@@ -915,12 +915,11 @@ async function refresh(first){
 const NAV = () => [['dashboard', 'Dashboard'], ['bids', 'Bids'], has('pm.people') ? ['crew', 'Crew & Subs'] : null, ['map', 'Map'], ['calendar', 'Calendar']].filter(Boolean);
 const ICON = { dashboard: '<rect x="3" y="3" width="7" height="7"/><rect x="14" y="3" width="7" height="7"/><rect x="14" y="14" width="7" height="7"/><rect x="3" y="14" width="7" height="7"/>', bids: '<path d="M16 4h2a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2H6a2 2 0 0 1-2-2V6a2 2 0 0 1 2-2h2"/><rect x="8" y="2" width="8" height="4" rx="1"/><path d="M9 12h6M9 16h6"/>', crew: '<path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 0 0-3-3.87M16 3.13a4 4 0 0 1 0 7.75"/>', map: '<path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0 1 18 0z"/><circle cx="12" cy="10" r="3"/>', calendar: '<rect x="3" y="4" width="18" height="18" rx="2"/><path d="M16 2v4M8 2v4M3 10h18"/>' };
 function quotaWidget(){
-  const q = QUOTA, w = $('#quotaWidget'); w.style.display = (ME && (ME.roles || [ME.role]).includes('estimator')) ? '' : 'none';   // quotas are personal: only estimators carry one
-  if(!q || !(ME && (ME.roles || [ME.role]).includes('estimator'))){ w.innerHTML = ''; return; }
-  const conv = q.conversion, tier = conv == null ? 'warn' : conv >= q.convTarget ? 'ok' : conv >= q.convTarget * .75 ? 'warn' : 'bad';
-  w.innerHTML = `<div class="grade-letter grade-text-${tier}">${conv == null ? '—' : conv.toFixed(1) + '%'}</div><div class="lbl">Conversion Rate</div><div class="grade-detail">goal ${q.convTarget}% · last 12 months</div>
-    <div class="quota-bar ${q.bidThisMonth >= q.bidTarget ? 'ok' : ''}"><i style="width:${Math.min(100, q.pctOfQuota)}%"></i></div>
-    <div class="qrow"><b>${moneyShort(q.bidThisMonth)}</b> of ${moneyShort(q.bidTarget)} bid this month (${q.pctOfQuota}%)</div>`;
+  // Same box as Logistics Health in the PM: big figure, label under it, small grey line under that. Not clickable.
+  const q = QUOTA, w = $('#quotaWidget'), mine = !!(ME && (ME.roles || [ME.role]).includes('estimator'));   // quotas are personal: only estimators carry one
+  w.style.display = mine ? '' : 'none';
+  if(!q || !mine){ w.innerHTML = ''; return; }
+  w.innerHTML = `<div class="grade-letter" style="color:var(--accent)">${moneyShort(q.bidThisMonth)}</div><div class="lbl">Monthly Bid Total</div><div class="grade-detail">Conversion rate ${q.conversion == null ? '—' : q.conversion.toFixed(1) + '%'}</div>`;
 }
 function render(){
   $('#navList').innerHTML = NAV().map(([id, l]) => `<button data-view="${id}" class="${VIEW === id ? 'active' : ''}"><svg class="icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">${ICON[id]}</svg><span class="lbl">${l}</span></button>`).join('');

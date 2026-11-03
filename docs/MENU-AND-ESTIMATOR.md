@@ -26,3 +26,6 @@ Estimator -> PM hand-off (which bid fields carry into a Project; which the PM ma
 
 ## Addresses (v7)
 Clean addresses: /home, /pm, /estimator, /admin/users, /builder/settings ... A `.htaccess` (see web/htaccess.txt) hands any non-file address to index.html. App pages live in /app (app/pm.html, app/estimator.html; a new branch = app/<branch>.html). Sub proposal and profile pages stay at /pm/proposal.html and /pm/profile.html so links already e-mailed keep working. Old #/ links convert themselves.
+
+## Notifications (v8)
+`backend/lib/notify.js`: `notify({ kind, text, route, toUser | toPane [, toLevel], from })` records an event; `resolveKind(kind)` clears it for everyone. The main page polls `/api/notifications` (every 30 s) and shows toasts in any branch; dismissals are per person (`notification_state`). Live events: sub proposal response / decline, crew-sub profile submitted, PM removal request. For the Estimator -> PM hand-off call `notify({ kind: 'handoff', toPane: 'pm.projects', route: '/pm?view=projects', text, from: req.user })`.

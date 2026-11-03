@@ -3449,7 +3449,7 @@ async function pollToasts(){
   try{ moneyToasts(); }catch(e){ /* pay-app reminders must never break the other checks */ }
   try{
     // (a) a person is waiting on the Owner/Builder; (b) a W-2/sub profile has come in.
-    if(BUILDER_MODE || OWNER_MODE){
+    if((BUILDER_MODE || OWNER_MODE) && !EMBEDDED){   // inside the company app these come from the server's notifications instead
       for(const w of WAITING_ITEMS){
         const n = await w.refresh();
         if(typeof n !== 'number') continue;
@@ -3461,6 +3461,7 @@ async function pollToasts(){
   }catch(e){ /* a failed check must never get in the way */ }
   try{
     // (c) a sub has sent or declined on their proposal link: anyone who can confirm proposals (PM, Owner, Builder) is told.
+    if(EMBEDDED) return;
     await bidsRefreshSubs();
     const n = bidsPendingCount(), prev = TOAST.counts.subresp; TOAST.counts.subresp = n;
     if(!n) clearToastGroup('subresp');
@@ -12926,7 +12927,12 @@ function applyReadOnly(){
     if(b.matches('[data-delete-person],[data-delete-proj],[data-toggle-pause-person],[data-delete-skill],.btn.primary') || RO_HIDE.test(t)) b.style.display = 'none';
   });
 }
+// Opened by a notification or the main page: ?view=bids etc., and later changes of screen arrive as a message.
+const EMBEDDED = (window.top !== window);
+function gotoView(v){ if(!v || !Array.isArray(NAV) || !NAV.some(n => n.id === v)) return; try{ closeModal(); }catch(e){} VIEW = v; render(); }
+window.addEventListener('message', e => { if(e.origin === location.origin && e.data && e.data.type === 'goto' && GATE_PASSED) gotoView(e.data.view); });
 function runOnlyView(){
+  try{ const v = new URLSearchParams(location.search).get('view'); if(v) gotoView(v); }catch(e){}
   if(ONLY_VIEW !== 'people') return;
   document.body.classList.add('only-view');
   const ro = GO_PANES['pm.people'] !== 'write';

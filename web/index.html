@@ -1,6 +1,6 @@
 <!doctype html>
 <html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
-<meta name="app-build" content="7.0.0"><title>Lucas Industrial</title>
+<meta name="app-build" content="8.0.0"><title>Lucas Industrial</title>
 <style>
 @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap');
 :root{
@@ -45,7 +45,18 @@ body.gm-open #gm{display:block}
 .topnav{display:flex;gap:4px;align-items:center}.topnav a{padding:7px 14px;border-radius:999px;color:var(--ink);text-decoration:none;font-weight:600;font-size:13.5px;cursor:pointer;white-space:nowrap}.topnav a:hover{background:var(--panel-2)}.topnav a.on{background:var(--brand-yellow)}
 /* wide screens: the menu lies across the top bar; narrow screens (tablet portrait, phone): it folds into the button */
 @media(max-width:860px){#menuBtn{display:inline-flex;align-items:center;justify-content:center;width:36px;height:36px;font-size:19px;line-height:1;padding:0}.topnav{display:none}#uname{display:none}}
-@media(min-width:861px){#gm,#gmShade{display:none !important}}
+@media(min-width:861px){#gm,/* notifications (toasts): one stack for the whole company app, in every branch */
+#toastStack{position:fixed;right:16px;bottom:40px;z-index:99990;display:flex;flex-direction:column;gap:10px;align-items:flex-end;pointer-events:none;max-width:min(380px,calc(100vw - 32px))}
+.toast{pointer-events:auto;display:flex;align-items:center;gap:12px;background:#fff;color:var(--ink);border:1px solid var(--line);border-left:4px solid var(--brand-blue);border-radius:10px;padding:10px 12px;box-shadow:0 6px 22px rgba(0,0,0,.28);font-size:13.5px;font-weight:600;cursor:pointer;animation:toastIn .22s ease-out;user-select:none}
+.toast small{display:block;font-weight:400;color:var(--mut);font-size:11px;margin-top:2px}
+.toast .toast-go{flex-shrink:0;background:var(--brand-blue);color:#fff;border:0;border-radius:6px;padding:6px 12px;font-weight:700;font-size:12.5px;cursor:pointer}
+.toast.leaving{opacity:0;transform:translateX(24px);transition:all .18s ease-in}
+.toastmore{pointer-events:auto;font-size:12px;color:#fff;background:rgba(0,0,0,.65);border-radius:12px;padding:3px 10px;cursor:pointer}
+@keyframes toastIn{from{opacity:0;transform:translateX(24px)}to{opacity:1;transform:none}}
+#gmShade{display:none !important}
+/* wide screens: the logo block is as wide as the branch sidebar (220px), so the menu starts just over the page title and the D of Dashboard */
+.top .brandlink{width:204px;flex-shrink:0}.topnav{margin-left:8px}.top .sp.l{display:none}
+.side{width:220px}.main{padding:24px 34px}}
 #gm a{display:block;padding:10px 12px;border-radius:10px;color:var(--ink);cursor:pointer;text-decoration:none;font-weight:600;font-size:14px;margin-bottom:2px}#gm a:hover{background:var(--panel-2)}#gm a.on{background:var(--brand-yellow)}
 #gm .gsep{height:1px;background:var(--line);margin:8px 4px}#gm .glab{font-size:10.5px;text-transform:uppercase;letter-spacing:.08em;color:var(--faint);margin:10px 12px 4px;font-weight:600}
 #gfoot{position:fixed;left:0;right:0;bottom:0;height:24px;background:#fff;border-top:1px solid var(--line);display:flex;gap:16px;align-items:center;padding:0 14px;font-size:11px;color:var(--faint);z-index:40}#gfoot #gstat a{cursor:pointer}
@@ -81,7 +92,12 @@ const say = e => MSG[e.code] || e.message || 'Something went wrong.';
 // Clean addresses: go.lucasindustrial.us/pm, /estimator, /admin/users. A pane key such as admin.users lives at /admin/users.
 const U = key => '/' + String(key).replace('.', '/');
 const parts = () => ({ path: location.pathname.replace(/^\/+|\/+$/g, '').replace('/', '.'), q: new URLSearchParams(location.search) });
-function navTo(to, replace){ history[replace ? 'replaceState' : 'pushState'](null, '', to); route(); }
+function navTo(to, replace){
+  // Already inside that branch's app (e.g. a toast pointing at another screen of the PM): tell it, don't rebuild it.
+  try{ const u = new URL(to, location.origin), f = document.getElementById('appFrame'), v = u.searchParams.get('view');
+    if(f && v && u.pathname === location.pathname && FRAMED[parts().path]){ history.pushState(null, '', to); f.contentWindow.postMessage({ type: 'goto', view: v }, location.origin); return; } }catch(e){}
+  history[replace ? 'replaceState' : 'pushState'](null, '', to); route();
+}
 window.addEventListener('popstate', route);
 // Links inside the page change the address without reloading it.
 document.addEventListener('click', e => { const a = e.target.closest && e.target.closest('a[href^="/"]'); if(!a || a.target || e.metaKey || e.ctrlKey || e.shiftKey || e.button) return; e.preventDefault(); navTo(a.getAttribute('href')); });
@@ -137,6 +153,35 @@ function viewChange(){
 // ---------- version, always on screen ----------
 const BUILD = (document.querySelector('meta[name=app-build]') || {}).content || '';
 let STALE = false;
+// ---------- notifications ----------
+// The server decides who is told what. We poll, show each new one once as a toast in whatever branch the person is in, and remember dismissals on the server.
+const SEEN = new Set(); let NOTES = [], NOTE_TIMER = null, AUDIO = null, LAST_CHIME = 0;
+const soundOn = () => { try{ return localStorage.getItem('lucasToastSound') !== 'off'; }catch(e){ return true; } };
+function chime(){
+  if(!soundOn() || Date.now() - LAST_CHIME < 1500) return; LAST_CHIME = Date.now();
+  try{ AUDIO = AUDIO || new (window.AudioContext || window.webkitAudioContext)(); const c = AUDIO; if(c.state === 'suspended') c.resume();
+    [[880, 0], [1318.5, 0.16]].forEach(([f, dt]) => { const o = c.createOscillator(), g = c.createGain(), t = c.currentTime + dt; o.type = 'sine'; o.frequency.value = f;
+      g.gain.setValueAtTime(0.0001, t); g.gain.exponentialRampToValueAtTime(0.25, t + 0.02); g.gain.exponentialRampToValueAtTime(0.0001, t + 0.45); o.connect(g); g.connect(c.destination); o.start(t); o.stop(t + 0.5); }); }catch(e){}
+}
+function dismissNote(id, el){ NOTES = NOTES.filter(n => n.id !== id); api('POST', '/notifications/dismiss', { ids: [id] }).catch(() => {}); if(el){ el.classList.add('leaving'); setTimeout(() => { el.remove(); paintToasts(); }, 180); } }
+function paintToasts(){
+  let st = $('#toastStack'); if(!st){ st = document.createElement('div'); st.id = 'toastStack'; st.setAttribute('aria-live', 'polite'); document.body.appendChild(st); }
+  const shown = NOTES.slice(0, 3); st.innerHTML = '';
+  shown.forEach(n => { const el = document.createElement('div'); el.className = 'toast'; el.title = 'Click to dismiss';
+    el.innerHTML = '<span style="flex:1">' + esc(n.text) + (n.by ? '<small>' + esc(n.by) + '</small>' : '') + '</span>' + (n.route ? '<button type="button" class="toast-go">Go &rarr;</button>' : '');
+    el.onclick = () => dismissNote(n.id, el);
+    const go = el.querySelector('.toast-go'); if(go) go.onclick = ev => { ev.stopPropagation(); dismissNote(n.id, el); navTo(n.route); };
+    st.appendChild(el); });
+  if(NOTES.length > shown.length){ const m = document.createElement('div'); m.className = 'toastmore'; m.textContent = '+' + (NOTES.length - shown.length) + ' more'; m.onclick = () => { NOTES.slice(0, NOTES.length - 0).forEach(n => dismissNote(n.id)); NOTES = []; paintToasts(); }; m.title = 'Click to dismiss all'; st.appendChild(m); }
+}
+async function pollNotes(){
+  if(!TOKEN || !ME || document.hidden) return;
+  try{ const r = await api('GET', '/notifications'); let fresh = false;
+    r.items.forEach(n => { if(!SEEN.has(n.id)){ SEEN.add(n.id); fresh = true; } });
+    NOTES = r.items; paintToasts(); if(fresh) chime(); }catch(e){}
+}
+function startNotes(){ if(NOTE_TIMER) return; NOTE_TIMER = setInterval(pollNotes, 30000); document.addEventListener('visibilitychange', () => { if(!document.hidden) pollNotes(); }); pollNotes(); }
+
 function paintFooter(){ const v = $('#gver'), st = $('#gstat'); if(!v) return; v.textContent = 'v' + BUILD;
   st.innerHTML = STALE ? '<a style="color:var(--bad)" id="gre">&#9888;&#65039; Update available — click to reload</a>' : '<span style="color:var(--ok)">&#10003; Up to date</span>';
   const re = $('#gre'); if(re) re.onclick = () => location.reload(); }
@@ -165,10 +210,10 @@ function shell(path){
   const gm = (ME.menu || []).map(m => (m.key === 'admin' || m.key === 'builder' ? '' : '') + `<a href="${menuHref(m)}" data-m="${m.key}" class="${cur === m.key && path !== 'home' ? 'on' : ''}">${esc(m.label)}</a>`).join('');
   // Second-level menu for the native sections (Estimator, Admin, Builder). Project Manager brings its own tabs.
   const side = (curItem && !FRAMED[path]) ? curItem.sections.map(sec => `<div class="sec">${esc(sec.label)}</div>` + sec.panes.map(p => `<a href="${U(p.key)}" class="${path === p.key ? 'on' : ''}">${esc(p.label)}</a>`).join('')).join('') : '';
-  $('#app').innerHTML = `<div class="top"><button id="menuBtn" type="button" class="btn sec" aria-label="Main menu" title="Main menu">&#9776;</button><a href="/home" style="display:flex;align-items:center;gap:12px;color:inherit" title="Home"><img src="/logo.png" alt=""><div><b>Lucas Industrial</b><small>Company platform</small></div></a><span class="sp"></span><nav class="topnav" aria-label="Main menu">${(ME.menu || []).map(m => `<a href="${menuHref(m)}" class="${cur === m.key && path !== 'home' ? 'on' : ''}">${esc(m.label)}</a>`).join('')}</nav><span class="sp"></span><span id="uname">${esc(ME.user.name)}</span><a id="lo">Sign out</a></div>
+  $('#app').innerHTML = `<div class="top"><button id="menuBtn" type="button" class="btn sec" aria-label="Main menu" title="Main menu">&#9776;</button><a href="/home" class="brandlink" style="display:flex;align-items:center;gap:12px;color:inherit" title="Home"><img src="/logo.png" alt=""><div><b>Lucas Industrial</b><small>Company platform</small></div></a><span class="sp l"></span><nav class="topnav" aria-label="Main menu">${(ME.menu || []).map(m => `<a href="${menuHref(m)}" class="${cur === m.key && path !== 'home' ? 'on' : ''}">${esc(m.label)}</a>`).join('')}</nav><span class="sp"></span><span id="uname">${esc(ME.user.name)}</span><a id="lo">Sign out</a></div>
   <div id="gmShade"></div><div id="gfoot"><span id="gver"></span><span id="gstat"></span><span>&reg; Lucas Industrial</span></div><nav id="gm" aria-label="Main menu">${gm}</nav>
   <div class="layout">${side ? `<div class="side">${side}</div>` : ''}<div class="main" id="main"></div></div>`;
-  paintFooter(); document.body.classList.remove('gm-open'); document.body.classList.toggle('fullpage', !!FRAMED[path]);
+  paintFooter(); startNotes(); document.body.classList.remove('gm-open'); document.body.classList.toggle('fullpage', !!FRAMED[path]);
   const toggle = () => document.body.classList.toggle('gm-open');
   $('#menuBtn').onclick = toggle; $('#gmShade').onclick = toggle;
   document.querySelectorAll('#gm a').forEach(a => a.addEventListener('click', () => document.body.classList.remove('gm-open')));
@@ -178,7 +223,7 @@ function shell(path){
   if(FRAMED[path]){
     if(!menuItem(path)) return el.innerHTML = '<div class="card">You do not have access to this section.</div>';
     el.style.padding = '0';
-    el.innerHTML = '<iframe id="appFrame" src="' + FRAMED[path] + '" title="' + esc(menuItem(path).label) + '" style="border:0;width:100%;height:calc(100vh - 74px);display:block"></iframe>';
+    el.innerHTML = '<iframe id="appFrame" src="' + FRAMED[path] + (new URLSearchParams(location.search).get('view') ? '&view=' + encodeURIComponent(new URLSearchParams(location.search).get('view')) : '') + '" title="' + esc(menuItem(path).label) + '" style="border:0;width:100%;height:calc(100vh - 74px);display:block"></iframe>';
     return;
   }
   if(!level || level === 'none') return el.innerHTML = '<div class="card">You do not have access to this section.</div>';

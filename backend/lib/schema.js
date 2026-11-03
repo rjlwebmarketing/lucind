@@ -88,6 +88,28 @@ const DDL = [
     KEY idx_user (user_id)
   ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4`,
   // Extra roles for a person who does more than one job (their primary role stays in users.role_key). Access is the combination of all of them.
+  // Notifications: one row per event; who it is for is a person or a screen (everyone holding it). Each person's dismissals are kept separately.
+  `CREATE TABLE IF NOT EXISTS notifications (
+    id BIGINT UNSIGNED NOT NULL AUTO_INCREMENT PRIMARY KEY,
+    created_at BIGINT NOT NULL,
+    kind VARCHAR(40) NOT NULL,
+    text VARCHAR(300) NOT NULL,
+    route VARCHAR(200) NULL,
+    to_user BIGINT NULL,
+    to_pane VARCHAR(64) NULL,
+    to_level VARCHAR(8) NULL,
+    from_user_id BIGINT NULL,
+    from_name VARCHAR(120) NULL,
+    from_username VARCHAR(40) NULL,
+    resolved_at BIGINT NULL,
+    KEY idx_created (created_at)
+  ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4`,
+  `CREATE TABLE IF NOT EXISTS notification_state (
+    user_id BIGINT NOT NULL,
+    notification_id BIGINT NOT NULL,
+    dismissed_at BIGINT NULL,
+    PRIMARY KEY (user_id, notification_id)
+  ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4`,
   `CREATE TABLE IF NOT EXISTS user_roles (
     user_id BIGINT NOT NULL,
     role_key VARCHAR(32) NOT NULL,

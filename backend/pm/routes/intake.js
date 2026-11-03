@@ -148,6 +148,7 @@ router.post('/submissions/dismiss', requireAuth(...STAFF), wrap(async (req, res)
   if (ids.length) {
     await pool.query(`DELETE FROM intake_submissions WHERE id IN (${ids.map(() => '?').join(',')})`, ids);
     await audit('intake_dismissed', req, req.auth.role, `${ids.length} submission(s) reviewed`);
+    const [left] = await pool.query('SELECT id FROM intake_submissions LIMIT 1'); if(!left.length) await require('../../lib/notify').resolveKind('profile_submitted');
   }
   res.json({ ok: true });
 }));
@@ -193,6 +194,7 @@ router.post('/submit', wrap(async (req, res) => {
     throw e;
   }
   await audit('intake_submitted', req, null, `${inv.kind}: ${checked.value.name}`.slice(0, 200));
+  require('../../lib/notify').notify({ kind: 'profile_submitted', toPane: 'pm.people', route: '/pm?view=people', text: String(checked.value.name || 'Someone') + ' filled in their ' + (inv.kind === 'sub' ? 'subcontractor' : 'crew') + ' profile' });
   res.json({ ok: true });
 }));
 

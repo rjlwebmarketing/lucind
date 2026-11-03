@@ -187,7 +187,7 @@ router.post('/handle', requireAuth(...STAFF), wrap(async (req, res) => {
     const [r] = await pool.query('UPDATE proposal_submissions SET handled_version = ? WHERE link_id = ? AND handled_version < ? AND version >= ?', [ver, id, ver, ver]);
     n += r.affectedRows || 0;
   }
-  if (n) await audit('proposal_handled', req, req.auth.role, `${n} sub proposal response(s) reviewed`);
+  if (n) { await audit('proposal_handled', req, req.auth.role, `${n} sub proposal response(s) reviewed`); const [open] = await pool.query("SELECT link_id FROM proposal_submissions WHERE status <> 'draft' AND version > handled_version LIMIT 1"); if (!open.length) await require('../../lib/notify').resolveKind('sub_response'); }
   res.json({ ok: true });
 }));
 
@@ -246,7 +246,11 @@ async function store(req, res, status) {
         [status, now, status === 'draft' ? null : now, String(req.ip || '').slice(0, 64), JSON.stringify(data), r.link.id]);
     }
   }
-  if (status !== 'draft') await audit('proposal_' + status, req, null, `${r.info.project.name} (sub link ${r.link.id})`.slice(0, 200));
+  if (status !== 'draft') {
+    await audit('proposal_' + status, req, null, `${r.info.project.name} (sub link ${r.link.id})`.slice(0, 200));
+    require('../../lib/notify').notify({ kind: 'sub_response', toPane: 'pm.proposals', route: '/pm?view=bids',
+      text: (status === 'declined' ? 'A sub declined the proposal request for ' : 'A sub sent a proposal for ') + String(r.info.project.name || 'a project').slice(0, 120) });
+  }
   res.json({ ok: true, status, savedAt: now });
 }
 router.post('/save', wrap((req, res) => store(req, res, 'draft')));

@@ -28,6 +28,8 @@ router.post('/', requireAuth(), wrap(async (req, res) => {
 
   await pool.query('INSERT INTO requests (created_at, kind, from_role, from_name, body, user_id, user_name, user_username) VALUES (?, ?, ?, ?, ?, ?, ?, ?)',
     [now, kind, req.auth.role, from || null, text].concat(require('../../lib/actor').cols()));
+  require('../../lib/notify').notify({ kind: 'removal_request', toPane: 'admin.requests', route: '/admin/requests', from: req.user,
+    text: ((req.user && req.user.name) || 'A PM') + ' asked for a removal: ' + text.replace(/\s+/g, ' ').slice(0, 140) });
   res.json({ ok: true });
 }));
 
@@ -41,6 +43,7 @@ router.post('/ack', requireAuth('owner', 'builder'), wrap(async (req, res) => {
   if (ids.length) {
     await pool.query(`DELETE FROM requests WHERE id IN (${ids.map(() => '?').join(',')})`, ids);
     await audit('requests_dismissed', req, req.auth.role, `${ids.length} request(s) dismissed`);
+    const [left] = await pool.query('SELECT id FROM requests LIMIT 1'); if(!left.length) await require('../../lib/notify').resolveKind('removal_request');
   }
   res.json({ ok: true });
 }));
