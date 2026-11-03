@@ -23,3 +23,6 @@ Projects, Crew & Subs and Calendar are viewable from the Estimator branch (view-
 
 ## Next
 Estimator -> PM hand-off (which bid fields carry into a Project; which the PM may not edit), Analytics (per-person views, density maps, sub award rate), toasts between roles.
+
+## Addresses (v7)
+Clean addresses: /home, /pm, /estimator, /admin/users, /builder/settings ... A `.htaccess` (see web/htaccess.txt) hands any non-file address to index.html. App pages live in /app (app/pm.html, app/estimator.html; a new branch = app/<branch>.html). Sub proposal and profile pages stay at /pm/proposal.html and /pm/profile.html so links already e-mailed keep working. Old #/ links convert themselves.

@@ -190,7 +190,7 @@ async function bootstrapBuilder(){
     const token = newToken();
     await pool.query('INSERT INTO password_resets (token_hash, user_id, kind, created_at, expires_at) VALUES (?, ?, ?, ?, ?)', [sha256(token), ins.insertId, 'invite', now, now + 24 * 3600 * 1000]);
     const base = process.env.APP_URL || 'https://go.lucasindustrial.us';
-    console.log(`[setup] Builder created for ${email}. One-time password setup link (24h): ${base}/#/reset?token=${token}`);
+    console.log(`[setup] Builder created for ${email}. One-time password setup link (24h): ${base}/reset?token=${token}`);
   } else console.log(`[setup] Builder created for ${email}. They must change the initial password at first login.`);
 }
 // Usernames: lowercase letters, digits, dot, dash, underscore. Sign-in accepts the username OR the email; resets always go to the email.

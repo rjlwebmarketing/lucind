@@ -1,6 +1,6 @@
 <!doctype html>
 <html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
-<meta name="app-build" content="5.0.0"><title>Lucas Industrial</title>
+<meta name="app-build" content="7.0.0"><title>Lucas Industrial</title>
 <style>
 @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap');
 :root{
@@ -55,7 +55,7 @@ body.fullpage .side{display:none}
 @media(max-width:760px){.layout{flex-direction:column}.side{width:auto}.main{padding:16px}}
 </style></head><body>
 <div id="app"></div>
-<script src="config.js"></script>
+<script src="/config.js"></script>
 <script>
 const $ = s => document.querySelector(s);
 const esc = s => String(s == null ? '' : s).replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
@@ -70,7 +70,7 @@ const saveTok = (t, remember) => { TOKEN = t; try{
 async function api(method, path, body){
   const r = await fetch(GO_CONFIG.API + '/api' + path, { method, headers: Object.assign({ 'Content-Type': 'application/json' }, TOKEN ? { Authorization: 'Bearer ' + TOKEN } : {}), body: body === undefined ? undefined : JSON.stringify(body) });
   let j = {}; try{ j = await r.json(); }catch(e){}
-  if(r.status === 401 && TOKEN && j.error !== 'bad_credentials'){ saveTok(null); ME = null; location.hash = '#/login'; }
+  if(r.status === 401 && TOKEN && j.error !== 'bad_credentials'){ saveTok(null); ME = null; navTo('/login', true); }
   if(!r.ok) throw Object.assign(new Error(j.message || j.error || ('http_' + r.status)), { code: j.error, status: r.status, data: j });
   return j;
 }
@@ -78,21 +78,28 @@ const MSG = { bad_credentials: 'Email or password is not right.', locked: 'Too m
 const say = e => MSG[e.code] || e.message || 'Something went wrong.';
 
 // ---------- routing ----------
-const parts = () => { const h = location.hash.replace(/^#\/?/, ''); const [p, q] = h.split('?'); return { path: p || '', q: new URLSearchParams(q || '') }; };
-window.addEventListener('hashchange', route);
+// Clean addresses: go.lucasindustrial.us/pm, /estimator, /admin/users. A pane key such as admin.users lives at /admin/users.
+const U = key => '/' + String(key).replace('.', '/');
+const parts = () => ({ path: location.pathname.replace(/^\/+|\/+$/g, '').replace('/', '.'), q: new URLSearchParams(location.search) });
+function navTo(to, replace){ history[replace ? 'replaceState' : 'pushState'](null, '', to); route(); }
+window.addEventListener('popstate', route);
+// Links inside the page change the address without reloading it.
+document.addEventListener('click', e => { const a = e.target.closest && e.target.closest('a[href^="/"]'); if(!a || a.target || e.metaKey || e.ctrlKey || e.shiftKey || e.button) return; e.preventDefault(); navTo(a.getAttribute('href')); });
+// Old bookmarks and e-mailed links used #/something: turn them into the clean address once.
+(function(){ const h = location.hash; if(/^#\//.test(h)){ const t = h.slice(1).replace(/^(\/[a-z]+)\.([a-z]+)/, '$1/$2'); history.replaceState(null, '', t); } })();
 async function route(){
   const { path, q } = parts();
   if(path === 'reset') return viewReset(q.get('token') || '');
   if(path === 'forgot') return viewForgot();
-  if(!TOKEN){ if(path !== 'login') { location.hash = '#/login'; return; } return viewLogin(); }
+  if(!TOKEN){ if(path !== 'login') { navTo('/login', true); return; } return viewLogin(); }
   if(!ME){ try{ ME = await api('GET', '/auth/me'); }catch(e){ if(!TOKEN) viewLogin(); return; } }
   if(ME.user.mustChangePassword) return viewChange();
   // The page is newer than the server: the server has not finished updating (or its update failed). Say so instead of showing empty menus.
   if(!ME.menu){ plain('<h1>Almost there</h1><div class="mut">This page is newer than the server it talks to. The server has not finished updating, or its update failed. In Railway, open the LucInd service, Deployments, and check that the latest deployment says Active. If it says Failed, open it and read the log.</div><p><button class="btn" onclick="location.reload()">Check again</button></p>'); return; }
-  if(path === 'login' || !path) { location.hash = '#/home'; return; }
+  if(path === 'login' || !path) { navTo('/home', true); return; }
   shell(path);
 }
-function plain(html){ document.body.classList.remove('fullpage', 'menu-open'); $('#app').innerHTML = '<div class="center"><img class="logo" src="logo.png" alt="Lucas Industrial"><div class="box">' + html + '</div></div>'; }
+function plain(html){ document.body.classList.remove('fullpage', 'menu-open'); $('#app').innerHTML = '<div class="center"><img class="logo" src="/logo.png" alt="Lucas Industrial"><div class="box">' + html + '</div></div>'; }
 
 // ---------- public views ----------
 function viewLogin(){
@@ -100,13 +107,13 @@ function viewLogin(){
   <label>Username or email</label><input id="em" type="text" autocomplete="username" autocapitalize="none" spellcheck="false"><label>Password</label><input id="pw" type="password" autocomplete="current-password">
   <label style="display:flex;align-items:center;gap:8px;margin:12px 0 0;font-size:13px;color:var(--ink)"><input id="rem" type="checkbox" style="width:auto"> Keep me signed in for 30 days</label><div class="mut" style="font-size:11px;margin:2px 0 0 24px">Only on a device that is yours.</div>
   <div id="m" class="err"></div><button class="btn" id="go" style="width:100%">Sign in</button>
-  <p style="text-align:center"><a href="#/forgot">Forgot password?</a></p>`);
-  const go = async () => { try{ const r = await api('POST', '/auth/login', { login: $('#em').value, password: $('#pw').value, remember: $('#rem').checked }); saveTok(r.token, $('#rem').checked); ME = null; location.hash = '#/home'; route(); }catch(e){ $('#m').textContent = say(e); } };
+  <p style="text-align:center"><a href="/forgot">Forgot password?</a></p>`);
+  const go = async () => { try{ const r = await api('POST', '/auth/login', { login: $('#em').value, password: $('#pw').value, remember: $('#rem').checked }); saveTok(r.token, $('#rem').checked); ME = null; navTo('/home', true); }catch(e){ $('#m').textContent = say(e); } };
   $('#go').onclick = go; $('#pw').onkeydown = e => { if(e.key === 'Enter') go(); };
 }
 function viewForgot(){
   plain(`<h1>Reset password</h1><div class="mut">Enter your username or work email and we will send a link to the email on file.</div><label>Username or email</label><input id="em" type="text" autocapitalize="none" spellcheck="false">
-  <div id="m"></div><button class="btn" id="go" style="width:100%;margin-top:10px">Send link</button><p style="text-align:center"><a href="#/login">Back to sign in</a></p>`);
+  <div id="m"></div><button class="btn" id="go" style="width:100%;margin-top:10px">Send link</button><p style="text-align:center"><a href="/login">Back to sign in</a></p>`);
   $('#go').onclick = async () => { try{ const r = await api('POST', '/auth/forgot', { login: $('#em').value }); $('#m').innerHTML = '<div class="okm">' + esc(r.message) + '</div>'; }catch(e){ $('#m').innerHTML = '<div class="err">' + esc(say(e)) + '</div>'; } };
 }
 function viewReset(token){
@@ -114,7 +121,7 @@ function viewReset(token){
   <div id="m" class="err"></div><button class="btn" id="go" style="width:100%">Save password</button>`);
   $('#go').onclick = async () => {
     if($('#p1').value !== $('#p2').value) { $('#m').textContent = 'The two passwords do not match.'; return; }
-    try{ await api('POST', '/auth/reset', { token, password: $('#p1').value }); saveTok(null); ME = null; plain('<h1>Password saved</h1><p><a href="#/login">Sign in</a></p>'); }catch(e){ $('#m').textContent = say(e); }
+    try{ await api('POST', '/auth/reset', { token, password: $('#p1').value }); saveTok(null); ME = null; plain('<h1>Password saved</h1><p><a href="/login">Sign in</a></p>'); }catch(e){ $('#m').textContent = say(e); }
   };
 }
 function viewChange(){
@@ -123,7 +130,7 @@ function viewChange(){
   <div id="m" class="err"></div><button class="btn" id="go" style="width:100%">Save</button>`);
   $('#go').onclick = async () => {
     if($('#p1').value !== $('#p2').value) { $('#m').textContent = 'The two passwords do not match.'; return; }
-    try{ await api('POST', '/auth/change-password', { current: $('#cur').value, password: $('#p1').value }); ME = null; location.hash = '#/home'; route(); }catch(e){ $('#m').textContent = say(e); }
+    try{ await api('POST', '/auth/change-password', { current: $('#cur').value, password: $('#p1').value }); ME = null; navTo('/home', true); }catch(e){ $('#m').textContent = say(e); }
   };
 }
 
@@ -133,7 +140,7 @@ let STALE = false;
 function paintFooter(){ const v = $('#gver'), st = $('#gstat'); if(!v) return; v.textContent = 'v' + BUILD;
   st.innerHTML = STALE ? '<a style="color:var(--bad)" id="gre">&#9888;&#65039; Update available — click to reload</a>' : '<span style="color:var(--ok)">&#10003; Up to date</span>';
   const re = $('#gre'); if(re) re.onclick = () => location.reload(); }
-async function checkBuild(){ try{ const r = await fetch(location.pathname + '?b=' + Date.now(), { cache: 'no-store' }); const t = await r.text(); const m = t.match(/name="app-build" content="([^"]*)"/); if(m && m[1] !== BUILD){ STALE = true; paintFooter(); } }catch(e){} }
+async function checkBuild(){ try{ const r = await fetch('/?b=' + Date.now(), { cache: 'no-store' }); const t = await r.text(); const m = t.match(/name="app-build" content="([^"]*)"/); if(m && m[1] !== BUILD){ STALE = true; paintFooter(); } }catch(e){} }
 setInterval(checkBuild, 5 * 60 * 1000);
 
 // ---------- signed-in shell ----------
@@ -143,27 +150,29 @@ const menuItem = k => (ME.menu || []).find(m => m.key === k);
 const firstPane = m => m.sections[0].panes[0].key;
 const DESC = { estimator: 'Estimates, customers and the price book', pm: 'Projects, dispatch, crew, pay apps and close-out', admin: 'People, audit trail, analytics and sensitive data', builder: 'Infrastructure, connections and role templates' };
 // Where a menu item goes: Project Manager opens the whole embedded app; the others open their first permitted screen.
-const FRAMED = { pm: 'pm/index.html?v=3.5', estimator: 'estimator/index.html?v=1' };   // branches that open as a whole app
+const FRAMED = { pm: '/app/pm.html?v=' + BUILD, estimator: '/app/estimator.html?v=' + BUILD };   // branches that open as a whole app
 // Screens that are one of the PM app's own tool windows, opened on their own from the Builder / Admin menus.
 const TOOLS = { 'builder.pmsettings': 'settings', 'builder.devtools': 'devTasks', 'builder.architecture': 'architecture', 'builder.data': 'data', 'admin.requests': 'requests' };
-const menuHref = m => FRAMED[m.key] ? '#/' + m.key : '#/' + firstPane(m);
+const menuHref = m => FRAMED[m.key] ? U(m.key) : U(firstPane(m));
 const menuOf = path => FRAMED[path] ? path : (path.split('.')[0] === 'estimator' ? 'estimator' : path.split('.')[0] === 'sensitive' ? 'admin' : path.split('.')[0]);
 function shell(path){
   // Short links such as #/admin or #/builder resolve to the first screen this person may open.
+  // An address that is not a screen this person has (typo, old link, no access) goes home.
+  if(path !== 'home' && !FRAMED[path] && !menuItem(path) && allLabel(path) === path){ navTo('/home', true); return; }
   const mi = menuItem(path);
-  if(mi && !FRAMED[path]){ location.replace(menuHref(mi)); return; }
+  if(mi && !FRAMED[path]){ navTo(menuHref(mi), true); return; }
   const cur = menuOf(path), curItem = menuItem(cur);
   const gm = (ME.menu || []).map(m => (m.key === 'admin' || m.key === 'builder' ? '' : '') + `<a href="${menuHref(m)}" data-m="${m.key}" class="${cur === m.key && path !== 'home' ? 'on' : ''}">${esc(m.label)}</a>`).join('');
   // Second-level menu for the native sections (Estimator, Admin, Builder). Project Manager brings its own tabs.
-  const side = (curItem && !FRAMED[path]) ? curItem.sections.map(sec => `<div class="sec">${esc(sec.label)}</div>` + sec.panes.map(p => `<a href="#/${p.key}" class="${path === p.key ? 'on' : ''}">${esc(p.label)}</a>`).join('')).join('') : '';
-  $('#app').innerHTML = `<div class="top"><button id="menuBtn" type="button" class="btn sec" aria-label="Main menu" title="Main menu">&#9776;</button><a href="#/home" style="display:flex;align-items:center;gap:12px;color:inherit" title="Home"><img src="logo.png" alt=""><div><b>Lucas Industrial</b><small>Company platform</small></div></a><span class="sp"></span><nav class="topnav" aria-label="Main menu">${(ME.menu || []).map(m => `<a href="${menuHref(m)}" class="${cur === m.key && path !== 'home' ? 'on' : ''}">${esc(m.label)}</a>`).join('')}</nav><span class="sp"></span><span id="uname">${esc(ME.user.name)}</span><a id="lo">Sign out</a></div>
+  const side = (curItem && !FRAMED[path]) ? curItem.sections.map(sec => `<div class="sec">${esc(sec.label)}</div>` + sec.panes.map(p => `<a href="${U(p.key)}" class="${path === p.key ? 'on' : ''}">${esc(p.label)}</a>`).join('')).join('') : '';
+  $('#app').innerHTML = `<div class="top"><button id="menuBtn" type="button" class="btn sec" aria-label="Main menu" title="Main menu">&#9776;</button><a href="/home" style="display:flex;align-items:center;gap:12px;color:inherit" title="Home"><img src="/logo.png" alt=""><div><b>Lucas Industrial</b><small>Company platform</small></div></a><span class="sp"></span><nav class="topnav" aria-label="Main menu">${(ME.menu || []).map(m => `<a href="${menuHref(m)}" class="${cur === m.key && path !== 'home' ? 'on' : ''}">${esc(m.label)}</a>`).join('')}</nav><span class="sp"></span><span id="uname">${esc(ME.user.name)}</span><a id="lo">Sign out</a></div>
   <div id="gmShade"></div><div id="gfoot"><span id="gver"></span><span id="gstat"></span><span>&reg; Lucas Industrial</span></div><nav id="gm" aria-label="Main menu">${gm}</nav>
   <div class="layout">${side ? `<div class="side">${side}</div>` : ''}<div class="main" id="main"></div></div>`;
   paintFooter(); document.body.classList.remove('gm-open'); document.body.classList.toggle('fullpage', !!FRAMED[path]);
   const toggle = () => document.body.classList.toggle('gm-open');
   $('#menuBtn').onclick = toggle; $('#gmShade').onclick = toggle;
   document.querySelectorAll('#gm a').forEach(a => a.addEventListener('click', () => document.body.classList.remove('gm-open')));
-  $('#lo').onclick = async () => { try{ await api('POST', '/auth/logout'); }catch(e){} saveTok(null); ME = null; location.hash = '#/login'; };
+  $('#lo').onclick = async () => { try{ await api('POST', '/auth/logout'); }catch(e){} saveTok(null); ME = null; navTo('/login', true); };
   const el = $('#main'), level = ME.permissions[path];
   if(path === 'home') return home(el);
   if(FRAMED[path]){
@@ -173,7 +182,7 @@ function shell(path){
     return;
   }
   if(!level || level === 'none') return el.innerHTML = '<div class="card">You do not have access to this section.</div>';
-  if(TOOLS[path]){ el.style.padding = '0'; el.innerHTML = '<iframe id="appFrame" src="pm/index.html?v=3.5&tool=' + TOOLS[path] + '" title="' + esc(allLabel(path)) + '" style="border:0;width:100%;height:calc(100vh - 74px);display:block"></iframe>'; return; }
+  if(TOOLS[path]){ el.style.padding = '0'; el.innerHTML = '<iframe id="appFrame" src="/app/pm.html?v=' + BUILD + '&tool=' + TOOLS[path] + '" title="' + esc(allLabel(path)) + '" style="border:0;width:100%;height:calc(100vh - 74px);display:block"></iframe>'; return; }
   if(path === 'admin.users') return adminUsers(el);
   if(path === 'admin.audit') return adminAudit(el);
   if(path === 'builder.settings') return builderSettings(el);

@@ -65,7 +65,7 @@ router.post('/forgot', limiter('forgot', 10, 60 * 60 * 1000), async (req, res) =
     if(u && u.status === 'active'){
       const token = newToken(), now = Date.now();
       await pool.query('INSERT INTO password_resets (token_hash, user_id, kind, created_at, expires_at) VALUES (?, ?, ?, ?, ?)', [sha256(token), u.id, 'reset', now, now + RESET_HOURS * 3600 * 1000]);
-      const link = (process.env.APP_URL || 'https://go.lucasindustrial.us') + '/#/reset?token=' + token;
+      const link = (process.env.APP_URL || 'https://go.lucasindustrial.us') + '/reset?token=' + token;
       const m = resetEmail({ name: u.name, link, hours: RESET_HOURS, invite: false, username: u.username });
       await sendMail({ to: u.email, subject: m.subject, text: m.text, html: m.html });
       await audit(u, 'password.reset_requested', 'user', u.id, null, req.ip);

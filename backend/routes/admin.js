@@ -17,7 +17,7 @@ const wrap = fn => async (req, res) => { try{ await fn(req, res); }catch(e){ con
 async function sendInvite(u, ip, by){
   const token = newToken(), now = Date.now();
   await pool.query('INSERT INTO password_resets (token_hash, user_id, kind, created_at, expires_at) VALUES (?, ?, ?, ?, ?)', [sha256(token), u.id, 'invite', now, now + 72 * 3600 * 1000]);
-  const link = (process.env.APP_URL || 'https://go.lucasindustrial.us') + '/#/reset?token=' + token;
+  const link = (process.env.APP_URL || 'https://go.lucasindustrial.us') + '/reset?token=' + token;
   const m = resetEmail({ name: u.name, link, hours: 72, invite: true, username: u.username });
   await sendMail({ to: u.email, subject: m.subject, text: m.text, html: m.html });
   await audit(by, 'user.invite_sent', 'user', u.id, null, ip);
