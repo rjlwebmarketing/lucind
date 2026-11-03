@@ -19,7 +19,7 @@ const PANE_BY_PREFIX = {
 // These are available to anyone who can open the PM section at all, even read-only (sending a suggestion, presence pings).
 const READ_LEVEL_OK = new Set(['/suggestions', '/requests', '/presence']);
 
-const legacyRoleOf = user => user.role_key === 'builder' ? 'builder' : (user.role_key === 'owner' ? 'owner' : 'pm');
+const legacyRoleOf = user => user.role_key === 'builder' ? 'builder' : ((user.roles || [user.role_key]).includes('owner') ? 'owner' : 'pm');
 const sha256 = s => crypto.createHash('sha256').update(s).digest('hex');
 
 function paneFor(req){

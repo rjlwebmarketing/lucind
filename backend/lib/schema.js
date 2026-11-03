@@ -87,6 +87,12 @@ const DDL = [
     KEY idx_at (at),
     KEY idx_user (user_id)
   ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4`,
+  // Extra roles for a person who does more than one job (their primary role stays in users.role_key). Access is the combination of all of them.
+  `CREATE TABLE IF NOT EXISTS user_roles (
+    user_id BIGINT NOT NULL,
+    role_key VARCHAR(32) NOT NULL,
+    PRIMARY KEY (user_id, role_key)
+  ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4`,
   `CREATE TABLE IF NOT EXISTS est_bids (
     id BIGINT UNSIGNED NOT NULL AUTO_INCREMENT PRIMARY KEY,
     name VARCHAR(200) NOT NULL,
@@ -163,6 +169,7 @@ async function upgradeTemplatesV5(){
   await set('owner', 'admin.analytics', 'write');
   // PMs are handed won jobs, not bids: no looking back into the Estimator unless the Owner grants view-only per person.
   await pool.query("DELETE FROM role_permissions WHERE role_key = 'pm' AND perm_key LIKE 'estimator.%'");
+  await pool.query("DELETE FROM role_permissions WHERE role_key = 'estimator' AND perm_key = 'pm.proposals'");   // sub proposals are a PM-only screen
   await set('estimator', 'pm.people', 'read'); await set('estimator', 'pm.calendar', 'read');
   await setSetting('tpl_v5_estimator', '1');
 }

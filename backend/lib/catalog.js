@@ -20,11 +20,11 @@ const SECTIONS = [
     { key: 'estimator.customers', label: 'Customers & Contacts' },
     { key: 'estimator.pricebook', label: 'Price Book & Rates' } ] },
   { key: 'pm', menu: 'pm', label: 'Project Management', panes: [
-    { key: 'pm.projects', label: 'Projects' },
+    { key: 'pm.projects', shared: true, label: 'Projects' },
     { key: 'pm.dispatch', label: 'Dispatch' },
-    { key: 'pm.people', label: 'Crew & Subcontractors' },
-    { key: 'pm.proposals', label: 'Sub Proposals' },
-    { key: 'pm.calendar', label: 'Calendar & Map' },
+    { key: 'pm.people', shared: true, label: 'Crew & Subcontractors' },
+    { key: 'pm.proposals', label: 'Request For Proposals' },
+    { key: 'pm.calendar', shared: true, label: 'Calendar & Map' },
     { key: 'pm.logistics_ai', label: 'Logistics AI' } ] },
   { key: 'payapps', menu: 'pm', label: 'Pay Apps', panes: [
     { key: 'payapps.main', label: 'Pay Apps' },
@@ -46,6 +46,8 @@ const SECTIONS = [
     { key: 'builder.architecture', label: 'System Architecture' },
     { key: 'builder.data', label: 'Import / Export Data' } ] }
 ];
+// Cross-department panes: viewable from another branch (e.g. the Estimator's Map, Calendar and Crew & Subs) without opening this branch's own app.
+const SHARED_PANES = SECTIONS.flatMap(s => s.panes.filter(p => p.shared).map(p => p.key));
 const PANE_KEYS = SECTIONS.flatMap(s => s.panes.map(p => p.key));
 // Panes only a Builder can ever hold (checked wherever access is granted).
 const BUILDER_ONLY = k => String(k).startsWith('builder.');
@@ -54,7 +56,7 @@ const BUILDER_ONLY = k => String(k).startsWith('builder.');
 const ROLE_DEFAULTS = {
   builder:   { label: 'Builder', system: true, perms: { '*': 'write' } },
   owner:     { label: 'Owner', perms: { 'estimator.*': 'write', 'pm.*': 'write', 'payapps.*': 'write', 'sensitive.*': 'write', 'admin.*': 'write', 'admin.audit': 'read' } },
-  estimator: { label: 'Estimator', perms: { 'estimator.*': 'write', 'pm.projects': 'read', 'pm.people': 'read', 'pm.calendar': 'read', 'pm.proposals': 'write', 'sensitive.estimate_costs': 'write', 'sensitive.contract_values': 'read' } },
+  estimator: { label: 'Estimator', perms: { 'estimator.*': 'write', 'pm.projects': 'read', 'pm.people': 'read', 'pm.calendar': 'read', 'sensitive.estimate_costs': 'write', 'sensitive.contract_values': 'read' } },
   pm:        { label: 'Project Manager', perms: { 'pm.*': 'write', 'payapps.*': 'write', 'sensitive.contract_values': 'read' } },
   ar_ap:     { label: 'AR / AP', perms: { 'payapps.*': 'write', 'pm.projects': 'read', 'sensitive.contract_values': 'read' } }
 };
@@ -70,4 +72,4 @@ function expand(perms){
   entries.filter(([k]) => !(k === '*' || k.endsWith('.*'))).forEach(([k, v]) => { if(k in out) out[k] = v; });
   return out;
 }
-module.exports = { BUILDER_ONLY, LEVELS, lvl, MENU, SECTIONS, PANE_KEYS, ROLE_DEFAULTS, expand };
+module.exports = { SHARED_PANES, BUILDER_ONLY, LEVELS, lvl, MENU, SECTIONS, PANE_KEYS, ROLE_DEFAULTS, expand };

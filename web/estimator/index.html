@@ -913,8 +913,8 @@ async function refresh(first){
 const NAV = () => [['dashboard', 'Dashboard'], ['bids', 'Bids'], has('pm.people') ? ['crew', 'Crew & Subs'] : null, ['map', 'Map'], ['calendar', 'Calendar']].filter(Boolean);
 const ICON = { dashboard: '<rect x="3" y="3" width="7" height="7"/><rect x="14" y="3" width="7" height="7"/><rect x="14" y="14" width="7" height="7"/><rect x="3" y="14" width="7" height="7"/>', bids: '<path d="M16 4h2a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2H6a2 2 0 0 1-2-2V6a2 2 0 0 1 2-2h2"/><rect x="8" y="2" width="8" height="4" rx="1"/><path d="M9 12h6M9 16h6"/>', crew: '<path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 0 0-3-3.87M16 3.13a4 4 0 0 1 0 7.75"/>', map: '<path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0 1 18 0z"/><circle cx="12" cy="10" r="3"/>', calendar: '<rect x="3" y="4" width="18" height="18" rx="2"/><path d="M16 2v4M8 2v4M3 10h18"/>' };
 function quotaWidget(){
-  const q = QUOTA, w = $('#quotaWidget'); w.style.display = (ME && ME.role === 'estimator') ? '' : 'none';   // quotas are personal: only estimators carry one
-  if(!q || !(ME && ME.role === 'estimator')){ w.innerHTML = ''; return; }
+  const q = QUOTA, w = $('#quotaWidget'); w.style.display = (ME && (ME.roles || [ME.role]).includes('estimator')) ? '' : 'none';   // quotas are personal: only estimators carry one
+  if(!q || !(ME && (ME.roles || [ME.role]).includes('estimator'))){ w.innerHTML = ''; return; }
   const conv = q.conversion, tier = conv == null ? 'warn' : conv >= q.convTarget ? 'ok' : conv >= q.convTarget * .75 ? 'warn' : 'bad';
   w.innerHTML = `<div class="grade-letter grade-text-${tier}">${conv == null ? '—' : conv.toFixed(1) + '%'}</div><div class="lbl">Conversion Rate</div><div class="grade-detail">goal ${q.convTarget}% · last 12 months</div>
     <div class="quota-bar ${q.bidThisMonth >= q.bidTarget ? 'ok' : ''}"><i style="width:${Math.min(100, q.pctOfQuota)}%"></i></div>
@@ -926,7 +926,7 @@ function render(){
   $('#navList').querySelectorAll('button').forEach(b => b.onclick = () => { VIEW = b.dataset.view; closeNav(); render(); });
   $('#mobileTopBarTitle').textContent = (NAV().find(n => n[0] === VIEW) || [0, ''])[1];
   quotaWidget();
-  const m = $('#main'); m.classList.toggle('flush', VIEW === 'map');
+  const m = $('#main'); m.classList.toggle('flush', VIEW === 'map'); m.style.padding = '';
   ({ dashboard, bids, crew, map, calendar })[VIEW](m);
 }
 
@@ -1055,21 +1055,10 @@ function loadMaps(cb){
   document.head.appendChild(s);
 }
 
-// ---------- crew & subs (read-only: the PM manages the workforce) ----------
-async function crew(el){
-  el.innerHTML = '<div class="page-head"><div><h2>Crew &amp; Subs</h2></div></div><div class="ro-note">For reference. The Project Manager manages the workforce.</div><div class="empty">Loading…</div>';
-  if(!CREW){ try{ CREW = (await api('GET', '/crew')).people; }catch(e){ el.innerHTML += ''; $('#main').querySelector('.empty').textContent = 'Could not load (' + e.message + ').'; return; } }
-  let q = '', type = 'all';
-  const draw = () => {
-    const list = CREW.filter(p => (type === 'all' || p.type === type) && (!q || (p.name + ' ' + p.trade + ' ' + p.city).toLowerCase().includes(q)));
-    $('#crewT').innerHTML = list.length ? `<table class="responsive-table"><thead><tr><th>Name</th><th>Type</th><th>Trade</th><th>Location</th><th>Availability</th></tr></thead><tbody>${list.map(p => `<tr><td><b>${esc(p.name)}</b></td><td data-label="Type">${esc(p.type === 'sub' ? 'Sub' : p.type === 'crew' ? 'Crew' : p.type)}</td><td data-label="Trade">${esc(p.trade) || '—'}</td><td data-label="Location">${esc([p.city, p.state].filter(Boolean).join(', ')) || '—'}</td><td data-label="Availability">${esc(p.availability) || '—'}</td></tr>`).join('')}</tbody></table>` : '<div class="empty">No one matches.</div>';
-  };
-  el.innerHTML = `<div class="page-head"><div><h2>Crew &amp; Subs</h2></div></div><div class="ro-note">For reference only. The Project Manager manages the workforce.</div>
-  <div style="display:flex;gap:8px;margin-bottom:14px;flex-wrap:wrap"><input id="cq" placeholder="Search name, trade or city" style="padding:8px 12px;border:1px solid var(--line);border-radius:8px;min-width:240px">${[['all', 'All'], ['crew', 'Crew'], ['sub', 'Subs']].map(([k, l]) => `<button class="btn small ${k === 'all' ? 'primary' : ''}" data-t="${k}">${l}</button>`).join('')}</div>
-  <div class="panel"><div class="panel-body" style="padding:0" id="crewT"></div></div>`;
-  $('#cq').oninput = e => { q = e.target.value.toLowerCase(); draw(); };
-  el.querySelectorAll('[data-t]').forEach(b => b.onclick = () => { type = b.dataset.t; el.querySelectorAll('[data-t]').forEach(x => x.classList.toggle('primary', x === b)); draw(); });
-  draw();
+// ---------- crew & subs: the PM's own Crew & Subs screen, view-only (the PM manages the workforce) ----------
+function crew(el){
+  el.style.padding = '0';
+  el.innerHTML = '<iframe src="../pm/index.html?v=3.5&only=people" title="Crew & Subs" style="border:0;width:100%;height:100vh;display:block"></iframe>';
 }
 
 // ---------- map: bids and active jobs, told apart ----------

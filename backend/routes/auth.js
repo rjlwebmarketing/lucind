@@ -3,7 +3,7 @@ const pool = require('../config/db');
 const { hashPassword, verifyPassword, burnTime, passwordProblem } = require('../lib/password');
 const { newToken, sha256 } = require('../lib/tokens');
 const { createSession, revokeSessions, effectivePerms, publicUser, requireAuth } = require('../lib/auth');
-const { MENU, SECTIONS, lvl } = require('../lib/catalog');
+const { MENU, SECTIONS, SHARED_PANES, lvl } = require('../lib/catalog');
 const { limiter } = require('../lib/throttle');
 const { audit } = require('../lib/audit');
 const { sendMail, resetEmail } = require('../lib/mailer');
@@ -21,6 +21,8 @@ function menuFor(perms){
       
       .filter(s => s.panes.length) }))
     // The Admin menu belongs to people who hold an admin pane; a lone sensitive-data grant (e.g. PM reading contract values) does not open it.
+    // A branch opens only for people who hold something that is really its own. Cross-department views (shared panes) never open the other branch's app.
+    .filter(m => m.sections.some(s => s.panes.some(p => !SHARED_PANES.includes(p.key))))
     .filter(m => m.sections.length && (m.key !== 'admin' || m.sections.some(s => s.key === 'admin')));
 }
 

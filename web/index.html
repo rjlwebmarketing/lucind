@@ -39,9 +39,13 @@ table{border-collapse:collapse;width:100%}th,td{text-align:left;padding:8px;bord
 .modal{position:fixed;inset:0;background:rgba(0,0,0,.4);display:flex;align-items:center;justify-content:center;padding:16px}.modal .card{max-width:640px;width:100%;max-height:90vh;overflow:auto;margin:0}
 .pw{font:15px ui-monospace,Menlo,monospace;background:#FFF8D6;border:1px dashed #b89a1c;padding:10px;border-radius:6px;user-select:all}
 /* global menu: always present, left of the logo */
-#menuBtn{display:inline-flex;align-items:center;justify-content:center;width:36px;height:36px;font-size:19px;line-height:1;padding:0}
+#menuBtn{display:none;align-items:center;justify-content:center;width:36px;height:36px;font-size:19px;line-height:1;padding:0}
 #gm{position:fixed;top:50px;left:0;bottom:0;width:260px;background:#fff;border-right:1px solid var(--line);box-shadow:4px 0 16px rgba(0,0,0,.12);z-index:60;padding:12px 10px;overflow:auto;display:none}
 body.gm-open #gm{display:block}
+.topnav{display:flex;gap:4px;align-items:center}.topnav a{padding:7px 14px;border-radius:999px;color:var(--ink);text-decoration:none;font-weight:600;font-size:13.5px;cursor:pointer;white-space:nowrap}.topnav a:hover{background:var(--panel-2)}.topnav a.on{background:var(--brand-yellow)}
+/* wide screens: the menu lies across the top bar; narrow screens (tablet portrait, phone): it folds into the button */
+@media(max-width:860px){#menuBtn{display:inline-flex;align-items:center;justify-content:center;width:36px;height:36px;font-size:19px;line-height:1;padding:0}.topnav{display:none}#uname{display:none}}
+@media(min-width:861px){#gm,#gmShade{display:none !important}}
 #gm a{display:block;padding:10px 12px;border-radius:10px;color:var(--ink);cursor:pointer;text-decoration:none;font-weight:600;font-size:14px;margin-bottom:2px}#gm a:hover{background:var(--panel-2)}#gm a.on{background:var(--brand-yellow)}
 #gm .gsep{height:1px;background:var(--line);margin:8px 4px}#gm .glab{font-size:10.5px;text-transform:uppercase;letter-spacing:.08em;color:var(--faint);margin:10px 12px 4px;font-weight:600}
 #gfoot{position:fixed;left:0;right:0;bottom:0;height:24px;background:#fff;border-top:1px solid var(--line);display:flex;gap:16px;align-items:center;padding:0 14px;font-size:11px;color:var(--faint);z-index:40}#gfoot #gstat a{cursor:pointer}
@@ -83,6 +87,8 @@ async function route(){
   if(!TOKEN){ if(path !== 'login') { location.hash = '#/login'; return; } return viewLogin(); }
   if(!ME){ try{ ME = await api('GET', '/auth/me'); }catch(e){ if(!TOKEN) viewLogin(); return; } }
   if(ME.user.mustChangePassword) return viewChange();
+  // The page is newer than the server: the server has not finished updating (or its update failed). Say so instead of showing empty menus.
+  if(!ME.menu){ plain('<h1>Almost there</h1><div class="mut">This page is newer than the server it talks to. The server has not finished updating, or its update failed. In Railway, open the LucInd service, Deployments, and check that the latest deployment says Active. If it says Failed, open it and read the log.</div><p><button class="btn" onclick="location.reload()">Check again</button></p>'); return; }
   if(path === 'login' || !path) { location.hash = '#/home'; return; }
   shell(path);
 }
@@ -150,7 +156,7 @@ function shell(path){
   const gm = (ME.menu || []).map(m => (m.key === 'admin' || m.key === 'builder' ? '' : '') + `<a href="${menuHref(m)}" data-m="${m.key}" class="${cur === m.key && path !== 'home' ? 'on' : ''}">${esc(m.label)}</a>`).join('');
   // Second-level menu for the native sections (Estimator, Admin, Builder). Project Manager brings its own tabs.
   const side = (curItem && !FRAMED[path]) ? curItem.sections.map(sec => `<div class="sec">${esc(sec.label)}</div>` + sec.panes.map(p => `<a href="#/${p.key}" class="${path === p.key ? 'on' : ''}">${esc(p.label)}</a>`).join('')).join('') : '';
-  $('#app').innerHTML = `<div class="top"><button id="menuBtn" type="button" class="btn sec" aria-label="Main menu" title="Main menu">&#9776;</button><a href="#/home" style="display:flex;align-items:center;gap:12px;color:inherit" title="Home"><img src="logo.png" alt=""><div><b>Lucas Industrial</b><small>Company platform</small></div></a><span class="sp"></span><span>${esc(ME.user.name)}</span><a id="lo">Sign out</a></div>
+  $('#app').innerHTML = `<div class="top"><button id="menuBtn" type="button" class="btn sec" aria-label="Main menu" title="Main menu">&#9776;</button><a href="#/home" style="display:flex;align-items:center;gap:12px;color:inherit" title="Home"><img src="logo.png" alt=""><div><b>Lucas Industrial</b><small>Company platform</small></div></a><span class="sp"></span><nav class="topnav" aria-label="Main menu">${(ME.menu || []).map(m => `<a href="${menuHref(m)}" class="${cur === m.key && path !== 'home' ? 'on' : ''}">${esc(m.label)}</a>`).join('')}</nav><span class="sp"></span><span id="uname">${esc(ME.user.name)}</span><a id="lo">Sign out</a></div>
   <div id="gmShade"></div><div id="gfoot"><span id="gver"></span><span id="gstat"></span><span>&reg; Lucas Industrial</span></div><nav id="gm" aria-label="Main menu">${gm}</nav>
   <div class="layout">${side ? `<div class="side">${side}</div>` : ''}<div class="main" id="main"></div></div>`;
   paintFooter(); document.body.classList.remove('gm-open'); document.body.classList.toggle('fullpage', !!FRAMED[path]);
@@ -194,20 +200,24 @@ async function tabPeople(el, canW){
   const roleLabel = k => (cat.roles.find(r => r.key === k) || {}).label || k;
   el.innerHTML = `<div class="card"><div class="row" style="align-items:center"><h2 style="margin:0">People</h2>${canW ? '<button class="btn" id="add" style="flex:0">+ Add person</button>' : ''}</div>
   <table><tr><th>Name</th><th>Username</th><th>Email</th><th>Role</th><th>Status</th><th>Last sign-in</th><th></th></tr>
-  ${u.users.map(x => `<tr><td>${esc(x.name)}</td><td>${esc(x.username || '')}</td><td>${esc(x.email)}</td><td>${esc(roleLabel(x.role))}</td><td><span class="tag ${x.status === 'active' ? 'act' : 'dis'}">${esc(x.status)}</span></td><td>${when(x.lastLoginAt)}</td><td>${canW ? `<button class="btn sec sm" data-id="${x.id}">Manage</button>` : ''}</td></tr>`).join('')}</table></div>`;
+  ${u.users.map(x => `<tr><td>${esc(x.name)}</td><td>${esc(x.username || '')}</td><td>${esc(x.email)}</td><td>${esc([x.role].concat(x.extraRoles || []).map(roleLabel).join(' + '))}</td><td><span class="tag ${x.status === 'active' ? 'act' : 'dis'}">${esc(x.status)}</span></td><td>${when(x.lastLoginAt)}</td><td>${canW ? `<button class="btn sec sm" data-id="${x.id}">Manage</button>` : ''}</td></tr>`).join('')}</table></div>`;
   if(!canW) return;
   el.querySelector('#add').onclick = () => addPerson(cat, () => tabPeople(el, canW));
   el.querySelectorAll('button[data-id]').forEach(b => b.onclick = () => managePerson(u.users.find(x => x.id == b.dataset.id), cat, () => tabPeople(el, canW)));
 }
+// "Also does" checkboxes: a person with more than one job gets the combined access of every role ticked.
+const extraBoxes = (roles, primary, have) => '<label>Also does these jobs <span class="mut" style="text-transform:none;font-weight:400">(access is combined)</span></label><div id="xr" style="display:flex;gap:14px;flex-wrap:wrap;margin:4px 0 8px">' +
+  roles.filter(r => r.key !== 'builder').map(r => `<label style="display:flex;align-items:center;gap:6px;margin:0;font-weight:400;text-transform:none;letter-spacing:0"><input type="checkbox" value="${r.key}" style="width:auto" ${(have || []).includes(r.key) ? 'checked' : ''}> ${esc(r.label)}</label>`).join('') + '</div>';
+const pickedExtras = m => [...m.querySelectorAll('#xr input:checked')].map(i => i.value);
 function addPerson(cat, done){
   const roles = cat.roles.filter(r => r.key !== 'builder' || ME.user.role === 'builder');
   const m = modal(`<h2>Add person</h2><label>Name</label><input id="n"><label>Work email (used for password resets)</label><input id="e" type="email"><label>Username (what they type to sign in; leave blank to use the part before the @)</label><input id="un" autocapitalize="none" spellcheck="false">
-  <label>Role</label><select id="r">${roles.map(r => `<option value="${r.key}">${esc(r.label)}</option>`).join('')}</select>
+  <label>Main role</label><select id="r">${roles.map(r => `<option value="${r.key}">${esc(r.label)}</option>`).join('')}</select>${extraBoxes(roles)}
   <label>How should they get in?</label><select id="md"><option value="invite">Email them a link to choose their own password</option><option value="temp">Give me a temporary password to hand over</option></select>
   <div id="m" class="err"></div><div class="row" style="margin-top:12px"><button class="btn sec" id="x">Cancel</button><button class="btn" id="ok">Add</button></div>`);
   m.querySelector('#x').onclick = m.close;
   m.querySelector('#ok').onclick = async () => {
-    try{ const r = await api('POST', '/admin/users', { name: m.querySelector('#n').value, email: m.querySelector('#e').value, username: m.querySelector('#un').value, role: m.querySelector('#r').value, mode: m.querySelector('#md').value });
+    try{ const r = await api('POST', '/admin/users', { name: m.querySelector('#n').value, email: m.querySelector('#e').value, username: m.querySelector('#un').value, role: m.querySelector('#r').value, extraRoles: pickedExtras(m), mode: m.querySelector('#md').value });
       if(r.temporaryPassword){ m.querySelector('.card').innerHTML = `<h2>Person added</h2><p>Give them this temporary password. It is shown only once. They will choose their own at first sign-in.</p><div class="pw">${esc(r.temporaryPassword)}</div><div style="margin-top:12px"><button class="btn" id="d">Done</button></div>`; m.querySelector('#d').onclick = () => { m.close(); done(); }; }
       else { m.close(); done(); } }catch(e){ m.querySelector('#m').textContent = say(e); }
   };
@@ -220,7 +230,7 @@ function managePerson(u, cat, done){
     return `<tr><td>${esc(p.label)}</td><td><select data-k="${p.key}" ${locked || u.role === 'builder' ? 'disabled' : ''}><option value="">Role default</option>${cat.levels.map(l => `<option value="${l}" ${ov[p.key] === l ? 'selected' : ''}>${l}</option>`).join('')}</select></td></tr>`;
   }).join('')).join('');
   const m = modal(`<h2>${esc(u.name)}</h2><div class="mut">${esc(u.username || '')} · ${esc(u.email)} · ${esc(u.status)}</div>
-  <div class="row"><div><label>Name</label><input id="n" value="${esc(u.name)}"></div><div><label>Username</label><input id="un" value="${esc(u.username || '')}" autocapitalize="none" spellcheck="false"></div><div><label>Email</label><input id="e" value="${esc(u.email)}"></div><div><label>Role</label><select id="r">${roles.map(r => `<option value="${r.key}" ${u.role === r.key ? 'selected' : ''}>${esc(r.label)}</option>`).join('')}</select></div></div>
+  <div class="row"><div><label>Name</label><input id="n" value="${esc(u.name)}"></div><div><label>Username</label><input id="un" value="${esc(u.username || '')}" autocapitalize="none" spellcheck="false"></div><div><label>Email</label><input id="e" value="${esc(u.email)}"></div><div><label>Main role</label><select id="r">${roles.map(r => `<option value="${r.key}" ${u.role === r.key ? 'selected' : ''}>${esc(r.label)}</option>`).join('')}</select></div></div>${u.role === 'builder' ? '' : extraBoxes(roles, u.role, u.extraRoles)}
   <div style="margin-top:8px"><button class="btn sm" id="sv">Save details</button></div><div id="m"></div><hr>
   <h2 style="font-size:15px">Access for this person only</h2><div class="mut">Leave on "Role default" unless this person needs more or less than their role.</div>
   <table>${grid}</table><div style="margin-top:8px"><button class="btn sm" id="sp" ${u.role === 'builder' ? 'disabled' : ''}>Save access</button></div><hr>
@@ -229,7 +239,7 @@ function managePerson(u, cat, done){
   const msg = (t, ok) => { m.querySelector('#m').innerHTML = `<div class="${ok ? 'okm' : 'err'}">${esc(t)}</div>`; };
   const run = fn => async () => { try{ await fn(); }catch(e){ msg(say(e)); } };
   m.querySelector('#x').onclick = () => { m.close(); done(); };
-  m.querySelector('#sv').onclick = run(async () => { await api('PATCH', '/admin/users/' + u.id, { name: m.querySelector('#n').value, username: m.querySelector('#un').value, email: m.querySelector('#e').value, role: m.querySelector('#r').value }); msg('Saved.', true); });
+  m.querySelector('#sv').onclick = run(async () => { await api('PATCH', '/admin/users/' + u.id, { name: m.querySelector('#n').value, username: m.querySelector('#un').value, email: m.querySelector('#e').value, role: m.querySelector('#r').value, extraRoles: u.role === 'builder' ? undefined : pickedExtras(m) }); msg('Saved.', true); });
   m.querySelector('#sp').onclick = run(async () => { const perms = {}; m.querySelectorAll('select[data-k]').forEach(s => { if(s.disabled) return; const v = s.value || null; if((ov[s.dataset.k] || null) !== v) perms[s.dataset.k] = v; }); await api('PUT', '/admin/users/' + u.id + '/permissions', { perms }); msg('Access saved.', true); });
   m.querySelector('#tp').onclick = run(async () => { if(!confirm('Set a new temporary password? Their current sessions end.')) return; const r = await api('POST', '/admin/users/' + u.id + '/reset-password', { mode: 'temp' }); m.querySelector('#m').innerHTML = `<div class="okm">Temporary password (shown once):</div><div class="pw">${esc(r.temporaryPassword)}</div>`; });
   m.querySelector('#em').onclick = run(async () => { await api('POST', '/admin/users/' + u.id + '/reset-password', { mode: 'email' }); msg('Link emailed.', true); });

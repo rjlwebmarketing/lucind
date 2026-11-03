@@ -96,6 +96,9 @@
   #mobileNavBackdrop.open{display:block;}
   /* Builder/Admin tools moved to the global menu; version + trademark are global too */
   #devTasksBtn,#requestsBtn,#changeCodeBtn,#settingsHubBtn,#architectureBtn,#exportDataBtn,#appVersionDisplay,#versionStatus,.sidebar-foot > div:last-of-type{display:none !important;}
+  body.only-view #sidebar,body.only-view #mobileTopBar,body.only-view #assistantBar,body.only-view #suggestPill{display:none !important;}
+  body.only-view #main{padding:20px 22px 40px;}
+  body.ro-mode input:disabled,body.ro-mode select:disabled,body.ro-mode textarea:disabled{opacity:1;color:var(--text);background:var(--panel-2);cursor:default;}
   body.tool-mode #sidebar,body.tool-mode #main,body.tool-mode #mobileTopBar,body.tool-mode #assistantBar,body.tool-mode #suggestPill{display:none !important;}
   #toolReopen{display:none;text-align:center;padding:60px 20px}body.tool-mode.tool-closed #toolReopen{display:block}
   #sidebar{
@@ -1514,7 +1517,7 @@ function wireGate(){
       if(!res.ok){ AUTH_TOKEN = null; return needSignIn(res.status === 401 ? 'Your session has ended. Please sign in again.' : 'You do not have access to this section.'); }
       me = await res.json();
     }catch(e){ AUTH_TOKEN = null; return needSignIn("Can't reach the server. Check your connection and try again."); }
-    if(!me.hasPmAccess){ AUTH_TOKEN = null; return needSignIn('You do not have access to this section.'); }
+    if(!me.hasPmAccess && !(me.hasCrossView && new URLSearchParams(location.search).get('only') === 'people')){ AUTH_TOKEN = null; return needSignIn('You do not have access to this section.'); }
     ROLE = me.role; GO_PANES = me.panes || {}; GO_USER = { id: me.userId, name: me.name, username: me.username };
     BUILDER_MODE = (ROLE === 'builder'); OWNER_MODE = (ROLE === 'owner'); PM_MODE = (ROLE === 'pm');
     try{ await loadData(); }catch(e){
@@ -1529,7 +1532,7 @@ function wireGate(){
     render(); applyBuilderVisibility(); startPolling(); showAssistantBar(); geocodeHQAddress();
     mergeSuggestionInbox(); installPmRemovalMode(); startPresence();
     wireToastSoundBtn(); pollToasts(); setInterval(pollToasts, 30000);
-    runDeepLinkTool();
+    runDeepLinkTool(); runOnlyView();
   })();
 }
 // Managers' "Suggest a change" lands in a server-side inbox only the Builder can
@@ -5281,7 +5284,7 @@ function openProjectHealthModal(projId){
       else if(iss.type==='status_mismatch') btn = `<button class="btn small primary" data-health-promote-greenlit type="button">Promote to Green-lit</button>`;
       else if(iss.type==='missing_location') btn = `<button class="btn small primary" data-health-fix-location type="button">Enter address</button>`;
       else if(iss.type==='paused_but_assigned') btn = `<button class="btn small primary" data-health-crew type="button">Find replacement</button>`;
-      else if(iss.type==='no_backup' || iss.type==='proposal_overdue') btn = `<button class="btn small primary" data-health-bids type="button">Open Proposals</button>`;
+      else if(iss.type==='no_backup' || iss.type==='proposal_overdue') btn = `<button class="btn small primary" data-health-bids type="button">Open Request For Proposals</button>`;
       else if(iss.type==='low_margin') btn = `<button class="btn small primary" data-health-money type="button">Open Pay Apps</button>`;
       return `<div class="health-issue">
         <span class="health-warn-icon">${iss.type==='no_coverage'?'\u26d4':'\u26a0\ufe0f'}</span>
@@ -6476,7 +6479,7 @@ function paintMoney(){
       <div class="row2"><div class="field"><label>Agreed / quoted price ($)</label>${mNumIn('dl_price', d.price)}</div>
       <div class="field"><label>Status</label><select id="dl_status">${['active', 'paused', 'dropped', 'complete'].map(x => `<option value="${x}" ${d.status === x ? 'selected' : ''}>${({ active: 'Active', paused: 'Detached — on hold', dropped: 'Dropped out', complete: 'Complete' })[x]}</option>`).join('')}</select></div></div>
       <div class="field"><label>Notes</label><input id="dl_notes" value="${mInp(d.notes)}" placeholder="e.g. includes mobilization, excludes permits"></div>
-      <div class="hint" style="margin:0 0 8px;">Who the sub is, what they cover and their role come from Dispatch and Proposals.</div>
+      <div class="hint" style="margin:0 0 8px;">Who the sub is, what they cover and their role come from Dispatch and Request For Proposals.</div>
       <div style="display:flex; gap:8px;"><button class="btn primary small" data-m="deal-save" type="button">Save sub</button><button class="btn ghost small" data-m="edit-cancel" type="button">Cancel</button></div></div>`;
   })() : '';
 
@@ -6515,7 +6518,7 @@ function paintMoney(){
     </div></div>
 
     <div class="panel mny-sec"><div class="panel-head"><h3>Subcontractors</h3></div><div class="panel-body">
-      <div class="hint" style="margin:0 0 8px;">Who works on this job is chosen in Dispatch and Proposals. Add each sub's price here.</div>
+      <div class="hint" style="margin:0 0 8px;">Who works on this job is chosen in Dispatch and Request For Proposals. Add each sub's price here.</div>
       ${s.missingBackups.length ? (() => {
         const miss = s.missingBackups.map(d => ({ d, pe: backupNamedInDispatch(p, d) })), named = miss.filter(x => x.pe), unnamed = miss.filter(x => !x.pe);
         return (unnamed.length ? `<div class="mny-warn">No backup sub on file for ${esc(unnamed.map(x => mSubName(x.d) + ' (' + mPhaseLabel(p, x.d.phaseId) + ')').join(', '))}. Name a backup in Dispatch (a price is optional) so a drop-out doesn't stall the job.</div>` : '');
@@ -6531,7 +6534,7 @@ function paintMoney(){
           <div style="flex:1; min-width:200px;"><strong>${esc(w.name)}</strong> ${w.type === 'temp' ? mTag('Temp For Hire', cssVar('--bidding')) : mTag('W-2', cssVar('--accent'))}
             <div class="hint" style="margin:0;">${esc(mPhaseLabel(p, w.phaseId))} · estimated from ${w.type === 'temp' ? (w.heads || 1) + ' person' + ((w.heads || 1) === 1 ? '' : 's') + ' at the day rate' : 'wage x man-days'}, counted in the margin</div></div>
           <div class="mono">${moneyStaff() ? mUsd(w.cost) : ''}</div></div></div>`).join('');
-        return pendHtml + cards + crewHtml || '<div class="hint">No subs on this project yet. Assign or award one in Dispatch or Proposals.</div>';
+        return pendHtml + cards + crewHtml || '<div class="hint">No subs on this project yet. Assign or award one in Dispatch or Request For Proposals.</div>';
       })()}${dealEdit}
     </div></div>
 
@@ -7109,7 +7112,7 @@ function bidsRows(){
 }
 function renderBidsPage(){
   const rows = bidsRows();
-  if(!rows.length) return `<div class="page-head"><div><h2>Proposals</h2></div></div><div class="empty">Add a project first.</div>`;
+  if(!rows.length) return `<div class="page-head"><div><h2>Request For Proposals</h2></div></div><div class="empty">Add a project first.</div>`;
   if(!BIDS.pid || !rows.some(r => r.p.id === BIDS.pid)) BIDS.pid = (rows.find(r => r.st.state !== 'awarded') || rows[0]).p.id;
   const shown = rows.filter(r => BIDS.showAwarded || r.st.state !== 'awarded');
   const awardedN = rows.length - rows.filter(r => r.st.state !== 'awarded').length;
@@ -7130,7 +7133,7 @@ function renderBidsPage(){
   }).join('');
   return `
   <div class="page-head" style="display:flex; justify-content:space-between; align-items:center; gap:10px; flex-wrap:wrap;">
-    <div><h2>Proposals</h2><div class="hint" style="margin:2px 0 0;">Invite subs, collect their proposals, compare price and margin, then award the job.</div></div>
+    <div><h2>Request For Proposals</h2><div class="hint" style="margin:2px 0 0;">Invite subs, collect their proposals, compare price and margin, then award the job.</div></div>
     ${awardedN ? `<button class="btn ghost small" data-b="toggle-awarded" type="button">${BIDS.showAwarded ? 'Hide Awarded' : 'Show Awarded (' + awardedN + ')'}</button>` : ''}
   </div>
   <div class="panel" style="margin-bottom:20px;"><div class="panel-head"><h3>Projects With Open Proposals</h3></div>
@@ -7611,7 +7614,7 @@ const NAV = [
   {id:'dashboard', label:'Dashboard', icon: iconGrid},
   {id:'projects', label:'Projects', icon: iconLayers},
   {id:'people', label:'Crew & Subs', icon: iconUsers},
-  {id:'bids', label:'Proposals', icon: iconClipboard, child:true},
+  {id:'bids', label:'Request For Proposals', icon: iconClipboard, child:true},
   {id:'dispatch', label:'Dispatch', icon: iconTruck},
   {id:'money', label:'Pay Apps', icon: iconDollar},
   {id:'logistics', label:'Logistics AI', icon: iconRoute},
@@ -7651,7 +7654,7 @@ function renderNav(){
 
 const PAGE_TITLES = {
   dashboard: 'Dashboard', projects: 'Projects', people: 'Crew & Subs',
-  logistics: 'Logistics AI', map: 'Map', calendar: 'Calendar', dispatch: 'Dispatch', money: 'Pay Apps', bids: 'Proposals'
+  logistics: 'Logistics AI', map: 'Map', calendar: 'Calendar', dispatch: 'Dispatch', money: 'Pay Apps', bids: 'Request For Proposals'
 };
 function updatePageTitle(){
   const label = PAGE_TITLES[VIEW] || 'Dashboard';
@@ -12909,6 +12912,35 @@ function openMobileNav(){
 // The global menu opens one of the old footer tools directly: pm/index.html?tool=devTasks etc. Only that tool's window is shown.
 const TOOL_OPENERS = { devTasks: () => openDevTasksModal(), architecture: () => openArchitectureModal(), data: () => openDataTransferModal(), settings: () => openSettingsHub('rules'), requests: () => openRequestsModal() };
 let TOOL_NAME = null; try{ TOOL_NAME = new URLSearchParams(location.search).get('tool'); }catch(e){}
+// The Estimator's Crew & Subs is this very screen, view-only: ?only=people shows just the Crew & Subs page and, unless the person has write access
+// to it, switches on view-only mode: every field is locked and every add / change / pause / delete control is hidden. People and Assignments still open.
+let ONLY_VIEW = null; try{ ONLY_VIEW = new URLSearchParams(location.search).get('only'); }catch(e){}
+const RO_HIDE = /^\s*(\+|request\b|add\b|save|delete|remove|pause|reactivate|send|apply|create|import|find dup|grading|skillsets|merge|dispatch|new\b|upload|generate|assign\b|unassign|set\b|clear|reset|mark\b|confirm|submit|invite|duplicate|attach|rename|restore|undo|ask|draft|notify|email|text\b|call\b)/i;
+function applyReadOnly(){
+  document.querySelectorAll('#main input,#main select,#main textarea,#modalBody input,#modalBody select,#modalBody textarea').forEach(el => {
+    if(el.type === 'file'){ el.style.display = 'none'; return; }
+    el.disabled = true; if('readOnly' in el) el.readOnly = true; });
+  document.querySelectorAll('#main button,#modalBody button').forEach(b => {
+    if(b.matches('[data-quick-skills],[data-quick-grade]')){ b.style.pointerEvents = 'none'; b.disabled = true; return; }
+    if(b.matches('[data-edit-person],[data-person-sched],[data-people-filter],[data-toggle-paused-section],[data-edit-proj],.offcanvas-close,#offcanvasCloseBtn')) return;
+    const t = (b.textContent || '').trim();
+    if(b.matches('[data-delete-person],[data-delete-proj],[data-toggle-pause-person],[data-delete-skill],.btn.primary') || RO_HIDE.test(t)) b.style.display = 'none';
+  });
+}
+function runOnlyView(){
+  if(ONLY_VIEW !== 'people') return;
+  document.body.classList.add('only-view');
+  const ro = GO_PANES['pm.people'] !== 'write';
+  VIEW = 'people'; render();
+  if(!ro) return;
+  document.body.classList.add('ro-mode');
+  // Belt and braces: nothing this page sends can change data (the server refuses it too).
+  const realFetch = window.fetch.bind(window);
+  window.fetch = (u, o) => { const m = ((o && o.method) || 'GET').toUpperCase(); if(m !== 'GET' && !/\/(presence|auth\/me)/.test(String(u))) return Promise.resolve(new Response('{"error":"view_only"}', { status: 403, headers: { 'Content-Type': 'application/json' } })); return realFetch(u, o); };
+  let queued = false; const run = () => { if(queued) return; queued = true; requestAnimationFrame(() => { queued = false; applyReadOnly(); }); };
+  new MutationObserver(run).observe(document.body, { childList: true, subtree: true });
+  applyReadOnly();
+}
 function runDeepLinkTool(){
   if(!TOOL_NAME || !TOOL_OPENERS[TOOL_NAME]) return;
   document.body.classList.add('tool-mode');

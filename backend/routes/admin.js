@@ -22,7 +22,7 @@ async function sendInvite(u, ip, by){
   await sendMail({ to: u.email, subject: m.subject, text: m.text, html: m.html });
   await audit(by, 'user.invite_sent', 'user', u.id, null, ip);
 }
-const shape = (u, ov) => ({ id: Number(u.id), username: u.username || null, email: u.email, name: u.name, role: u.role_key, status: u.status, mustChangePassword: !!u.must_change_password, lastLoginAt: u.last_login_at == null ? null : Number(u.last_login_at), createdAt: Number(u.created_at), overrides: ov || {} });
+const shape = (u, ov, extra) => ({ id: Number(u.id), username: u.username || null, email: u.email, name: u.name, role: u.role_key, extraRoles: extra || [], status: u.status, mustChangePassword: !!u.must_change_password, lastLoginAt: u.last_login_at == null ? null : Number(u.last_login_at), createdAt: Number(u.created_at), overrides: ov || {} });
 
 const anyOf = (...keys) => (req, res, next) => keys.some(k => req.perms && req.perms[k] && req.perms[k] !== 'none') ? next() : res.status(403).json({ error: 'forbidden' });
 router.get('/catalog', anyOf('admin.users', 'builder.roles'), wrap(async (req, res) => {
@@ -30,11 +30,26 @@ router.get('/catalog', anyOf('admin.users', 'builder.roles'), wrap(async (req, r
   res.json({ sections: SECTIONS, levels: LEVELS, roles: roles.map(r => ({ key: r.role_key, label: r.label, system: !!r.is_system })) });
 }));
 
+// Extra roles for someone who does more than one job. Never Builder; never the same as the primary role.
+async function cleanExtraRoles(list, primary){
+  const want = [...new Set((Array.isArray(list) ? list : []).map(String))].filter(k => k !== primary);
+  if(want.includes('builder')) return { error: 'forbidden' };
+  if(!want.length) return { roles: [] };
+  const [rows] = await pool.query('SELECT role_key FROM roles WHERE role_key IN (' + want.map(() => '?').join(',') + ')', want);
+  if(rows.length !== want.length) return { error: 'unknown_role' };
+  return { roles: want };
+}
+async function saveExtraRoles(userId, roles){
+  await pool.query('DELETE FROM user_roles WHERE user_id = ?', [userId]);
+  for(const k of roles) await pool.query('INSERT INTO user_roles (user_id, role_key) VALUES (?, ?)', [userId, k]);
+}
 router.get('/users', R, wrap(async (req, res) => {
   const [us] = await pool.query('SELECT * FROM users ORDER BY id');
   const [ov] = await pool.query('SELECT user_id, perm_key, level FROM user_permissions');
   const by = {}; ov.forEach(o => { (by[o.user_id] = by[o.user_id] || {})[o.perm_key] = o.level; });
-  res.json({ users: us.map(u => shape(u, by[u.id])) });
+  const [xr] = await pool.query('SELECT user_id, role_key FROM user_roles');
+  const ex = {}; xr.forEach(x => { (ex[x.user_id] = ex[x.user_id] || []).push(x.role_key); });
+  res.json({ users: us.map(u => shape(u, by[u.id], ex[u.id])) });
 }));
 
 // Create a person. mode 'invite' emails a link; mode 'temp' returns a one-time temporary password to hand over.
@@ -44,6 +59,7 @@ router.post('/users', W, wrap(async (req, res) => {
   const [role] = await pool.query('SELECT role_key FROM roles WHERE role_key = ?', [b.role]);
   if(!role.length) return res.status(400).json({ error: 'unknown_role' });
   if(b.role === 'builder' && req.user.role_key !== 'builder') return res.status(403).json({ error: 'forbidden' });
+  const xr = await cleanExtraRoles(b.extraRoles, b.role); if(xr.error) return res.status(xr.error === 'forbidden' ? 403 : 400).json({ error: xr.error });
   const [dupe] = await pool.query('SELECT id FROM users WHERE email = ?', [email]);
   if(dupe.length) return res.status(409).json({ error: 'email_in_use' });
   let username = String(b.username || '').trim().toLowerCase();
@@ -53,7 +69,8 @@ router.post('/users', W, wrap(async (req, res) => {
   const [ins] = await pool.query('INSERT INTO users (email, username, name, role_key, status, password_hash, must_change_password, created_at, created_by) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)',
     [email, username, name, b.role, 'active', temp ? await hashPassword(temp) : null, 1, Date.now(), req.user.id]);
   const u = { id: ins.insertId, email, username, name, role_key: b.role };
-  await audit(req.user, 'user.create', 'user', u.id, { email, username, name, role: b.role }, req.ip);
+  await saveExtraRoles(u.id, xr.roles);
+  await audit(req.user, 'user.create', 'user', u.id, { email, username, name, role: b.role, extraRoles: xr.roles }, req.ip);
   if(!temp) await sendInvite(u, req.ip, req.user);
   res.json({ id: Number(u.id), username, temporaryPassword: temp });
 }));
@@ -81,10 +98,16 @@ router.patch('/users/:id', W, wrap(async (req, res) => {
     if(u.role_key === 'builder' && b.role !== 'builder'){ const [c] = await pool.query("SELECT COUNT(*) AS c FROM users WHERE role_key = 'builder' AND status = 'active'"); if(Number(c[0].c) <= 1) return res.status(409).json({ error: 'last_builder' }); }
     sets.push('role_key = ?'); vals.push(b.role); changed.role = b.role;
   }
-  if(!sets.length) return res.json({ ok: true });
+  if(b.extraRoles !== undefined){
+    if(u.role_key === 'builder') return res.status(409).json({ error: 'builder_is_always_full_access' });
+    const xr = await cleanExtraRoles(b.extraRoles, b.role !== undefined ? b.role : u.role_key); if(xr.error) return res.status(xr.error === 'forbidden' ? 403 : 400).json({ error: xr.error });
+    await saveExtraRoles(id, xr.roles); changed.extraRoles = xr.roles; changed.rolesChanged = true;
+  }
+  if(!sets.length && !changed.rolesChanged){ return res.json({ ok: true }); }
   delete changed.revokeSessions;
-  await pool.query('UPDATE users SET ' + sets.join(', ') + ' WHERE id = ?', vals.concat([id]));
-  if(changed.role) await revokeSessions(id);
+  if(sets.length) await pool.query('UPDATE users SET ' + sets.join(', ') + ' WHERE id = ?', vals.concat([id]));
+  if(changed.role || changed.rolesChanged) await revokeSessions(id);
+  delete changed.rolesChanged;
   await audit(req.user, 'user.update', 'user', id, changed, req.ip);
   res.json({ ok: true });
 }));

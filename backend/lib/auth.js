@@ -20,13 +20,17 @@ async function revokeSessions(userId, exceptHash){
 async function effectivePerms(user){
   if(user.role_key === 'builder'){ const all = {}; PANE_KEYS.forEach(k => { all[k] = 'write'; }); return all; }
   const out = {}; PANE_KEYS.forEach(k => { out[k] = 'none'; });
-  const [tpl] = await pool.query('SELECT perm_key, level FROM role_permissions WHERE role_key = ?', [user.role_key]);
-  tpl.forEach(r => { if(r.perm_key in out) out[r.perm_key] = r.level; });
+  // Every role the person has (primary + extras): the highest level on each screen wins.
+  const roles = user.roles || [user.role_key];
+  for(const role of roles){
+    const [tpl] = await pool.query('SELECT perm_key, level FROM role_permissions WHERE role_key = ?', [role]);
+    tpl.forEach(r => { if(r.perm_key in out && lvl(r.level) > lvl(out[r.perm_key])) out[r.perm_key] = r.level; });
+  }
   const [ov] = await pool.query('SELECT perm_key, level FROM user_permissions WHERE user_id = ?', [user.id]);
   ov.forEach(r => { if(r.perm_key in out) out[r.perm_key] = r.level; });
   return out;
 }
-const publicUser = u => ({ id: Number(u.id), username: u.username || null, email: u.email, name: u.name, role: u.role_key, mustChangePassword: !!u.must_change_password });
+const publicUser = u => ({ id: Number(u.id), username: u.username || null, email: u.email, name: u.name, role: u.role_key, roles: u.roles || [u.role_key], mustChangePassword: !!u.must_change_password });
 
 // Express middleware: who is calling? Sets req.user, req.perms, req.sessionHash.
 async function requireAuth(req, res, next){
@@ -41,6 +45,8 @@ async function requireAuth(req, res, next){
     if(!r || Number(r.expires_at) < now || now - Number(r.session_created_at) > (keep ? REMEMBER_MS : MAX_MS)){ if(r) await pool.query('DELETE FROM sessions WHERE token_hash = ?', [th]); return res.status(401).json({ error: 'session_expired' }); }
     if(r.status !== 'active') return res.status(401).json({ error: 'account_disabled' });
     await pool.query('UPDATE sessions SET last_seen = ?, expires_at = ? WHERE token_hash = ?', [now, keep ? Math.min(now + REMEMBER_MS, Number(r.session_created_at) + REMEMBER_MS) : now + IDLE_MS, th]);
+    const [xr] = await pool.query('SELECT role_key FROM user_roles WHERE user_id = ?', [r.id]);
+    r.roles = [r.role_key].concat(xr.map(x => x.role_key).filter(k => k !== r.role_key && k !== 'builder'));
     req.user = r; req.sessionHash = th; req.perms = await effectivePerms(r);
     return next();
   }catch(e){ console.error('[auth]', e); return res.status(500).json({ error: 'server_error' }); }

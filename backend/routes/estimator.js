@@ -145,7 +145,7 @@ router.get('/quota', R, wrap(async (req, res) => {
 // Everyone's standing, for the Owner / Builder.
 router.get('/quota/all', requirePerm('admin.users', 'read'), wrap(async (req, res) => {
   const [us] = await pool.query("SELECT DISTINCT u.id, u.name, u.username FROM users u JOIN est_bids b ON b.owner_id = u.id WHERE u.status = 'active'");
-  const [q] = await pool.query("SELECT u.id, u.name, u.username FROM users u WHERE u.status = 'active' AND u.role_key = 'estimator'");
+  const [q] = await pool.query("SELECT u.id, u.name, u.username FROM users u WHERE u.status = 'active' AND (u.role_key = 'estimator' OR u.id IN (SELECT user_id FROM user_roles WHERE role_key = 'estimator'))");
   const seen = {}; const people = [...q, ...us].filter(u => !seen[u.id] && (seen[u.id] = 1));
   res.json({ people: await Promise.all(people.map(async u => Object.assign({ name: u.name, username: u.username }, await quotaFor(Number(u.id))))) });
 }));
