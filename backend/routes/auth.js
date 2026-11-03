@@ -35,7 +35,7 @@ router.post('/login', limiter('login', 30, 15 * 60 * 1000), async (req, res) => 
     }
     if(u.status !== 'active') return res.status(403).json({ error: 'account_disabled' });
     await pool.query('UPDATE users SET failed_count = 0, locked_until = 0, last_login_at = ? WHERE id = ?', [now, u.id]);
-    const token = await createSession(u.id, req.ip, req.headers['user-agent']);
+    const token = await createSession(u.id, req.ip, req.headers['user-agent'], !!(req.body && req.body.remember));
     await audit(u, 'login.ok', 'user', u.id, null, req.ip);
     res.json({ token, user: publicUser(u) });
   }catch(e){ console.error('[login]', e); res.status(500).json({ error: 'server_error' }); }

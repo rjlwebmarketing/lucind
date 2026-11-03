@@ -49,8 +49,12 @@ body.fullpage #menuBtn{display:inline-block}
 const $ = s => document.querySelector(s);
 const esc = s => String(s == null ? '' : s).replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
 let TOKEN = null, ME = null;
-try{ TOKEN = sessionStorage.getItem('go_token'); }catch(e){}
-const saveTok = t => { TOKEN = t; try{ t ? sessionStorage.setItem('go_token', t) : sessionStorage.removeItem('go_token'); }catch(e){} };
+// "Keep me signed in" keeps the sign-in token in this browser's local storage (up to 30 days); otherwise it lives only until the tab closes.
+try{ TOKEN = sessionStorage.getItem('go_token') || localStorage.getItem('go_token'); if(TOKEN) sessionStorage.setItem('go_token', TOKEN); }catch(e){}
+const saveTok = (t, remember) => { TOKEN = t; try{
+  if(t){ sessionStorage.setItem('go_token', t); if(remember) localStorage.setItem('go_token', t); }
+  else { sessionStorage.removeItem('go_token'); localStorage.removeItem('go_token'); }
+}catch(e){} };
 
 async function api(method, path, body){
   const r = await fetch(GO_CONFIG.API + '/api' + path, { method, headers: Object.assign({ 'Content-Type': 'application/json' }, TOKEN ? { Authorization: 'Bearer ' + TOKEN } : {}), body: body === undefined ? undefined : JSON.stringify(body) });
@@ -70,7 +74,7 @@ async function route(){
   if(path === 'reset') return viewReset(q.get('token') || '');
   if(path === 'forgot') return viewForgot();
   if(!TOKEN){ if(path !== 'login') { location.hash = '#/login'; return; } return viewLogin(); }
-  if(!ME){ try{ ME = await api('GET', '/auth/me'); }catch(e){ return; } }
+  if(!ME){ try{ ME = await api('GET', '/auth/me'); }catch(e){ if(!TOKEN) viewLogin(); return; } }
   if(ME.user.mustChangePassword) return viewChange();
   if(path === 'login' || !path) { location.hash = '#/home'; return; }
   shell(path);
@@ -81,9 +85,10 @@ function plain(html){ document.body.classList.remove('fullpage', 'menu-open'); $
 function viewLogin(){
   plain(`<h1>Lucas Industrial</h1><div class="mut">Sign in</div>
   <label>Username or email</label><input id="em" type="text" autocomplete="username" autocapitalize="none" spellcheck="false"><label>Password</label><input id="pw" type="password" autocomplete="current-password">
+  <label style="display:flex;align-items:center;gap:8px;margin:12px 0 0;font-size:13px;color:var(--ink)"><input id="rem" type="checkbox" style="width:auto"> Keep me signed in for 30 days</label><div class="mut" style="font-size:11px;margin:2px 0 0 24px">Only on a device that is yours.</div>
   <div id="m" class="err"></div><button class="btn" id="go" style="width:100%">Sign in</button>
   <p style="text-align:center"><a href="#/forgot">Forgot password?</a></p>`);
-  const go = async () => { try{ const r = await api('POST', '/auth/login', { login: $('#em').value, password: $('#pw').value }); saveTok(r.token); ME = null; location.hash = '#/home'; route(); }catch(e){ $('#m').textContent = say(e); } };
+  const go = async () => { try{ const r = await api('POST', '/auth/login', { login: $('#em').value, password: $('#pw').value, remember: $('#rem').checked }); saveTok(r.token, $('#rem').checked); ME = null; location.hash = '#/home'; route(); }catch(e){ $('#m').textContent = say(e); } };
   $('#go').onclick = go; $('#pw').onkeydown = e => { if(e.key === 'Enter') go(); };
 }
 function viewForgot(){

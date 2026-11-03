@@ -74,6 +74,7 @@ const DDL = [
     expires_at BIGINT NOT NULL,
     ip VARCHAR(64) NULL,
     ua VARCHAR(255) NULL,
+    remember INT NOT NULL DEFAULT 0,
     KEY idx_user (user_id)
   ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4`,
 
@@ -169,6 +170,7 @@ async function migrateUsernames(){
 }
 async function ensureSchema(){
   for(const sql of DDL) await pool.query(sql);
+  try{ await pool.query('ALTER TABLE sessions ADD COLUMN remember INT NOT NULL DEFAULT 0'); }catch(e){ /* already there */ }
   await migrateUsernames();
   await seedRoles(); await seedSeats(); await bootstrapBuilder();
 }

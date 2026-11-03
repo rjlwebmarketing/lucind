@@ -4,11 +4,12 @@ const { lvl, expand, PANE_KEYS } = require('./catalog');
 
 const IDLE_MS = 8 * 3600 * 1000;          // signed out after 8 hours of no use
 const MAX_MS = 7 * 24 * 3600 * 1000;      // and never kept longer than 7 days in total
+const REMEMBER_MS = 30 * 24 * 3600 * 1000; // "Keep me signed in": up to 30 days, counted from sign-in
 
-async function createSession(userId, ip, ua){
+async function createSession(userId, ip, ua, remember){
   const token = newToken(), now = Date.now();
-  await pool.query('INSERT INTO sessions (token_hash, user_id, created_at, last_seen, expires_at, ip, ua) VALUES (?, ?, ?, ?, ?, ?, ?)',
-    [sha256(token), userId, now, now, now + IDLE_MS, ip || null, ua ? String(ua).slice(0, 250) : null]);
+  await pool.query('INSERT INTO sessions (token_hash, user_id, created_at, last_seen, expires_at, ip, ua, remember) VALUES (?, ?, ?, ?, ?, ?, ?, ?)',
+    [sha256(token), userId, now, now, now + (remember ? REMEMBER_MS : IDLE_MS), ip || null, ua ? String(ua).slice(0, 250) : null, remember ? 1 : 0]);
   return token;
 }
 async function revokeSessions(userId, exceptHash){
@@ -34,11 +35,12 @@ async function requireAuth(req, res, next){
     const token = h.startsWith('Bearer ') ? h.slice(7).trim() : '';
     if(!token) return res.status(401).json({ error: 'not_signed_in' });
     const th = sha256(token), now = Date.now();
-    const [rows] = await pool.query('SELECT s.token_hash, s.created_at, s.expires_at, u.* FROM sessions s JOIN users u ON u.id = s.user_id WHERE s.token_hash = ?', [th]);
+    const [rows] = await pool.query('SELECT u.*, s.token_hash, s.created_at AS session_created_at, s.expires_at, s.remember FROM sessions s JOIN users u ON u.id = s.user_id WHERE s.token_hash = ?', [th]);
     const r = rows[0];
-    if(!r || Number(r.expires_at) < now || now - Number(r.created_at) > MAX_MS){ if(r) await pool.query('DELETE FROM sessions WHERE token_hash = ?', [th]); return res.status(401).json({ error: 'session_expired' }); }
+    const keep = !!(r && Number(r.remember || 0));
+    if(!r || Number(r.expires_at) < now || now - Number(r.session_created_at) > (keep ? REMEMBER_MS : MAX_MS)){ if(r) await pool.query('DELETE FROM sessions WHERE token_hash = ?', [th]); return res.status(401).json({ error: 'session_expired' }); }
     if(r.status !== 'active') return res.status(401).json({ error: 'account_disabled' });
-    await pool.query('UPDATE sessions SET last_seen = ?, expires_at = ? WHERE token_hash = ?', [now, now + IDLE_MS, th]);
+    await pool.query('UPDATE sessions SET last_seen = ?, expires_at = ? WHERE token_hash = ?', [now, keep ? Math.min(now + REMEMBER_MS, Number(r.session_created_at) + REMEMBER_MS) : now + IDLE_MS, th]);
     req.user = r; req.sessionHash = th; req.perms = await effectivePerms(r);
     return next();
   }catch(e){ console.error('[auth]', e); return res.status(500).json({ error: 'server_error' }); }

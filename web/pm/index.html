@@ -1496,7 +1496,7 @@ function wireGate(){
   const link = document.getElementById('gateSubmit');
   const needSignIn = msg => { desc.textContent = msg; link.style.display = ''; };
   (async function enter(){
-    let tok = null; try{ tok = sessionStorage.getItem('go_token'); }catch(e){}
+    let tok = null; try{ tok = sessionStorage.getItem('go_token') || localStorage.getItem('go_token'); }catch(e){}
     if(!tok) return needSignIn('Please sign in on the main page first.');
     AUTH_TOKEN = tok;
     let me;
