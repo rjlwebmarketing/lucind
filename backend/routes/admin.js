@@ -1,0 +1,207 @@
+const express = require('express');
+const pool = require('../config/db');
+const { requireAuth, requirePerm, blockUntilPasswordChanged, revokeSessions } = require('../lib/auth');
+const { hashPassword, randomPassword } = require('../lib/password');
+const { newToken, sha256 } = require('../lib/tokens');
+const { SECTIONS, PANE_KEYS, LEVELS } = require('../lib/catalog');
+const { audit } = require('../lib/audit');
+const { sendMail, resetEmail } = require('../lib/mailer');
+const { USERNAME_RE, usernameFromEmail, freeUsername } = require('../lib/schema');
+
+const router = express.Router();
+router.use(requireAuth, blockUntilPasswordChanged);
+const R = requirePerm('admin.users', 'read'), W = requirePerm('admin.users', 'write');
+const emailOk = e => /^[^@\s]+@[^@\s]+\.[^@\s]+$/.test(e) && e.length <= 190;
+const wrap = fn => async (req, res) => { try{ await fn(req, res); }catch(e){ console.error('[admin]', e); res.status(500).json({ error: 'server_error' }); } };
+
+async function freeSeat(userId){
+  await pool.query('UPDATE seat_history SET released_at = ? WHERE user_id = ? AND released_at IS NULL', [Date.now(), userId]);
+}
+async function takeSeat(user, seatId){
+  await pool.query('INSERT INTO seat_history (seat_id, user_id, user_name, user_email, assigned_at) VALUES (?, ?, ?, ?, ?)', [seatId, user.id, user.name, user.email, Date.now()]);
+  await pool.query('UPDATE users SET seat_id = ? WHERE id = ?', [seatId, user.id]);
+}
+async function firstFreeSeat(){
+  const [seats] = await pool.query('SELECT id FROM seats ORDER BY id');
+  const [used] = await pool.query("SELECT seat_id FROM users WHERE status = 'active' AND seat_id IS NOT NULL");
+  const u = new Set(used.map(r => Number(r.seat_id)));
+  const s = seats.find(r => !u.has(Number(r.id)));
+  return s ? Number(s.id) : null;
+}
+async function sendInvite(u, ip, by){
+  const token = newToken(), now = Date.now();
+  await pool.query('INSERT INTO password_resets (token_hash, user_id, kind, created_at, expires_at) VALUES (?, ?, ?, ?, ?)', [sha256(token), u.id, 'invite', now, now + 72 * 3600 * 1000]);
+  const link = (process.env.APP_URL || 'https://go.lucasindustrial.us') + '/#/reset?token=' + token;
+  const m = resetEmail({ name: u.name, link, hours: 72, invite: true, username: u.username });
+  await sendMail({ to: u.email, subject: m.subject, text: m.text, html: m.html });
+  await audit(by, 'user.invite_sent', 'user', u.id, null, ip);
+}
+const shape = (u, ov) => ({ id: Number(u.id), username: u.username || null, email: u.email, name: u.name, role: u.role_key, status: u.status, seat: u.seat_id == null ? null : Number(u.seat_id), mustChangePassword: !!u.must_change_password, lastLoginAt: u.last_login_at == null ? null : Number(u.last_login_at), createdAt: Number(u.created_at), overrides: ov || {} });
+
+router.get('/catalog', R, wrap(async (req, res) => {
+  const [roles] = await pool.query('SELECT role_key, label, is_system FROM roles ORDER BY role_key');
+  res.json({ sections: SECTIONS, levels: LEVELS, roles: roles.map(r => ({ key: r.role_key, label: r.label, system: !!r.is_system })) });
+}));
+
+router.get('/users', R, wrap(async (req, res) => {
+  const [us] = await pool.query('SELECT * FROM users ORDER BY id');
+  const [ov] = await pool.query('SELECT user_id, perm_key, level FROM user_permissions');
+  const by = {}; ov.forEach(o => { (by[o.user_id] = by[o.user_id] || {})[o.perm_key] = o.level; });
+  res.json({ users: us.map(u => shape(u, by[u.id])) });
+}));
+
+// Create a person. mode 'invite' emails a link; mode 'temp' returns a one-time temporary password to hand over.
+router.post('/users', W, wrap(async (req, res) => {
+  const b = req.body || {}, email = String(b.email || '').trim().toLowerCase(), name = String(b.name || '').trim();
+  if(!emailOk(email) || !name) return res.status(400).json({ error: 'name_and_valid_email_required' });
+  const [role] = await pool.query('SELECT role_key FROM roles WHERE role_key = ?', [b.role]);
+  if(!role.length) return res.status(400).json({ error: 'unknown_role' });
+  if(b.role === 'builder' && req.user.role_key !== 'builder') return res.status(403).json({ error: 'forbidden' });
+  const [dupe] = await pool.query('SELECT id FROM users WHERE email = ?', [email]);
+  if(dupe.length) return res.status(409).json({ error: 'email_in_use' });
+  let username = String(b.username || '').trim().toLowerCase();
+  if(username){ if(!USERNAME_RE.test(username)) return res.status(400).json({ error: 'bad_username' }); const [d2] = await pool.query('SELECT id FROM users WHERE username = ?', [username]); if(d2.length) return res.status(409).json({ error: 'username_in_use' }); }
+  else username = await freeUsername(usernameFromEmail(email));
+  let seat = null;
+  if(b.role !== 'builder'){ seat = await firstFreeSeat(); if(seat == null) return res.status(409).json({ error: 'no_free_seat' }); }
+  const temp = b.mode === 'temp' ? randomPassword() : null;
+  const [ins] = await pool.query('INSERT INTO users (email, username, name, role_key, status, password_hash, must_change_password, created_at, created_by) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)',
+    [email, username, name, b.role, 'active', temp ? await hashPassword(temp) : null, 1, Date.now(), req.user.id]);
+  const u = { id: ins.insertId, email, username, name, role_key: b.role };
+  if(seat != null) await takeSeat(u, seat);
+  await audit(req.user, 'user.create', 'user', u.id, { email, username, name, role: b.role, seat }, req.ip);
+  if(!temp) await sendInvite(u, req.ip, req.user);
+  res.json({ id: Number(u.id), username, seat, temporaryPassword: temp });
+}));
+
+router.patch('/users/:id', W, wrap(async (req, res) => {
+  const id = Number(req.params.id), b = req.body || {};
+  const [rows] = await pool.query('SELECT * FROM users WHERE id = ?', [id]); const u = rows[0];
+  if(!u) return res.status(404).json({ error: 'not_found' });
+  if(u.role_key === 'builder' && req.user.role_key !== 'builder') return res.status(403).json({ error: 'forbidden' });
+  const sets = [], vals = [], changed = {};
+  if(b.name !== undefined){ const n = String(b.name).trim(); if(!n) return res.status(400).json({ error: 'name_required' }); sets.push('name = ?'); vals.push(n); changed.name = n; }
+  if(b.email !== undefined){
+    const e = String(b.email).trim().toLowerCase(); if(!emailOk(e)) return res.status(400).json({ error: 'bad_email' });
+    const [d] = await pool.query('SELECT id FROM users WHERE email = ? AND id <> ?', [e, id]); if(d.length) return res.status(409).json({ error: 'email_in_use' });
+    sets.push('email = ?'); vals.push(e); changed.email = e;
+  }
+  if(b.username !== undefined){
+    const un = String(b.username).trim().toLowerCase(); if(!USERNAME_RE.test(un)) return res.status(400).json({ error: 'bad_username' });
+    const [d] = await pool.query('SELECT id FROM users WHERE username = ? AND id <> ?', [un, id]); if(d.length) return res.status(409).json({ error: 'username_in_use' });
+    sets.push('username = ?'); vals.push(un); changed.username = un; changed.revokeSessions = false;
+  }
+  if(b.role !== undefined){
+    const [r] = await pool.query('SELECT role_key FROM roles WHERE role_key = ?', [b.role]); if(!r.length) return res.status(400).json({ error: 'unknown_role' });
+    if((b.role === 'builder' || u.role_key === 'builder') && req.user.role_key !== 'builder') return res.status(403).json({ error: 'forbidden' });
+    if(u.role_key === 'builder' && b.role !== 'builder'){ const [c] = await pool.query("SELECT COUNT(*) AS c FROM users WHERE role_key = 'builder' AND status = 'active'"); if(Number(c[0].c) <= 1) return res.status(409).json({ error: 'last_builder' }); }
+    sets.push('role_key = ?'); vals.push(b.role); changed.role = b.role;
+  }
+  if(!sets.length) return res.json({ ok: true });
+  delete changed.revokeSessions;
+  await pool.query('UPDATE users SET ' + sets.join(', ') + ' WHERE id = ?', vals.concat([id]));
+  if(changed.role) await revokeSessions(id);
+  await audit(req.user, 'user.update', 'user', id, changed, req.ip);
+  res.json({ ok: true });
+}));
+
+router.post('/users/:id/disable', W, wrap(async (req, res) => {
+  const id = Number(req.params.id);
+  const [rows] = await pool.query('SELECT * FROM users WHERE id = ?', [id]); const u = rows[0];
+  if(!u) return res.status(404).json({ error: 'not_found' });
+  if(id === Number(req.user.id)) return res.status(409).json({ error: 'cannot_disable_self' });
+  if(u.role_key === 'builder'){
+    if(req.user.role_key !== 'builder') return res.status(403).json({ error: 'forbidden' });
+    const [c] = await pool.query("SELECT COUNT(*) AS c FROM users WHERE role_key = 'builder' AND status = 'active'"); if(Number(c[0].c) <= 1) return res.status(409).json({ error: 'last_builder' });
+  }
+  await pool.query("UPDATE users SET status = 'disabled', disabled_at = ?, seat_id = NULL WHERE id = ?", [Date.now(), id]);
+  await freeSeat(id); await revokeSessions(id);
+  await audit(req.user, 'user.disable', 'user', id, { seat: u.seat_id }, req.ip);
+  res.json({ ok: true });
+}));
+
+router.post('/users/:id/enable', W, wrap(async (req, res) => {
+  const id = Number(req.params.id);
+  const [rows] = await pool.query('SELECT * FROM users WHERE id = ?', [id]); const u = rows[0];
+  if(!u) return res.status(404).json({ error: 'not_found' });
+  if(u.status === 'active') return res.json({ ok: true });
+  let seat = null;
+  if(u.role_key !== 'builder'){ seat = await firstFreeSeat(); if(seat == null) return res.status(409).json({ error: 'no_free_seat' }); }
+  await pool.query("UPDATE users SET status = 'active', disabled_at = NULL, failed_count = 0, locked_until = 0 WHERE id = ?", [id]);
+  if(seat != null) await takeSeat(u, seat);
+  await audit(req.user, 'user.enable', 'user', id, { seat }, req.ip);
+  res.json({ ok: true, seat });
+}));
+
+// Builder fallback: set a temporary password, or email a fresh link.
+router.post('/users/:id/reset-password', W, wrap(async (req, res) => {
+  const id = Number(req.params.id), mode = (req.body && req.body.mode) === 'email' ? 'email' : 'temp';
+  const [rows] = await pool.query('SELECT * FROM users WHERE id = ?', [id]); const u = rows[0];
+  if(!u) return res.status(404).json({ error: 'not_found' });
+  if(u.role_key === 'builder' && req.user.role_key !== 'builder') return res.status(403).json({ error: 'forbidden' });
+  if(mode === 'email'){ await sendInvite(u, req.ip, req.user); return res.json({ ok: true }); }
+  const temp = randomPassword();
+  await pool.query('UPDATE users SET password_hash = ?, must_change_password = 1, failed_count = 0, locked_until = 0 WHERE id = ?', [await hashPassword(temp), id]);
+  await revokeSessions(id);
+  await audit(req.user, 'user.temp_password', 'user', id, null, req.ip);
+  res.json({ ok: true, temporaryPassword: temp });
+}));
+
+// Per-person overrides on top of the role template. body: { perms: { 'pm.dispatch': 'read', 'pm.people': null } } (null removes the override)
+router.put('/users/:id/permissions', W, wrap(async (req, res) => {
+  const id = Number(req.params.id), perms = (req.body && req.body.perms) || {};
+  const [rows] = await pool.query('SELECT * FROM users WHERE id = ?', [id]); const u = rows[0];
+  if(!u) return res.status(404).json({ error: 'not_found' });
+  if(u.role_key === 'builder') return res.status(409).json({ error: 'builder_is_always_full_access' });
+  for(const [k, v] of Object.entries(perms)){ if(!PANE_KEYS.includes(k) || (v !== null && !LEVELS.includes(v))) return res.status(400).json({ error: 'bad_permission', key: k }); }
+  // Only a Builder may grant or change the admin panes and the sensitive panes.
+  if(req.user.role_key !== 'builder' && Object.keys(perms).some(k => k.startsWith('admin.') || k.startsWith('sensitive.'))) return res.status(403).json({ error: 'forbidden' });
+  for(const [k, v] of Object.entries(perms)){
+    await pool.query('DELETE FROM user_permissions WHERE user_id = ? AND perm_key = ?', [id, k]);
+    if(v !== null) await pool.query('INSERT INTO user_permissions (user_id, perm_key, level) VALUES (?, ?, ?)', [id, k, v]);
+  }
+  await audit(req.user, 'user.permissions', 'user', id, perms, req.ip);
+  res.json({ ok: true });
+}));
+
+router.get('/seats', R, wrap(async (req, res) => {
+  const [seats] = await pool.query('SELECT * FROM seats ORDER BY id');
+  const [us] = await pool.query("SELECT id, name, email, seat_id FROM users WHERE status = 'active' AND seat_id IS NOT NULL");
+  const [hist] = await pool.query('SELECT seat_id, user_id, user_name, user_email, assigned_at, released_at FROM seat_history ORDER BY id DESC');
+  res.json({ seats: seats.map(s => {
+    const u = us.find(x => Number(x.seat_id) === Number(s.id));
+    return { id: Number(s.id), label: s.label, occupant: u ? { id: Number(u.id), name: u.name, email: u.email } : null, history: hist.filter(h => Number(h.seat_id) === Number(s.id)).map(h => ({ userId: Number(h.user_id), name: h.user_name, email: h.user_email, assignedAt: Number(h.assigned_at), releasedAt: h.released_at == null ? null : Number(h.released_at) })) };
+  }) });
+}));
+
+router.get('/roles', R, wrap(async (req, res) => {
+  const [roles] = await pool.query('SELECT * FROM roles ORDER BY role_key');
+  const [rp] = await pool.query('SELECT role_key, perm_key, level FROM role_permissions');
+  res.json({ roles: roles.map(r => { const p = {}; PANE_KEYS.forEach(k => { p[k] = 'none'; }); rp.filter(x => x.role_key === r.role_key).forEach(x => { p[x.perm_key] = x.level; }); return { key: r.role_key, label: r.label, system: !!r.is_system, perms: r.role_key === 'builder' ? Object.fromEntries(PANE_KEYS.map(k => [k, 'write'])) : p }; }) });
+}));
+
+// Edit a role template (Builder only). Builder's own template is fixed.
+router.put('/roles/:key', W, wrap(async (req, res) => {
+  if(req.user.role_key !== 'builder') return res.status(403).json({ error: 'forbidden' });
+  const key = req.params.key, perms = (req.body && req.body.perms) || {};
+  const [r] = await pool.query('SELECT * FROM roles WHERE role_key = ?', [key]);
+  if(!r.length) return res.status(404).json({ error: 'not_found' });
+  if(key === 'builder') return res.status(409).json({ error: 'builder_template_is_fixed' });
+  for(const [k, v] of Object.entries(perms)) if(!PANE_KEYS.includes(k) || !LEVELS.includes(v)) return res.status(400).json({ error: 'bad_permission', key: k });
+  for(const [k, v] of Object.entries(perms)){
+    await pool.query('DELETE FROM role_permissions WHERE role_key = ? AND perm_key = ?', [key, k]);
+    await pool.query('INSERT INTO role_permissions (role_key, perm_key, level) VALUES (?, ?, ?)', [key, k, v]);
+  }
+  await audit(req.user, 'role.update', 'role', key, perms, req.ip);
+  res.json({ ok: true });
+}));
+
+router.get('/audit', requirePerm('admin.audit', 'read'), wrap(async (req, res) => {
+  const q = req.query || {}, where = [], vals = [];
+  if(q.user) { where.push('user_id = ?'); vals.push(Number(q.user)); }
+  if(q.action) { where.push('action LIKE ?'); vals.push(String(q.action).replace(/[%_]/g, '') + '%'); }
+  const limit = Math.min(500, Math.max(1, Number(q.limit) || 100));
+  const [rows] = await pool.query('SELECT * FROM audit_log' + (where.length ? ' WHERE ' + where.join(' AND ') : '') + ' ORDER BY id DESC LIMIT ' + limit, vals);
+  res.json({ entries: rows.map(r => ({ id: Number(r.id), at: Number(r.at), userId: r.user_id == null ? null : Number(r.user_id), name: r.user_name, email: r.user_email, action: r.action, entityType: r.entity_type, entityId: r.entity_id, detail: r.detail ? (() => { try{ return JSON.parse(r.detail); }catch(e){ return r.detail; } })() : null, ip: r.ip })) });
+}));
+module.exports = router;
