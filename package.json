@@ -1,0 +1,19 @@
+{
+  "name": "lucas-go-backend",
+  "version": "0.1.0",
+  "description": "Lucas Industrial company platform (go.lucasindustrial.us): login, seats, permissions, audit. Estimator, PM and Pay Apps plug in as modules.",
+  "main": "server.js",
+  "scripts": {
+    "start": "node server.js"
+  },
+  "engines": {
+    "node": ">=20"
+  },
+  "dependencies": {
+    "cors": "^2.8.5",
+    "dotenv": "^16.4.5",
+    "express": "^4.19.2",
+    "mysql2": "^3.10.0",
+    "pdf-lib": "^1.17.1"
+  }
+}
