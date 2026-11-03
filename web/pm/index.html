@@ -94,6 +94,10 @@
     display:none; position:fixed; inset:0; background:rgba(10,12,14,0.5); z-index:239;
   }
   #mobileNavBackdrop.open{display:block;}
+  /* Builder/Admin tools moved to the global menu; version + trademark are global too */
+  #devTasksBtn,#requestsBtn,#changeCodeBtn,#settingsHubBtn,#architectureBtn,#exportDataBtn,#appVersionDisplay,#versionStatus,.sidebar-foot > div:last-of-type{display:none !important;}
+  body.tool-mode #sidebar,body.tool-mode #main,body.tool-mode #mobileTopBar,body.tool-mode #assistantBar,body.tool-mode #suggestPill{display:none !important;}
+  #toolReopen{display:none;text-align:center;padding:60px 20px}body.tool-mode.tool-closed #toolReopen{display:block}
   #sidebar{
     width: 220px;
     flex-shrink:0;
@@ -897,7 +901,6 @@
     <div class="sidebar-foot">
       <div style="display:flex; align-items:center; gap:10px; margin-bottom:4px;">
         <button class="btn ghost small" id="toastSoundBtn" style="padding:2px 0; color:var(--text-faint);" type="button">&#128276; Alert sound: on</button>
-        <button class="btn ghost small" id="toastTestBtn" style="padding:2px 0; color:var(--text-faint); text-decoration:underline; display:none;" type="button" title="Builder only: show a sample toast with the chime">Test</button>
       </div>
       <div id="presenceWidget" style="font-size:11px; color:var(--text-faint); margin-bottom:6px; line-height:1.4;"></div>
       <div id="storageNote">Loading…</div>
@@ -914,6 +917,7 @@
     </div>
   </div>
   <div id="main"></div>
+  <div id="toolReopen"><button class="btn primary" id="toolReopenBtn" type="button">Open again</button></div>
 </div>
 
 <div class="modal-back" id="modalBack"><div class="modal" id="modalBody"></div></div>
@@ -1342,6 +1346,9 @@ async function loadData(){
   if(ROLE === 'builder' && (!DATA.devHowTos || !DATA.devHowTos.length)) DATA.devHowTos = seedDevHowTos();
   if(!DATA.devHowTos) DATA.devHowTos = [];
   if(!DATA.settings.googleMapsApiKey) DATA.settings.googleMapsApiKey = "AIzaSyDPrYv0sBUSzIj7QEehLw5rG2un1vJPUks";
+  // Keys/IDs saved in older board data win over the built-in defaults, so move the retired ones to the current ones.
+  if(DATA.settings.googleMapsApiKey === 'AIzaSyDekOwGJYu8ZJIs1rqO5CDcXekcbuA3i3E') DATA.settings.googleMapsApiKey = 'AIzaSyDPrYv0sBUSzIj7QEehLw5rG2un1vJPUks';
+  if(DATA.settings.driveClientId === '714309449796-28eek36edt2j170bpalvrsj0o4hb2mbr.apps.googleusercontent.com') DATA.settings.driveClientId = '198249406437-enslhkb0q8jonau5nd9pch3elebioial.apps.googleusercontent.com';
   if(DATA.settings.driveClientId===undefined) DATA.settings.driveClientId = "198249406437-enslhkb0q8jonau5nd9pch3elebioial.apps.googleusercontent.com";
   if(DATA.settings.driveParentFolderId===undefined) DATA.settings.driveParentFolderId = "";
   if(DATA.settings.boardLink===undefined) DATA.settings.boardLink = "";
@@ -1482,6 +1489,8 @@ function geocodeHQAddress(){
 // PM now sits inside the go. platform: the platform signs the person in and keeps the token in sessionStorage;
 // this page uses that same token and asks the server who they are and which parts of PM they may open.
 let GO_PANES = {};
+let GO_USER = null;   // who is signed in (copied onto notes and changes so history says WHO, not just which role)
+const goWho = () => GO_USER ? (GO_USER.username ? GO_USER.name + ' (' + GO_USER.username + ')' : GO_USER.name) : '';
 // menu item -> the platform pane that gates it
 const NAV_PANE = { projects:'pm.projects', people:'pm.people', bids:'pm.proposals', dispatch:'pm.dispatch', money:'payapps.main', logistics:'pm.logistics_ai', map:'pm.calendar', calendar:'pm.calendar' };
 function applyPanePermissions(){
@@ -1506,7 +1515,7 @@ function wireGate(){
       me = await res.json();
     }catch(e){ AUTH_TOKEN = null; return needSignIn("Can't reach the server. Check your connection and try again."); }
     if(!me.hasPmAccess){ AUTH_TOKEN = null; return needSignIn('You do not have access to this section.'); }
-    ROLE = me.role; GO_PANES = me.panes || {};
+    ROLE = me.role; GO_PANES = me.panes || {}; GO_USER = { id: me.userId, name: me.name, username: me.username };
     BUILDER_MODE = (ROLE === 'builder'); OWNER_MODE = (ROLE === 'owner'); PM_MODE = (ROLE === 'pm');
     try{ await loadData(); }catch(e){
       console.error('load failed after sign-in', e);
@@ -1520,6 +1529,7 @@ function wireGate(){
     render(); applyBuilderVisibility(); startPolling(); showAssistantBar(); geocodeHQAddress();
     mergeSuggestionInbox(); installPmRemovalMode(); startPresence();
     wireToastSoundBtn(); pollToasts(); setInterval(pollToasts, 30000);
+    runDeepLinkTool();
   })();
 }
 // Managers' "Suggest a change" lands in a server-side inbox only the Builder can
@@ -3266,7 +3276,7 @@ function mergeAdopt(target, source){
 // Never a lock - nothing here can stop anyone from editing; the merge in saveDataNow does the real work.
 const PRESENCE = { clientId: 'c_' + Math.random().toString(36).slice(2, 12), name: '', editing: null, others: [], timer: null };
 const ROLE_LABELS = { builder: 'Builder', owner: 'Owner', pm: 'PM' };
-function presenceStoredName(){ try{ return localStorage.getItem('lucasPresenceName') || ''; }catch(e){ return ''; } }
+function presenceStoredName(){ if(typeof GO_USER !== 'undefined' && GO_USER && GO_USER.name) return GO_USER.name; try{ return localStorage.getItem('lucasPresenceName') || ''; }catch(e){ return ''; } }
 function askPresenceName(){
   return new Promise(resolve => {
     const overlay = document.getElementById('customConfirmOverlay');
@@ -3458,11 +3468,6 @@ async function pollToasts(){
 function wireToastSoundBtn(){
   const b = document.getElementById('toastSoundBtn'); if(!b) return;
   paintToastSoundBtn();
-  const tb = document.getElementById('toastTestBtn');
-  if(tb){
-    tb.style.display = BUILDER_MODE ? 'inline-block' : 'none';
-    tb.onclick = () => { TOAST.lastChime = 0; showToast({ key: 'test:' + Date.now(), text: 'Test alert \u2014 this is what a toast looks like', goLabel: 'Go', onGo: goToDashboard, sticky: false }); };
-  }
   b.onclick = () => { try{ localStorage.setItem('lucasToastSound', toastSoundOn() ? 'off' : 'on'); }catch(e){} paintToastSoundBtn(); if(toastSoundOn()) playChime(true); };
 }
 
@@ -6284,7 +6289,7 @@ function openHandoffModal(pid){
   if($('hoMail')) $('hoMail').onclick = () => { window.open(buildGmailComposeUrl(c.email, subject, $('ho_body').value), '_blank'); $('hoMail').textContent = 'Opened ✓'; };
   $('hoSent').onclick = async () => {
     const s = moneySummary(p);
-    p.handoff = { at: new Date().toISOString(), by: ROLE || '', toName: c.name, toEmail: c.email, outstanding: s.outstanding };
+    p.handoff = { at: new Date().toISOString(), by: ROLE || '', byName: goWho(), byUserId: GO_USER ? GO_USER.id : null, toName: c.name, toEmail: c.email, outstanding: s.outstanding };
     logWorkflowEvent('handoff_collections', `"${p.name}" handed off to Collections${c.name ? ' (' + c.name + ')' : ''}, ${mUsd(s.outstanding)} still owed`);
     saveData(); closeModal(); render();
   };
@@ -6607,7 +6612,7 @@ async function moneyModalClick(ev){
     const ta = document.getElementById('m_newnote'), txt = ta ? ta.value.trim() : '';
     if(!txt){ await customAlert('Type the note first.'); return; }
     if(txt.length > 1500){ await customAlert('That note is too long (1,500 characters max).'); return; }
-    m.noteLog.push({ id: uid('note'), text: txt, at: new Date().toISOString(), by: (presenceStoredName() ? presenceStoredName() + ' (' : '') + (BUILDER_MODE ? 'Builder' : OWNER_MODE ? 'Owner' : 'PM') + (presenceStoredName() ? ')' : '') });
+    m.noteLog.push({ id: uid('note'), text: txt, at: new Date().toISOString(), by: goWho() || (BUILDER_MODE ? 'Builder' : OWNER_MODE ? 'Owner' : 'PM'), byUserId: GO_USER ? GO_USER.id : null });
     moneyCommit(); return;
   }
   if(act === 'note-del'){ if(moneyStaff() && await customConfirm('Delete this note? (The deletion is written to the change archive.)')){ m.noteLog = m.noteLog.filter(n => n.id !== id); moneyCommit(); } return; }
@@ -6949,13 +6954,13 @@ async function openProjectHistoryModal(pid){
       authFetch(BACKEND_URL + '/api/money/archive?limit=500&project=' + encodeURIComponent(pid))]);
     if(!a.ok || !b.ok) throw new Error('status ' + (a.ok ? b.status : a.status));
     const ja = await a.json(), jb = await b.json();
-    const rows = ja.items.map(i => ({ at: i.at, by: i.by, what: i.field, kind: i.kind, o: i.oldValue, n: i.newValue }))
-      .concat(jb.items.map(i => ({ at: i.at, by: i.by, what: moneyPathLabel(i.projectId, i.path), kind: i.kind, o: i.oldValue, n: i.newValue })))
+    const rows = ja.items.map(i => ({ at: i.at, by: i.by, byName: i.byName, what: i.field, kind: i.kind, o: i.oldValue, n: i.newValue }))
+      .concat(jb.items.map(i => ({ at: i.at, by: i.by, byName: i.byName, what: moneyPathLabel(i.projectId, i.path), kind: i.kind, o: i.oldValue, n: i.newValue })))
       .sort((x, y) => y.at - x.at);
     const el = document.getElementById('ph_list'); if(!el) return; el.className = '';
     el.innerHTML = rows.length ? `<table class="responsive-table"><thead><tr><th>When</th><th>Who</th><th>What</th><th>Was</th><th>Now</th></tr></thead><tbody>${rows.map(i => `<tr>
       <td data-label="When">${esc(new Date(i.at).toLocaleString('en-US', { month: 'short', day: 'numeric', year: 'numeric', hour: 'numeric', minute: '2-digit' }))}</td>
-      <td data-label="Who">${esc(i.by === 'pm' ? 'PM' : i.by === 'owner' ? 'Owner' : 'Builder')}</td>
+      <td data-label="Who">${esc(i.byName || (i.by === 'pm' ? 'PM' : i.by === 'owner' ? 'Owner' : 'Builder'))}</td>
       <td data-label="What">${esc(i.what)}${i.kind === 'added' ? ' ' + mTag('added', MNY_OK()) : i.kind === 'removed' ? ' ' + mTag('removed', MNY_BAD()) : ''}</td>
       <td data-label="Was" class="mono">${esc(i.o == null ? '—' : i.o)}</td><td data-label="Now" class="mono">${esc(i.n == null ? '—' : i.n)}</td></tr>`).join('')}</tbody></table>` : '<div class="empty">Nothing has been changed since logging began.</div>';
   }catch(e){ const el = document.getElementById('ph_list'); if(el) el.textContent = 'Could not load the history (' + e.message + '). Try again in a moment.'; }
@@ -6975,7 +6980,7 @@ async function openMoneyArchiveModal(projectId){
     el.className = '';
     el.innerHTML = j.items.length ? `<table class="responsive-table"><thead><tr><th>When</th><th>Who</th><th>Project</th><th>What</th><th>Was</th><th>Now</th></tr></thead><tbody>${j.items.map(i => `<tr>
       <td data-label="When">${esc(new Date(i.at).toLocaleString('en-US', { month: 'short', day: 'numeric', hour: 'numeric', minute: '2-digit' }))}</td>
-      <td data-label="Who">${esc(i.by === 'pm' ? 'PM' : i.by === 'owner' ? 'Owner' : 'Builder')}</td>
+      <td data-label="Who">${esc(i.byName || (i.by === 'pm' ? 'PM' : i.by === 'owner' ? 'Owner' : 'Builder'))}</td>
       <td data-label="Project">${esc(i.project || '')}</td>
       <td data-label="What">${esc(moneyPathLabel(i.projectId, i.path))}${i.kind === 'added' ? ' ' + mTag('added', MNY_OK()) : i.kind === 'removed' ? ' ' + mTag('deleted', MNY_BAD()) : ''}</td>
       <td data-label="Was" class="mono">${esc(i.oldValue == null ? '—' : i.oldValue)}</td>
@@ -10378,7 +10383,7 @@ async function openHouseRulesModal(){
         <input type="checkbox" data-hr-on="${r.id}" ${r.enabled ? 'checked' : ''} title="Turn this rule on or off" style="margin-top:4px;">
         <div style="flex:1; min-width:0;">
           <div data-hr-text="${r.id}" style="font-size:13.5px; ${r.enabled ? '' : 'opacity:.5; text-decoration:line-through;'}">${esc(r.text)}</div>
-          <div class="hint" style="margin:2px 0 0;">Added by ${esc(r.by === 'owner' ? 'Owner' : r.by === 'builder' ? 'Builder' : 'someone')} · ${esc(new Date(r.createdAt).toLocaleDateString())}</div>
+          <div class="hint" style="margin:2px 0 0;">Added by ${esc(r.byName || (r.by === 'owner' ? 'Owner' : r.by === 'builder' ? 'Builder' : 'someone'))} · ${esc(new Date(r.createdAt).toLocaleDateString())}</div>
         </div>
         <button class="btn ghost small" data-hr-edit="${r.id}" type="button">Edit</button>
         <button class="btn ghost small" data-hr-del="${r.id}" type="button">Delete</button>
@@ -12901,6 +12906,16 @@ function openMobileNav(){
     mobileLogo.onclick = () => { if(!GATE_PASSED) return; closeModal(); closeMobileNav(); VIEW = 'dashboard'; render(); };
   }
 })();
+// The global menu opens one of the old footer tools directly: pm/index.html?tool=devTasks etc. Only that tool's window is shown.
+const TOOL_OPENERS = { devTasks: () => openDevTasksModal(), architecture: () => openArchitectureModal(), data: () => openDataTransferModal(), settings: () => openSettingsHub('rules'), requests: () => openRequestsModal() };
+let TOOL_NAME = null; try{ TOOL_NAME = new URLSearchParams(location.search).get('tool'); }catch(e){}
+function runDeepLinkTool(){
+  if(!TOOL_NAME || !TOOL_OPENERS[TOOL_NAME]) return;
+  document.body.classList.add('tool-mode');
+  const open = () => { document.body.classList.remove('tool-closed'); try{ TOOL_OPENERS[TOOL_NAME](); }catch(e){ console.error(e); } };
+  const rb = document.getElementById('toolReopenBtn'); if(rb) rb.onclick = open;
+  open();
+}
 function applyBuilderVisibility(){
   // Builder unlocks everything below. The Owner unlocks Access Codes and the
   // Requests inbox only; the PM unlocks none of it.
@@ -13388,7 +13403,7 @@ function customAlert(message){
     document.getElementById('customConfirmOk').onclick = () => { overlay.classList.remove('open'); resolve(); };
   });
 }
-function closeModal(){ clearPresenceEditing(); const back=document.getElementById('modalBack'); back.classList.remove('open'); back.classList.remove('offcanvas'); syncSuggestPill(); const bar=document.getElementById('mobileTopBar'); if(bar) bar.style.visibility=''; updateBodyScrollLock(); }
+function closeModal(){ if(document.body.classList.contains('tool-mode')) document.body.classList.add('tool-closed'); clearPresenceEditing(); const back=document.getElementById('modalBack'); back.classList.remove('open'); back.classList.remove('offcanvas'); syncSuggestPill(); const bar=document.getElementById('mobileTopBar'); if(bar) bar.style.visibility=''; updateBodyScrollLock(); }
 // Deliberately no click-outside-to-close on the backdrop anymore — it was
 // silently discarding unsaved edits on any editor modal (not just people),
 // with nothing to undo it. Every modal already has its own explicit

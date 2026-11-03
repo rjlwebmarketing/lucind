@@ -14,10 +14,10 @@ const store = require('../lib/boardStore');
 router.get('/history', requireAuth('builder', 'owner'), wrap(async (req, res) => {
   const limit = Math.min(Math.max(parseInt(req.query.limit, 10) || 60, 1), 200);
   const [rows] = await pool.query(
-    `SELECT id, created_at, reason, saved_by, revision, projects_n, people_n, skills_n, bytes
+    `SELECT id, created_at, reason, saved_by, user_id, user_name, user_username, revision, projects_n, people_n, skills_n, bytes
        FROM board_history ORDER BY id DESC LIMIT ${limit}`);
   res.json({ items: rows.map(r => ({
-    id: Number(r.id), at: Number(r.created_at), reason: r.reason, savedBy: r.saved_by,
+    id: Number(r.id), at: Number(r.created_at), reason: r.reason, savedBy: r.saved_by, savedByName: require('../../lib/actor').labelOf(r.user_name, r.user_username),
     revision: r.revision, projects: r.projects_n, people: r.people_n, skills: r.skills_n, bytes: r.bytes
   })) });
 }));

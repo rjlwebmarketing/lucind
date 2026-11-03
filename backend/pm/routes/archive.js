@@ -19,7 +19,7 @@ router.post('/drive/connect-url', requireAuth('builder'), express.json(), wrap(a
   if (!drive.configured()) return res.status(409).json({ error: 'not_configured', message: 'Add GOOGLE_OAUTH_CLIENT_ID and GOOGLE_OAUTH_CLIENT_SECRET to the Railway variables first.', redirectUri: drive.redirectUri(req) });
   const state = require('crypto').randomBytes(24).toString('hex'), redirect = drive.redirectUri(req);
   for (const [k, v] of pending) if (Date.now() - v.at > 600000) pending.delete(k);
-  pending.set(state, { role: req.auth.role, redirect, at: Date.now(), rootName: String((req.body && req.body.rootName) || '').trim().slice(0, 100) || drive.DEFAULT_ROOT });
+  pending.set(state, { role: req.auth.role, actor: require('../../lib/actor').current(), redirect, at: Date.now(), rootName: String((req.body && req.body.rootName) || '').trim().slice(0, 100) || drive.DEFAULT_ROOT });
   res.json({ url: drive.authUrl(state, redirect) });
 }));
 router.get('/drive/callback', wrap(async (req, res) => {
@@ -31,7 +31,7 @@ router.get('/drive/callback', wrap(async (req, res) => {
     const tok = await drive.tokenCall({ grant_type: 'authorization_code', code: String(req.query.code || ''), redirect_uri: st.redirect });
     if (!tok.refresh_token) throw new Error('Google did not return a long-lived permission. Remove the app under your Google account permissions and try again.');
     const about = await (await drive.ctl.fetchImpl('https://www.googleapis.com/drive/v3/about?fields=user(emailAddress)', { headers: { Authorization: 'Bearer ' + tok.access_token } })).json().catch(() => ({}));
-    await drive.saveConnection({ refreshToken: tok.refresh_token, email: about.user && about.user.emailAddress, rootName: st.rootName, by: st.role });
+    await require('../../lib/actor').runAs(st.actor, () => drive.saveConnection({ refreshToken: tok.refresh_token, email: about.user && about.user.emailAddress, rootName: st.rootName, by: st.role }));
     await drive.ensureRoot();
     await audit('drive_connected', req, st.role, String(about.user && about.user.emailAddress || '').slice(0, 100));
     res.send(page('Archive drive connected', 'Closing packets will be saved in the folder "' + st.rootName.replace(/[<>&]/g, '') + '" in the Google Drive you just chose.'));
@@ -64,8 +64,8 @@ router.post('/close', requireAuth('pm', 'owner', 'builder'), express.json(), wra
   } catch (e) { if (!e.status) console.error('close failed', e); send(res, e); }
 }));
 router.get('/packets', requireAuth('builder', 'owner'), wrap(async (req, res) => {
-  const [rows] = await pool.query('SELECT created_at, project_id, project_code, project_name, closed_by, pdf_name, pdf_link FROM closed_packets ORDER BY id DESC LIMIT 500');
-  res.json({ items: rows.map(r => ({ at: Number(r.created_at), projectId: r.project_id, code: r.project_code, name: r.project_name, by: r.closed_by, file: r.pdf_name, link: r.pdf_link })) });
+  const [rows] = await pool.query('SELECT created_at, project_id, project_code, project_name, closed_by, user_name, user_username, pdf_name, pdf_link FROM closed_packets ORDER BY id DESC LIMIT 500');
+  res.json({ items: rows.map(r => ({ at: Number(r.created_at), projectId: r.project_id, code: r.project_code, name: r.project_name, by: r.closed_by, byName: require('../../lib/actor').labelOf(r.user_name, r.user_username), file: r.pdf_name, link: r.pdf_link })) });
 }));
 
 module.exports = router;

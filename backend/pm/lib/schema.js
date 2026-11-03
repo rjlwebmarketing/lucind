@@ -180,8 +180,16 @@ const DDL = [
   ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4`
 ];
 
+// Every record of an action also stores WHO did it: the person's id, name and username at that moment (the old
+// 'role' columns stay, so records from before this change still read as pm / owner / builder).
+const WHO_TABLES = ['project_events', 'money_archive', 'board_history', 'closed_packets', 'house_rules', 'proposal_links', 'requests', 'intake_invites', 'suggestions', 'drive_connection'];
 async function ensureSchema() {
   for (const stmt of DDL) await pool.query(stmt);
+  for (const t of WHO_TABLES) {
+    for (const col of ['user_id BIGINT NULL', 'user_name VARCHAR(120) NULL', 'user_username VARCHAR(40) NULL']) {
+      try { await pool.query('ALTER TABLE ' + t + ' ADD COLUMN ' + col); } catch (e) { /* already there */ }
+    }
+  }
 }
 
 module.exports = { ensureSchema, DDL };

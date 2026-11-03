@@ -21,10 +21,10 @@ function tooBusy(role) {
   if (recent.length >= 120) return true;
   recent.push(now); changes.set(role, recent); return false;
 }
-const shape = r => ({ id: r.id, text: r.body, enabled: !!r.enabled, by: r.author_role, createdAt: Number(r.created_at), updatedAt: Number(r.updated_at) });
+const shape = r => ({ id: r.id, text: r.body, enabled: !!r.enabled, by: r.author_role, byName: require('../../lib/actor').labelOf(r.user_name, r.user_username), createdAt: Number(r.created_at), updatedAt: Number(r.updated_at) });
 
 router.get('/', requireAuth(...STAFF), wrap(async (req, res) => {
-  const [rows] = await pool.query('SELECT id, created_at, updated_at, author_role, body, enabled FROM house_rules ORDER BY id ASC');
+  const [rows] = await pool.query('SELECT id, created_at, updated_at, author_role, user_name, user_username, body, enabled FROM house_rules ORDER BY id ASC');
   res.json({ items: rows.map(shape), max: MAX_RULES, maxLength: MAX_LEN });
 }));
 
@@ -35,7 +35,7 @@ router.post('/', requireAuth(...STAFF), wrap(async (req, res) => {
   const [rows] = await pool.query('SELECT id FROM house_rules');
   if (rows.length >= MAX_RULES) return res.status(409).json({ error: 'too_many_rules', message: 'There are already ' + MAX_RULES + ' house rules. Remove or merge one first.' });
   const now = Date.now();
-  await pool.query('INSERT INTO house_rules (created_at, updated_at, author_role, body, enabled) VALUES (?, ?, ?, ?, 1)', [now, now, req.auth.role, text]);
+  await pool.query('INSERT INTO house_rules (created_at, updated_at, author_role, body, enabled, user_id, user_name, user_username) VALUES (?, ?, ?, ?, 1, ?, ?, ?)', [now, now, req.auth.role, text].concat(require('../../lib/actor').cols()));
   await audit('house_rule_add', req, req.auth.role, text.slice(0, 120));
   res.json({ ok: true });
 }));

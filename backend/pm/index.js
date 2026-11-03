@@ -22,6 +22,6 @@ router.use('/api/archive', require('./routes/archive'));
 const authMw = (req, res, next) => require('../lib/auth').requireAuth(req, res, next);
 router.get('/api/me', authMw, (req, res) => {
   const panes = {}; PANE_KEYS.filter(k => k.startsWith('pm.') || k.startsWith('payapps.')).forEach(k => { panes[k] = req.perms[k]; });
-  res.json({ role: legacyRoleOf(req.user), name: req.user.name, panes, hasPmAccess: Object.values(panes).some(l => lvl(l) >= 1) });
+  res.json({ role: legacyRoleOf(req.user), name: req.user.name, username: req.user.username || null, userId: Number(req.user.id), panes, hasPmAccess: Object.values(panes).some(l => lvl(l) >= 1) });
 });
 module.exports = { router, ensureSchema };

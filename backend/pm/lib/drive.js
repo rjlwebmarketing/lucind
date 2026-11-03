@@ -40,8 +40,8 @@ async function tokenCall(params) {
 async function getConnection() { const [rows] = await pool.query('SELECT * FROM drive_connection WHERE id = 1'); return rows[0] || null; }
 async function saveConnection(c) {
   await pool.query('DELETE FROM drive_connection WHERE id = 1');
-  await pool.query('INSERT INTO drive_connection (id, refresh_enc, email, root_folder_id, root_name, connected_at, connected_by) VALUES (1, ?, ?, ?, ?, ?, ?)',
-    [enc(c.refreshToken), c.email || '', c.rootFolderId || '', c.rootName || DEFAULT_ROOT, Date.now(), c.by || '']);
+  await pool.query('INSERT INTO drive_connection (id, refresh_enc, email, root_folder_id, root_name, connected_at, connected_by, user_id, user_name, user_username) VALUES (1, ?, ?, ?, ?, ?, ?, ?, ?, ?)',
+    [enc(c.refreshToken), c.email || '', c.rootFolderId || '', c.rootName || DEFAULT_ROOT, Date.now(), c.by || ''].concat(require('../../lib/actor').cols()));
 }
 async function disconnect() { await pool.query('DELETE FROM drive_connection WHERE id = 1'); }
 

@@ -26,7 +26,7 @@ async function effectivePerms(user){
   ov.forEach(r => { if(r.perm_key in out) out[r.perm_key] = r.level; });
   return out;
 }
-const publicUser = u => ({ id: Number(u.id), username: u.username || null, email: u.email, name: u.name, role: u.role_key, seat: u.seat_id == null ? null : Number(u.seat_id), mustChangePassword: !!u.must_change_password });
+const publicUser = u => ({ id: Number(u.id), username: u.username || null, email: u.email, name: u.name, role: u.role_key, mustChangePassword: !!u.must_change_password });
 
 // Express middleware: who is calling? Sets req.user, req.perms, req.sessionHash.
 async function requireAuth(req, res, next){

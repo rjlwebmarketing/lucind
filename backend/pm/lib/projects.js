@@ -121,8 +121,8 @@ function stampHistory(cur, next, nowIso) {
 async function writeEvents(pool, role, rows, atMs) {
   for (const r of rows) {
     await pool.query(
-      'INSERT INTO project_events (created_at, role, project_id, project_code, project_name, field, kind, old_value, new_value) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)',
-      [atMs, role, clip(r.projectId, 64), clip(r.code, 16), clip(r.name, 200), clip(r.field, 120), r.kind, r.oldV, r.newV]);
+      'INSERT INTO project_events (created_at, role, project_id, project_code, project_name, field, kind, old_value, new_value, user_id, user_name, user_username) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)',
+      [atMs, role, clip(r.projectId, 64), clip(r.code, 16), clip(r.name, 200), clip(r.field, 120), r.kind, r.oldV, r.newV].concat(require('../../lib/actor').cols()));
   }
   return rows.length;
 }

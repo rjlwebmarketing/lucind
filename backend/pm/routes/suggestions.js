@@ -29,7 +29,7 @@ router.post('/', requireAuth(), express.json({ limit: '2mb' }), wrap(async (req,
   if (shot !== undefined && shot !== null && shot !== '') {
     if (typeof shot !== 'string' || shot.length > MAX_SHOT_CHARS || !SHOT_RE.test(shot)) return res.status(400).json({ error: 'bad_screenshot' });
   }
-  const [ins] = await pool.query('INSERT INTO suggestions (created_at, from_name, body) VALUES (?, ?, ?)', [now, from || null, text]);
+  const [ins] = await pool.query('INSERT INTO suggestions (created_at, from_name, body, user_id, user_name, user_username) VALUES (?, ?, ?, ?, ?, ?)', [now, from || null, text].concat(require('../../lib/actor').cols()));
   if (shot) {
     await pool.query('INSERT INTO suggestion_shots (suggestion_id, created_at, image) VALUES (?, ?, ?)', [ins.insertId, now, shot]);
     await pool.query('DELETE FROM suggestion_shots WHERE created_at < ?', [now - 120 * 24 * 60 * 60 * 1000]);   // housekeeping

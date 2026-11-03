@@ -26,14 +26,14 @@ router.post('/', requireAuth(), wrap(async (req, res) => {
   recent.push(now);
   sent.set(req.auth.role, recent);
 
-  await pool.query('INSERT INTO requests (created_at, kind, from_role, from_name, body) VALUES (?, ?, ?, ?, ?)',
-    [now, kind, req.auth.role, from || null, text]);
+  await pool.query('INSERT INTO requests (created_at, kind, from_role, from_name, body, user_id, user_name, user_username) VALUES (?, ?, ?, ?, ?, ?, ?, ?)',
+    [now, kind, req.auth.role, from || null, text].concat(require('../../lib/actor').cols()));
   res.json({ ok: true });
 }));
 
 router.get('/', requireAuth('owner', 'builder'), wrap(async (req, res) => {
-  const [rows] = await pool.query('SELECT id, created_at, kind, from_role, from_name, body FROM requests ORDER BY id ASC LIMIT 200');
-  res.json({ items: rows.map(r => ({ id: Number(r.id), at: Number(r.created_at), kind: r.kind, role: r.from_role, from: r.from_name, text: r.body })) });
+  const [rows] = await pool.query('SELECT id, created_at, kind, from_role, from_name, user_name, user_username, body FROM requests ORDER BY id ASC LIMIT 200');
+  res.json({ items: rows.map(r => ({ id: Number(r.id), at: Number(r.created_at), kind: r.kind, role: r.from_role, from: r.from_name, byName: require('../../lib/actor').labelOf(r.user_name, r.user_username), text: r.body })) });
 }));
 
 router.post('/ack', requireAuth('owner', 'builder'), wrap(async (req, res) => {

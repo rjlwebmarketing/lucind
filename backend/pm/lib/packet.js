@@ -122,8 +122,8 @@ function gather(board, project, calc, extra) {
   const labor = calc.laborClean(board.moneySettings && board.moneySettings.labor);
   const w2s = [...w2ids].map(id => { const pe = people.find(x => x && x.id === id) || {}; return { id, name: pe.name || id, wage: pe.wage || null, wageVoid: !!pe.wageVoid }; });
   const log = [];
-  (extra.events || []).forEach(e => log.push({ at: e.at, by: e.by, what: e.field, kind: e.kind, was: e.oldValue, now: e.newValue }));
-  (extra.archive || []).forEach(e => log.push({ at: e.at, by: e.by, what: pathLabel(project, e.path), kind: e.kind, was: e.oldValue, now: e.newValue }));
+  (extra.events || []).forEach(e => log.push({ at: e.at, by: e.by, byName: e.byName, what: e.field, kind: e.kind, was: e.oldValue, now: e.newValue }));
+  (extra.archive || []).forEach(e => log.push({ at: e.at, by: e.by, byName: e.byName, what: pathLabel(project, e.path), kind: e.kind, was: e.oldValue, now: e.newValue }));
   log.sort((a, b) => a.at - b.at);
   return { project, summary, money, live, subName, phaseLabel, worked, w2s, labor, log, personName };
 }
@@ -143,7 +143,7 @@ async function buildPdf(board, project, calc, extra) {
   L.kv([
     ['Project ID', p.code || '', true], ['Customer', p.customer], ['Store #', p.storeNumber], ['Location', [p.address, [p.city, p.state].filter(Boolean).join(', ')].filter(Boolean).join(' - ')],
     ['Status', p.status], ['Planned start', day(p.plannedStart)], ['Planned end', day(p.plannedEnd)], ['Marked completed', day(p.completedAt)],
-    [extra.preview ? 'Previewed' : 'Closed out', when(extra.closedAt || extra.generatedAt)], ['Closed by', extra.preview ? '' : roleLabel(extra.by)], ['Packet generated', when(extra.generatedAt)], ['Packet ID', extra.packetId || '(preview)'],
+    [extra.preview ? 'Previewed' : 'Closed out', when(extra.closedAt || extra.generatedAt)], ['Closed by', extra.preview ? '' : (extra.byName || roleLabel(extra.by))], ['Packet generated', when(extra.generatedAt)], ['Packet ID', extra.packetId || '(preview)'],
   ]);
 
   L.h2('1. Financial summary');
@@ -207,7 +207,7 @@ async function buildPdf(board, project, calc, extra) {
   L.h2('10. Change log (everything that was changed, in order)');
   L.note('Times are ' + TZ + '. "Who" is the login role. Entries start when logging began in v20; pay-app and proposal changes were logged earlier.');
   L.table([{ label: 'When', w: .225 }, { label: 'Who', w: .08 }, { label: 'What', w: .275 }, { label: 'Was', w: .21 }, { label: 'Now', w: .21 }],
-    g.log.map(e => ({ cells: [when(e.at), roleLabel(e.by), e.what + (e.kind === 'added' ? ' (added)' : e.kind === 'removed' ? ' (removed)' : ''), e.was == null ? '-' : e.was, e.now == null ? '-' : e.now] })), 'No changes were logged.');
+    g.log.map(e => ({ cells: [when(e.at), e.byName || roleLabel(e.by), e.what + (e.kind === 'added' ? ' (added)' : e.kind === 'removed' ? ' (removed)' : ''), e.was == null ? '-' : e.was, e.now == null ? '-' : e.now] })), 'No changes were logged.');
 
   L.finish();
   return Buffer.from(await pdf.save());
@@ -219,10 +219,10 @@ async function buildPacket(board, project, calc, opts) {
   const closedAt = opts.closedAt || generatedAt;
   const baseName = packetBaseName(project, closedAt);
   const packetId = opts.preview ? '' : 'PKT-' + (project.code || 'LI') + '-' + generatedAt.replace(/\D/g, '').slice(0, 14);
-  const extra = { events: opts.events, archive: opts.archive, preview: !!opts.preview, generatedAt, closedAt, by: opts.by, packetId };
+  const extra = { events: opts.events, archive: opts.archive, preview: !!opts.preview, generatedAt, closedAt, by: opts.by, byName: opts.byName, packetId };
   const pdf = await buildPdf(board, project, calc, extra);
   const people = (board.people || []).filter(pe => (pe.history || []).some(h => h.projectId === project.id)).map(pe => ({ id: pe.id, name: pe.name, type: pe.type, history: pe.history.filter(h => h.projectId === project.id) }));
-  const json = Buffer.from(JSON.stringify({ format: 'lucas-closing-packet', version: 1, packetId, generatedAt, closedAt, closedBy: opts.by || null, preview: !!opts.preview, project, workHistory: people, changeLog: { project: opts.events || [], money: opts.archive || [] }, summary: calc.moneySummary(project) }, null, 1));
+  const json = Buffer.from(JSON.stringify({ format: 'lucas-closing-packet', version: 1, packetId, generatedAt, closedAt, closedBy: opts.by || null, closedByName: opts.byName || null, closedByUserId: opts.byUserId == null ? null : opts.byUserId, preview: !!opts.preview, project, workHistory: people, changeLog: { project: opts.events || [], money: opts.archive || [] }, summary: calc.moneySummary(project) }, null, 1));
   return { pdf, json, baseName, pdfName: baseName + '.pdf', jsonName: baseName + '.json', packetId, sha256: crypto.createHash('sha256').update(pdf).digest('hex') };
 }
 

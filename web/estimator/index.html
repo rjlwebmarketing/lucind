@@ -1,0 +1,1122 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Estimator | Lucas Industrial</title>
+<meta name="theme-color" content="#ffffff">
+<link rel="icon" type="image/png" href="../logo.png">
+<style>
+  @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap');
+
+  :root{
+    /* ---- Brand palette (source of truth — edit only here) ---- */
+    --brand-black:      #000000;
+    --brand-page-grey:  #F3F3F3;
+    --brand-yellow:     #FFDC4B;
+    --brand-gravel:     #789696;
+    --brand-turquoise:  #55ABAB;
+    --brand-blue:       #013CAE;
+    --brand-light-black:#2D2D2D;
+
+    /* ---- Status-specific overrides (kept alongside the brand palette for one-off tweaks) ---- */
+    --status-green-lit: #1E8449;
+    --status-in-progress: #7A5D00;
+    --status-delayed: #D32F2F;
+
+    /* ---- Semantic tokens (used throughout the app — map these to the brand palette above) ---- */
+    --bg: var(--brand-page-grey);
+    --panel: #FFFFFF;
+    --panel-2: #EAF0F0;
+    --line: #D7E0E0;
+    --line-soft: #E3EAEA;
+    --text: var(--brand-light-black);
+    --text-dim: #55696A;
+    --text-faint: #8B9D9D;
+    --accent: var(--brand-blue);
+    --accent-text: #FFFFFF;
+    --warn: var(--brand-yellow);
+    --warn-text: #7A5D00;
+    --danger: var(--brand-black);
+    --ok: var(--brand-turquoise);
+    --info: var(--brand-blue);
+    --bidding: var(--brand-gravel);
+
+    --radius: 3px;
+  }
+  *{box-sizing:border-box;}
+  html,body{margin:0;padding:0;}
+  html.scroll-locked, body.scroll-locked{overflow:hidden; height:100vh;}
+  /* Belt-and-suspenders on top of the sidebar/#main height fixes below:
+     forces the whole page to never scroll at all while a flush (edge-to-
+     edge) page like Map or Calendar is active, regardless of what else
+     might be contributing extra height somewhere. Modern Chrome supports
+     :has() fine; this is a hard guarantee, not a guess at the cause. */
+  html:has(#main.flush), body:has(#main.flush){overflow:hidden; height:100vh;}
+  body{
+    background: var(--bg);
+    color: var(--text);
+    font-family: 'Inter', sans-serif;
+    font-size: 14px;
+    line-height: 1.45;
+    min-height:100vh;
+  }
+  h1,h2,h3,h4{
+    font-family:'Inter',sans-serif;
+    font-weight:800;
+    margin:0;
+    letter-spacing: -0.01em;
+  }
+  .mono{font-family:'Inter',sans-serif;}
+  button{font-family:inherit;cursor:pointer;}
+  input,select,textarea{font-family:inherit;font-size:14px;}
+  a{color:inherit;}
+
+  /* ---- App shell ---- */
+  #app{display:flex; min-height:100vh;}
+  #mobileTopBar{
+    display:none; position:fixed; top:0; left:0; right:0; z-index:250;
+    height:56px; padding:0 14px; background:var(--panel); border-bottom:1px solid var(--line);
+    align-items:center; gap:12px;
+  }
+  #gate:not(.hidden) ~ #app #mobileTopBar{display:none !important;}
+  #mobileTopBarLogo{width:28px; height:28px; object-fit:contain; flex-shrink:0;}
+  #mobileTopBarTitle{flex:1; font-weight:700; font-size:16px; color:var(--text); white-space:nowrap; overflow:hidden; text-overflow:ellipsis;}
+  #mobileNavToggle{
+    background:none; border:none; padding:0; color:var(--text); cursor:pointer;
+    display:flex; align-items:center; justify-content:center; flex-shrink:0;
+  }
+  #mobileNavBackdrop{
+    display:none; position:fixed; inset:0; background:rgba(10,12,14,0.5); z-index:239;
+  }
+  #mobileNavBackdrop.open{display:block;}
+  #sidebar{
+    width: 220px;
+    flex-shrink:0;
+    background: var(--panel-2);
+    border-right: 1px solid var(--line);
+    display:flex;
+    flex-direction:column;
+    position:sticky;
+    top:0;
+    height:100vh;
+    overflow-y:auto;
+  }
+  .brand{
+    padding: 20px 20px 12px;
+  }
+  .brand .mark{
+    display:flex;
+    align-items:center;
+    gap:10px;
+  }
+  .brand .mark .logo-img{
+    width:30px; height:30px; flex-shrink:0; object-fit:contain;
+  }
+  .brand h1{font-size:16px; color:var(--text); line-height:1.1;}
+  .brand .sub{font-size:11px; color:var(--text-faint); margin-top:4px; text-transform:uppercase; letter-spacing:.08em;}
+
+  nav{padding: 8px 10px 14px; flex:1;}
+  nav button{
+    display:flex;
+    align-items:center;
+    gap:10px;
+    width:100%;
+    text-align:left;
+    background:none;
+    border:none;
+    color: var(--text-dim);
+    padding: 10px 12px;
+    border-radius: 10px;
+    font-size:13.5px;
+    font-weight:600;
+    margin-bottom:2px;
+  }
+  nav button:hover{background: var(--panel); color:var(--text);}
+  nav button.child{padding-left:34px; font-size:12.5px; font-weight:500; padding-top:7px; padding-bottom:7px;}
+  nav button.child .icon{width:14px;height:14px;}
+  nav button.active{background: var(--panel); color:var(--text); box-shadow: inset 3px 0 0 var(--accent);}
+  nav .icon{width:16px;height:16px;flex-shrink:0;}
+  .sidebar-foot{
+    padding: 14px 20px 18px;
+    border-top:1px solid var(--line);
+    font-size:11px;
+    color: var(--text-faint);
+  }
+
+  #main{flex:1; min-width:0; padding: 28px 34px 60px;}
+  .page-head{display:flex; align-items:flex-end; justify-content:space-between; margin-bottom:22px; flex-wrap:wrap; gap:12px;}
+  .page-head h2{font-size:22px; color:var(--text);}
+  .page-head .desc{color:var(--text-dim); font-size:13px; margin-top:4px; max-width:105ch;}
+
+  .btn{
+    background: var(--panel-2);
+    border:1px solid var(--line);
+    color:var(--text);
+    padding: 9px 16px;
+    border-radius: 10px;
+    font-size:13px;
+    font-weight:600;
+  }
+  .btn:hover{border-color:#B0B3B8;}
+  .btn.primary{background: var(--accent); border-color:var(--accent); color:var(--accent-text);}
+  .btn.primary:hover{filter:brightness(1.08);}
+  .btn.ghost{background:none; border-color:transparent; color:var(--text-dim); padding:9px 10px;}
+  .btn.ghost:hover{color:var(--text);}
+  .btn.small{padding:6px 11px; font-size:12px;}
+  .btn.danger{color:var(--danger); border-color:var(--line);}
+  .btn:disabled, .btn:disabled:hover{opacity:0.45; cursor:not-allowed; filter:none; pointer-events:none;}
+
+  /* ---- Stat cards ---- */
+  .mny-row{display:flex; align-items:center; gap:10px; padding:8px 0; border-bottom:1px solid var(--line);}
+  .mny-row:last-child{border-bottom:none;}
+  .mcal-grid{display:grid; grid-template-columns:repeat(7,minmax(0,1fr)); gap:4px;}
+  .mcal-dow{font-size:11px; text-transform:uppercase; letter-spacing:.04em; color:var(--text-faint); text-align:center; padding:2px 0;}
+  .mcal-cell{min-height:88px; border:1px solid var(--line); border-radius:6px; padding:4px 5px; cursor:pointer; background:var(--panel); overflow:hidden; position:relative;}
+  .mcal-cell:hover{border-color:var(--accent);}
+  .mcal-empty{border:none; background:transparent; cursor:default;}
+  .mcal-win{background:rgba(255,196,0,.14);}
+  .mcal-today{box-shadow:inset 0 0 0 2px var(--accent);}
+  .mcal-sel{border-color:var(--accent); box-shadow:inset 0 0 0 1px var(--accent);}
+  .mcal-num{font-size:12px; font-weight:700;}
+  .mcal-winlbl{font-size:10px; color:var(--warn-text, #8a6a00); line-height:1.2;}
+  .mcal-rem{font-size:10px; color:var(--text-dim); line-height:1.2;}
+  .mcal-chips{display:flex; flex-direction:column; gap:2px; margin-top:2px;}
+  .mcal-chip{font-size:10px; line-height:1.25; border-left:3px solid; padding:1px 4px; border-radius:3px; white-space:nowrap; overflow:hidden; text-overflow:ellipsis;}
+  .mcal-more{font-size:10px; color:var(--text-faint);}
+  .mcal-dot{display:none; width:7px; height:7px; border-radius:50%; margin-right:2px;}
+  .mcal-swatch{display:inline-block; width:12px; height:12px; background:rgba(255,196,0,.35); border-radius:3px;}
+  @media (max-width:860px){ .mcal-cell{min-height:56px; padding:3px;} .mcal-chip, .mcal-winlbl, .mcal-rem{display:none;} .mcal-chips{flex-direction:row; flex-wrap:wrap;} .mcal-dot{display:inline-block;} .mcal-win .mcal-num::after{content:' \2022'; color:#c9a000;} }
+  .mny-entry{display:flex; align-items:center; gap:10px; flex-wrap:wrap; padding:9px 0; border-bottom:1px solid var(--line); font-size:13px;}
+  .mny-entry:last-of-type{border-bottom:none;}
+  .mny-void{opacity:.55;}
+  .mny-void strong, .mny-void .mono{text-decoration:line-through;}
+  .mny-btns{display:flex; gap:4px; flex-wrap:wrap;}
+  .mny-form{background:var(--bg); border:1px solid var(--line); border-radius:6px; padding:12px; margin-top:10px;}
+  .mny-deal{border:1px solid var(--line); border-radius:6px; padding:10px 12px; margin-bottom:10px; background:var(--panel);}
+  .mny-pay{display:flex; justify-content:space-between; align-items:center; gap:8px; flex-wrap:wrap; padding:5px 0; font-size:12.5px; border-top:1px dashed var(--line);}
+  .mny-warn{background:rgba(255,196,0,.16); border:1px solid var(--brand-yellow); border-radius:6px; padding:8px 10px; margin-bottom:10px; font-size:12.5px;}
+  .mny-sec .panel-head{padding:10px 14px;} .mny-sec .panel-head h3{font-size:14px;}
+  .stat-row{display:grid; grid-template-columns:repeat(auto-fit,minmax(160px,1fr)); gap:12px; margin-bottom:26px;}
+  .stat{
+    background:var(--panel);
+    border:1px solid var(--line);
+    border-radius:var(--radius);
+    padding:16px 16px 14px;
+  }
+  .stat .num{font-family:'Inter'; font-size:30px; font-weight:800; color:var(--text);}
+  .stat-grade{position:relative;}
+  .stat-grade .grade-letter{font-size:46px; line-height:1;}
+  .stat-grade .grade-detail{font-size:10.5px; color:var(--text-faint); margin-top:4px;}
+  .stat-grade-ok .grade-letter{color:var(--ok);}
+  .stat-grade-ok{border-left:3px solid var(--ok);}
+  .stat-grade-warn .grade-letter{color:var(--status-in-progress);}
+  .stat-grade-warn{border-left:3px solid var(--status-in-progress);}
+  .stat-grade-bad .grade-letter{color:var(--status-delayed);}
+  .stat-grade-bad{border-left:3px solid var(--status-delayed);}
+  .sidebar-health-widget{margin:0 16px 8px; padding:12px 10px; border:1px solid var(--line); border-radius:10px; background:var(--panel-2); text-align:center; cursor:pointer;}
+  .sidebar-health-widget:hover{border-color:var(--accent);}
+  .sidebar-health-widget .grade-letter{font-size:40px; line-height:1; font-weight:800;}
+  .sidebar-health-widget .lbl{font-size:11px; text-transform:uppercase; letter-spacing:.04em; color:var(--text-dim); font-weight:700; margin-top:2px;}
+  .sidebar-health-widget .grade-detail{font-size:10.5px; color:var(--text-faint); margin-top:4px; line-height:1.3;}
+  /* Google Maps InfoWindow reserves fixed space above its content for its own
+     close button, which can't be repositioned — this pulls the actual
+     content up into that space to cut down the empty gap, a standard
+     workaround since the close button itself isn't otherwise controllable. */
+  .gm-style-iw-d{overflow:visible !important; padding-top:0 !important; padding-bottom:0 !important;}
+  .gm-style-iw-c{padding:6px 8px !important; top:0 !important; max-height:none !important;}
+  /* The close button itself is hidden (see .gm-ui-hover-effect below), but
+     Google wraps it in its own "chrome" row that reserves a fixed strip of
+     height regardless — that row is the actual source of the leftover gap
+     above the content, not padding on the balloon itself. Collapsing it
+     directly is what actually removes the space. */
+  .gm-style-iw-chr{display:block !important; height:0 !important; min-height:0 !important; overflow:hidden !important;}
+  /* Google's own InfoWindow close button reserves a fixed, fairly roomy
+     strip that can't be shrunk via CSS in any reliable cross-version way —
+     hidden entirely in favor of a compact custom "×" built into the
+     content itself (see buildGoogleMap's info window content). */
+  .gm-ui-hover-effect{display:none !important;}
+  .custom-confirm-overlay{
+    position:fixed; inset:0; background:rgba(10,12,14,0.55); z-index:250;
+    display:none; align-items:center; justify-content:center; padding:20px;
+  }
+  .custom-confirm-overlay.open{display:flex;}
+  .custom-confirm-box{
+    background:var(--panel); border:1px solid var(--line); border-radius:12px;
+    max-width:440px; width:100%; padding:22px 22px 18px; box-shadow:0 12px 40px rgba(0,0,0,0.25);
+  }
+  .custom-confirm-msg{font-size:13.5px; color:var(--text); line-height:1.5; white-space:pre-wrap; margin-bottom:18px;}
+  .custom-confirm-actions{display:flex; justify-content:flex-end; gap:8px;}
+  .grade-text-ok{color:var(--ok);}
+  .grade-text-warn{color:var(--status-in-progress);}
+  .grade-text-bad{color:var(--status-delayed);}
+  .stat .lbl{font-size:12px; color:var(--text-dim); margin-top:2px;}
+  .stat.flag{border-left:3px solid var(--warn);}
+  .stat.flag .num{color:var(--warn-text);}
+  .stat.clickable{cursor:pointer; transition:border-color .12s;}
+  .stat.clickable:hover{border-color:var(--accent);}
+  .stat.stat-active{border-color:var(--accent); box-shadow:inset 0 0 0 1px var(--accent);}
+
+  .dash-two-col{display:grid; grid-template-columns:1fr 1fr; gap:20px; margin-bottom:20px;}
+  .dash-two-col.dispatch-third{grid-template-columns:1fr 2fr;}
+  .dash-tasks-row{display:grid; grid-template-columns:1.3fr 1fr; gap:20px; margin-bottom:20px; align-items:start;}
+  .dash-top-of-mind-body{max-height:660px; overflow-y:auto;}
+  .dash-preview-click{cursor:pointer;}
+  .dash-preview-click:hover{background:var(--bg);}
+  .logi-list{display:flex; flex-direction:column; gap:10px;}
+  .logi-solve-plan{display:flex; flex-direction:column; gap:10px; margin-top:10px;}
+  .logi-solve-project{background:var(--bg); border:1px solid var(--line); border-radius:8px; padding:10px 12px;}
+  .logi-solve-project-name{font-weight:700; font-size:12.5px; margin-bottom:6px;}
+  .logi-solve-row{display:flex; align-items:center; gap:8px; padding:4px 0; font-size:12.5px;}
+  .logi-walk-progress{font-size:11.5px; color:var(--text-faint); text-transform:uppercase; letter-spacing:.04em; margin-bottom:8px;}
+  .logi-walk-nav{display:flex; justify-content:space-between; margin-top:12px;}
+  .logi-card{
+    background:var(--bg); border:1px solid var(--line); border-left:3px solid var(--accent);
+    border-radius:6px; padding:11px 13px;
+  }
+  .logi-card-top{margin-bottom:6px;}
+  .logi-title{font-weight:700; font-size:13.5px; color:var(--text); margin-bottom:4px;}
+  .logi-title-link{font-family:inherit; transition:text-decoration-color .1s;}
+  .logi-title-link:hover{text-decoration-color:var(--text) !important;}
+  .logi-desc{font-size:12.5px; color:var(--text-dim); line-height:1.5;}
+  .logi-actions{margin-top:9px;}
+  .logi-inline-picks{display:flex; flex-direction:column; gap:5px; margin-top:9px;}
+  .logi-pick-row{
+    display:flex; align-items:center; gap:8px; width:100%; text-align:left;
+    background:var(--panel-2); border:1px solid var(--line); border-radius:6px;
+    padding:7px 10px; font-size:12.5px; cursor:pointer; font-family:inherit; color:var(--text);
+  }
+  .logi-pick-row:hover{border-color:var(--accent);}
+  .dash-map-preview{padding:10px;}
+  .dash-map-thumb{width:100%; height:220px; display:block; border-radius:8px; pointer-events:none;}
+
+  .mini-cal-grid{display:grid; grid-template-columns:repeat(7,1fr); gap:4px;}
+  .mini-cal-dow{font-size:9.5px; color:var(--text-faint); text-align:center; padding-bottom:2px;}
+  .mini-cal-cell{
+    background:var(--panel-2); border:1px solid var(--line); border-radius:2px;
+    min-height:38px; padding:3px 4px; display:flex; flex-direction:column; align-items:center;
+  }
+  .mini-cal-cell.outside{visibility:hidden;}
+  .mini-cal-cell.today{border-color:var(--accent); border-width:1.5px;}
+  .mini-cal-daynum{font-size:10px; color:var(--text-dim); font-family:'Inter';}
+  .mini-cal-dots{display:flex; gap:2px; flex-wrap:wrap; justify-content:center; margin-top:3px;}
+  .mini-dot{width:5px; height:5px; border-radius:50%; display:inline-block;}
+
+  /* ---- Panels / tables ---- */
+  .panel{background:var(--panel); border:1px solid var(--line); border-radius:var(--radius); margin-bottom:20px;}
+  .panel-head{padding:14px 18px; border-bottom:1px solid var(--line); display:flex; align-items:center; justify-content:space-between;}
+  .panel-head h3{font-size:14px; color:var(--text);}
+  .panel-body{padding:16px 18px;}
+  .mini-row{padding:10px 0; border-bottom:1px solid var(--line-soft);}
+  .mini-row:last-child{border-bottom:none;}
+  .mini-row-title{font-weight:700; font-size:13.5px; color:var(--text);}
+  .mini-row-customer{font-weight:400; color:var(--text-faint); font-size:12px;}
+  .mini-row-meta{display:flex; align-items:center; flex-wrap:wrap; gap:8px 12px; margin-top:5px; font-size:12.5px; color:var(--text-dim);}
+
+  table{width:100%; border-collapse:collapse;}
+  th{
+    text-align:left; font-size:11px; color:var(--text-faint); font-weight:600;
+    padding:8px 12px; border-bottom:1px solid var(--line); white-space:nowrap;
+  }
+  td{padding:11px 12px; border-bottom:1px solid var(--line-soft); font-size:13.5px; vertical-align:middle;}
+  tr:last-child td{border-bottom:none;}
+  tbody tr:hover{background:rgba(255,255,255,0.02);}
+
+  .skill-toggle{
+    display:inline-flex; align-items:center; justify-content:center;
+    background:var(--bg); border:1px solid var(--line); border-radius:20px;
+    padding:8px 14px; font-size:12.5px; font-weight:600; color:var(--text-dim); cursor:pointer;
+    white-space:nowrap; transition:background .12s, border-color .12s, color .12s;
+  }
+  .skill-toggle input{position:absolute; opacity:0; width:0; height:0;}
+  .skill-toggle:has(input:checked){background:#e8f5e9; border-color:var(--ok); color:var(--ok);}
+  .skill-bubble{display:inline-flex; align-items:center; gap:6px; border-radius:20px; padding:6px 6px 6px 14px; font-size:13px; font-weight:600; border:1.5px solid; margin:0 8px 8px 0;}
+  .skill-bubble.active{background:#e8f5e9; border-color:var(--ok); color:var(--ok);}
+  .skill-bubble.inactive{background:var(--panel-2); border-color:var(--line); color:var(--text-faint);}
+  .skill-bubble .bubble-count{opacity:.75; font-weight:400;}
+  .skill-bubble button{background:rgba(0,0,0,.06); border:none; width:20px; height:20px; border-radius:50%; display:flex; align-items:center; justify-content:center; font-size:14px; font-weight:700; cursor:pointer; line-height:1; padding:0; color:inherit; flex-shrink:0;}
+  .skill-bubble button:hover{background:rgba(0,0,0,.12);}
+  .tag{
+    display:inline-flex; align-items:center; gap:5px;
+    padding:3px 9px; border-radius:20px; font-size:11px; font-weight:700;
+    text-transform:uppercase; letter-spacing:.03em;
+  }
+  .dot{width:7px;height:7px;border-radius:50%;flex-shrink:0;}
+
+  .empty{color:var(--text-faint); font-size:13px; padding:20px 4px; text-align:center;}
+
+  /* ---- Forms / Modal ---- */
+  .modal-back{
+    position:fixed; inset:0; background:rgba(10,12,14,0.72);
+    display:none; align-items:flex-start; justify-content:center;
+    z-index:150; padding: 40px 20px; overflow-y:auto;
+  }
+  .modal-back.open{display:flex;}
+  .modal-back.offcanvas{
+    justify-content:flex-end; align-items:stretch; padding:0; background:rgba(20,22,20,0.32);
+  }
+  .modal-back.offcanvas .modal{
+    max-width:440px; width:100%; height:100vh; border-radius:0; margin:0;
+    animation: offcanvasIn .22s ease; overflow-y:auto; position:relative;
+    border-left:1px solid var(--line); border-top:none; border-right:none; border-bottom:none;
+  }
+  @keyframes offcanvasIn{ from{transform:translateX(100%);} to{transform:translateX(0);} }
+  .offcanvas-close{
+    position:absolute; top:16px; right:18px; background:none; border:none; cursor:pointer;
+    font-size:20px; color:var(--text-dim); line-height:1; padding:4px;
+  }
+  .offcanvas-close:hover{color:var(--text);}
+  /* collapsible panels: a clear arrow that turns when open */
+  details.coll > summary.panel-head{justify-content:flex-start;}
+  details.coll > summary{list-style:none; cursor:pointer; display:flex; align-items:center; gap:10px;}
+  details.coll > summary::-webkit-details-marker{display:none;}
+  details.coll > summary .caret{display:inline-block; width:14px; font-size:13px; color:var(--text-dim); transition:transform .15s;}
+  details.coll[open] > summary .caret{transform:rotate(90deg);}
+  .pill-row{display:flex; gap:8px; flex-wrap:wrap; align-items:center;}
+  .pill{border:1px solid var(--line); background:var(--panel); color:var(--text); border-radius:999px; padding:5px 15px; font-size:13px; font-family:inherit; cursor:pointer;}
+  .pill:hover{border-color:var(--accent);}
+  .pill.on{background:var(--accent); border-color:var(--accent); color:var(--accent-text); font-weight:600;}
+  .modal{
+    background:var(--panel-2); border:1px solid var(--line); border-radius:4px;
+    width:100%; max-width:860px; padding:24px 26px 26px;
+  }
+  .modal h3{font-size:16px; margin-bottom:18px;}
+  .field{margin-bottom:14px;}
+  .field label{display:block; font-size:11.5px; color:var(--text-dim); margin-bottom:5px; font-weight:600; text-transform:uppercase; letter-spacing:.03em;}
+  .field input, .field select, .field textarea{
+    width:100%; background:var(--bg); border:1px solid var(--line); color:var(--text);
+    padding:9px 10px; border-radius:var(--radius);
+  }
+  .field input:focus, .field select:focus, .field textarea:focus{outline:none; border-color:var(--accent);}
+  .field textarea{resize:vertical; min-height:56px;}
+  .row2{display:grid; grid-template-columns:1fr 1fr; gap:12px;}
+  .mny-split{display:grid; grid-template-columns:1fr 1fr; gap:0;}
+  .mny-half{min-width:0; padding-right:20px;}
+  .mny-half-r{padding:0 0 0 20px; border-left:1px solid var(--line);}
+  @media (max-width:860px){ .mny-split{grid-template-columns:1fr;} .mny-half{padding-right:0;} .mny-half-r{padding:16px 0 0; margin-top:16px; border-left:0; border-top:1px solid var(--line);} }
+  .row3{display:grid; grid-template-columns:1fr 1fr 1fr; gap:12px;}
+  .modal-actions{display:flex; justify-content:space-between; align-items:center; margin-top:20px; padding-top:16px; border-top:1px solid var(--line);}
+  .modal-actions .right{display:flex; gap:8px;}
+
+  .grade-slider-row{display:flex; align-items:center; gap:10px; margin-bottom:10px;}
+  .grade-slider-row .glabel{width:120px; font-size:12.5px; color:var(--text-dim); flex-shrink:0;}
+  .grade-slider-row input[type=range]{flex:1;}
+  .grade-slider-row .gval{width:22px; text-align:right; font-family:'Inter'; font-size:13px; color:var(--text);}
+
+  /* ---- Map ---- */
+  #main.flush{padding:0; overflow:hidden;}
+  #main.flush #mapWrap{height:100vh; border:none; border-radius:0; padding:0;}
+  #calWrap{
+    height:100vh; box-sizing:border-box; padding:20px 24px;
+    display:flex; flex-direction:column; background:var(--panel);
+  }
+  #calWrap .cal-head{flex:0 0 auto;}
+  #calWrap .cal-month-scroll{flex:1; min-height:0; display:flex; flex-direction:column;}
+  #calWrap .cal-month-scroll .cal-dow-row{flex:0 0 auto;}
+  #calWrap .cal-weeks{flex:1; min-height:0;}
+  #calWrap .cal-week-grid{flex:1; min-height:0;}
+  #calWrap .gantt-wrap{flex:1; min-height:0; display:flex; flex-direction:column;}
+  #calWrap .day-list{flex:1; min-height:0; overflow-y:auto;}
+  #mapWrap{background:var(--panel); border:1px solid var(--line); border-radius:var(--radius); padding:10px; position:relative; overflow:hidden;}
+  #mapSvg{width:100%; height:100%; display:block; touch-action:none; cursor:grab;}
+  #mapSvg.grabbing{cursor:grabbing;}
+  .map-legend{display:flex; flex-wrap:wrap; gap:16px; padding:12px 8px 4px; font-size:12px; color:var(--text-dim);}
+  .map-legend .item{display:flex; align-items:center; gap:6px;}
+  .map-legend-overlay{
+    position:absolute; left:14px; bottom:14px; background:rgba(255,255,255,0.92);
+    border:1px solid var(--line); border-radius:4px; padding:8px 12px; max-width:min(90%, 560px);
+    gap:8px 14px; pointer-events:none;
+  }
+  .map-reset-btn{
+    position:absolute; top:14px; right:14px; z-index:2;
+    background:rgba(255,255,255,0.92); border:1px solid var(--line); border-radius:20px;
+    padding:7px 14px; font-size:12px; font-weight:700; color:var(--text); cursor:pointer;
+  }
+  .map-svg-notice{
+    position:absolute; top:14px; left:14px; z-index:2; right:150px;
+    background:rgba(255,255,255,0.92); border:1px solid var(--line); border-radius:20px;
+    padding:6px 14px; font-size:11.5px; color:var(--text-dim);
+  }
+  .map-svg-notice button{
+    background:none; border:none; color:var(--accent); font-weight:700; font-size:11.5px; cursor:pointer; padding:0; text-decoration:underline;
+  }
+  .map-tip{
+    position:absolute; background:#0F1113; border:1px solid var(--line); border-radius:3px;
+    padding:8px 10px; font-size:12px; pointer-events:none; display:none; z-index:5; max-width:260px;
+  }
+  .map-tip .t-name{font-weight:700; color:var(--text); margin-bottom:2px;}
+  .map-tip .t-sub{color:var(--text-dim); font-size:12.5px;}
+  .map-tip-open-btn{
+    pointer-events:auto; display:block; width:100%; margin-top:8px;
+    background:var(--accent); color:var(--accent-text); border:none; border-radius:8px;
+    padding:6px 10px; font-size:11.5px; font-weight:700; cursor:pointer;
+  }
+  .tip-group-row{
+    display:flex; align-items:center; justify-content:space-between; gap:8px;
+    padding:6px 0; border-top:1px solid rgba(255,255,255,0.1); font-size:11.5px; color:var(--text-dim);
+  }
+  .tip-group-row:first-of-type{border-top:1px solid rgba(255,255,255,0.16); margin-top:4px;}
+  .map-tip-open-btn.small{width:auto; margin-top:0; padding:4px 9px; font-size:10.5px; flex-shrink:0;}
+
+  /* ---- Calendar ---- */
+  .cal-head{display:flex; align-items:center; justify-content:space-between; margin-bottom:14px;}
+  .cal-head .month-label{font-size:16px; font-family:'Inter'; font-weight:700;}
+  .cal-nav-compact{display:none;}
+  .cal-nav{display:flex; gap:6px; align-items:center;}
+  .cal-mode-toggle{display:flex; background:var(--bg); border:1px solid var(--line); border-radius:8px; padding:2px; margin-right:6px;}
+  .cal-mode-btn{background:none; border:none; padding:6px 12px; font-size:12px; font-weight:600; color:var(--text-dim); border-radius:6px; cursor:pointer;}
+  .cal-mode-btn.active{background:var(--panel); color:var(--text); box-shadow:0 1px 2px rgba(0,0,0,0.08);}
+
+  .gantt-header{display:flex;}
+  .gantt-label-spacer{width:180px; flex-shrink:0;}
+  .gantt-months-scroll{flex:1; overflow:hidden; min-width:0;}
+  .gantt-months{position:relative; height:26px; border-bottom:1px solid var(--line);}
+  .gantt-month{position:absolute; top:0; height:100%; font-size:10px; color:var(--text-faint); border-left:1px solid var(--line-soft); padding:4px 0 0 5px; box-sizing:border-box;}
+  .gantt-month-yearstart{border-left:1.5px solid var(--accent); font-weight:700; color:var(--text);}
+  .gantt-body{flex:1; min-height:0; overflow-y:auto; position:relative;}
+  .gantt-body-scroll{overflow-x:auto; cursor:grab; scrollbar-width:none;}
+  .gantt-body-scroll::-webkit-scrollbar{display:none;}
+  .gantt-body-scroll.dragging{cursor:grabbing; user-select:none;}
+  .gantt-row{display:flex; align-items:center; height:30px; border-bottom:1px solid var(--line-soft);}
+  .gantt-label{width:180px; flex-shrink:0; font-size:12px; color:var(--text); padding-right:12px; display:flex; align-items:center; gap:6px; min-width:0; position:sticky; left:0; background:var(--panel); z-index:2;}
+  .gantt-status-dot{
+    width:8px; height:8px; border-radius:50%; flex-shrink:0; cursor:pointer;
+    box-shadow:0 0 0 2px var(--panel); transition:transform .1s;
+  }
+  .gantt-status-dot:hover{transform:scale(1.3);}
+  .proj-issue-dot{
+    width:8px; height:8px; border-radius:50%; flex-shrink:0; cursor:pointer;
+    box-shadow:0 0 0 2px var(--panel); transition:transform .1s;
+  }
+  .proj-issue-dot:hover{transform:scale(1.3);}
+  .gantt-label-text{white-space:nowrap; overflow:hidden; text-overflow:ellipsis; min-width:0;}
+  .gantt-track{position:relative; height:100%; flex-shrink:0;}
+  .gantt-bar{position:absolute; top:6px; bottom:6px; border-radius:4px; cursor:pointer; min-width:4px;}
+  .gantt-today-line{position:absolute; top:0; bottom:0; width:1.5px; background:var(--accent); opacity:0.6; z-index:1;}
+  .cal-dow-row{display:grid; grid-template-columns:repeat(7,1fr); gap:0; margin-bottom:0;}
+  .cal-dow{font-size:10.5px; color:var(--text-faint); text-transform:uppercase; letter-spacing:.05em; padding:0 7px 4px;}
+  .cal-weeks{display:flex; flex-direction:column; gap:0;}
+  .cal-week-grid{display:grid; grid-template-columns:repeat(7,1fr); column-gap:0; row-gap:0;}
+  .cal-daybg{
+    background:var(--panel); border:1px solid var(--line); border-radius:0; position:relative; cursor:pointer;
+  }
+  .cal-daybg:hover{background:var(--bg);}
+  .cal-daybg.today{background:#e8f5e9;}
+  .cal-daybg.today:hover{background:#dcefdd;}
+  .cal-daybg.outside{background:none; border:none; cursor:default;}
+  .cal-daybg.outside:hover{background:none;}
+  .cal-daynum{
+    position:absolute; top:4px; left:7px; font-size:11px; color:var(--text-dim);
+    font-family:'Inter'; pointer-events:none;
+  }
+  .cal-daynum.today{color:var(--accent); font-weight:700;}
+  .cal-span-bar{
+    font-size:10px; font-weight:700; color:#fff; padding:2px 7px; position:relative; z-index:1;
+    white-space:nowrap; overflow:hidden; text-overflow:ellipsis; cursor:pointer;
+    display:flex; align-items:center; gap:4px; opacity:0.75;
+  }
+  .cal-bar-statusdot{width:5px; height:5px; border-radius:50%; flex-shrink:0; box-shadow:0 0 0 1px rgba(255,255,255,0.6);}
+  .health-issues-list{display:flex; flex-direction:column; gap:8px;}
+  .health-issue{
+    display:flex; align-items:center; gap:10px; background:var(--bg); border:1px solid var(--line);
+    border-radius:8px; padding:9px 12px;
+  }
+  .health-warn-icon{flex-shrink:0; font-size:14px;}
+  .health-issue-text{flex:1; font-size:12.5px; color:var(--text-dim); line-height:1.4;}
+  .health-ok{
+    display:flex; align-items:center; gap:10px; background:var(--bg); border:1px solid var(--line);
+    border-radius:8px; padding:14px; font-size:13px; font-weight:600; color:var(--ok);
+  }
+  .health-ok-icon{font-size:18px;}
+  .dup-warning{
+    background:var(--status-delayed)11; border:1px solid var(--status-delayed); border-radius:8px;
+    padding:12px 14px; margin-top:14px;
+  }
+  .dup-warning-title{font-weight:700; font-size:12.5px; color:var(--status-delayed); margin-bottom:8px;}
+  .dup-warning-row{font-size:12px; color:var(--text-dim); padding:3px 0;}
+  .dup-warning-actions{display:flex; gap:8px; flex-wrap:wrap; margin-top:10px;}
+  .dup-pair-row{display:flex; align-items:center; gap:14px; padding:12px 0; border-bottom:1px solid var(--line-soft);}
+  .dup-pair-item{flex:1; font-size:13px;}
+  .dup-pair-item .btn{margin-top:8px;}
+  .dup-pair-vs{color:var(--text-faint); font-size:11px; font-weight:700; flex-shrink:0;}
+  .howto-card{background:var(--bg); border:1px solid var(--line); border-radius:8px; padding:12px 14px; margin-bottom:10px;}
+  .howto-title{font-weight:700; font-size:13px; cursor:pointer; display:flex; justify-content:space-between; align-items:center;}
+  .howto-caret{color:var(--text-faint); font-size:11px;}
+  .howto-steps{display:none; margin:10px 0 8px; padding-left:20px; font-size:12.5px; color:var(--text-dim); line-height:1.7;}
+  .howto-steps.open{display:block;}
+  .unavail-section{margin-top:14px; padding-top:10px; border-top:1px solid var(--line);}
+  .unavail-title{font-size:11px; text-transform:uppercase; letter-spacing:.04em; color:var(--text-faint); margin-bottom:6px;}
+  .unavail-row{font-size:12px; color:var(--text-dim); padding:3px 0;}
+  .cal-week-overflow{
+    grid-column:1/8; font-size:10px; color:var(--text-faint); padding:0 6px; position:relative; z-index:1;
+  }
+
+  /* ---- Dispatch ---- */
+  .weight-box{display:flex; align-items:center; gap:16px; flex-wrap:wrap;}
+  .weight-box .wf{display:flex; align-items:center; gap:8px; font-size:12.5px; color:var(--text-dim);}
+  .weight-box input[type=range]{width:140px;}
+  .score-bar-track{background:var(--bg); border-radius:20px; height:6px; width:90px; overflow:hidden;}
+  .score-bar-fill{height:100%; background:var(--accent);}
+  .project-title-link{
+    background:none; border:none; padding:0; margin:0; cursor:pointer;
+    font-weight:700; font-size:13.5px; color:var(--text); text-align:left; font-family:inherit;
+  }
+  .project-title-link:hover{color:var(--accent); text-decoration:underline;}
+  .rank-badge{
+    width:22px;height:22px;border-radius:50%;background:var(--panel-2);border:1px solid var(--line);
+    display:flex;align-items:center;justify-content:center;font-size:11px;font-weight:700;color:var(--text-dim);
+  }
+  .rank-badge.rank1{background:#27F550; border-color:#27F550; color:#123018;}
+  .rank-badge.rank23{background:#FFDC4B; border-color:#FFDC4B; color:#4A3900;}
+
+  ::placeholder{color:var(--text-faint);}
+  .hint{font-size:11.5px; color:var(--text-faint); margin-top:3px;}
+  .spinner-wheel{position:relative; width:22px; height:22px; flex-shrink:0;}
+  .spinner-wheel div{position:absolute; top:0; left:50%; width:2px; height:6px; margin-left:-1px; border-radius:1px; background:var(--text-faint); transform-origin:1px 11px; animation:spinner-fade 1s linear infinite;}
+  @keyframes spin12{ to{ transform:rotate(360deg); } }
+  @keyframes spinner-fade{0%{opacity:1;} 100%{opacity:0.15;}}
+  .spinner-row{display:flex; align-items:center; gap:10px;}
+  select[multiple]{min-height:90px;}
+  select.status-select{-webkit-appearance:none; appearance:none; cursor:pointer;}
+  select.status-select:focus{outline:none;}
+
+  /* ---- AI assistant bar (floating, not full-width) ---- */
+  #assistantBar{
+    position:fixed; left:240px; right:24px; bottom:24px; z-index:120;
+    display:none; justify-content:center; pointer-events:none;
+  }
+  #assistantBar.show{display:flex;}
+  #assistantBarInner{
+    width:100%; max-width:792px; position:relative; pointer-events:auto;
+    background:var(--panel); border:1px solid var(--line); border-radius:18px;
+    box-shadow:0 10px 34px rgba(0,0,0,0.22); padding:6px 8px;
+  }
+  #assistantForm{display:flex; gap:4px; align-items:center;}
+  #assistantInput{
+    flex:1; background:transparent; border:none; color:var(--text);
+    padding:10px 6px; font-size:13.5px; min-width:0;
+    font-family:inherit; line-height:1.4; resize:none; overflow-y:auto;
+    max-height:160px;
+  }
+  #assistantInput:focus{outline:none;}
+  .a-icon-btn{
+    background:none; border:none; color:var(--text-dim); cursor:pointer;
+    width:34px; height:34px; border-radius:50%; display:flex; align-items:center; justify-content:center;
+    flex-shrink:0; transition:background .1s;
+  }
+  .a-icon-btn:hover{background:var(--bg); color:var(--text);}
+  .a-icon-btn.send{background:var(--accent); color:var(--accent-text);}
+  .a-icon-btn.send:hover{filter:brightness(1.08);}
+  .a-icon-btn.send:disabled{opacity:0.5; cursor:wait;}
+  .a-icon-btn.mic-active{background:var(--danger); color:#FFFFFF;}
+  #assistantAttachChip:empty{display:none;}
+  #assistantAttachChip{
+    display:flex; align-items:center; gap:6px; background:var(--bg); border:1px solid var(--line);
+    border-radius:8px; padding:5px 9px; font-size:11.5px; color:var(--text-dim); margin:4px 6px 6px;
+  }
+  #assistantAttachChip button{background:none; border:none; color:var(--text-faint); cursor:pointer; font-size:13px; padding:0 2px;}
+  #assistantConfirm:not(:empty){
+    position:absolute; left:0; right:0; bottom:100%; margin-bottom:10px;
+  }
+  .assistant-card{
+    background:var(--panel); border:1px solid var(--line); border-radius:14px;
+    padding:12px 14px; font-size:13px; max-height:40vh; overflow-y:auto;
+    box-shadow:0 10px 30px rgba(0,0,0,0.2);
+  }
+  .assistant-card .a-summary{font-weight:700; margin-bottom:8px; color:var(--text);}
+  .assistant-card .a-action-row{
+    font-size:12px; color:var(--text-dim); padding:4px 0 4px 10px; border-left:2px solid var(--accent);
+    margin-bottom:4px;
+  }
+  .assistant-card .a-buttons{display:flex; gap:8px; margin-top:10px;}
+  .assistant-card .a-error{color:var(--danger); font-size:12.5px;}
+  .assistant-card .a-clarify{color:var(--text-dim); font-size:12.5px;}
+  #main.has-assistant-pad{padding-bottom:96px;}
+  /* Map and Calendar are "flush" (edge-to-edge) pages that already go full
+     height — the assistant bar is a fixed, floating overlay regardless
+     (see #assistantBar above), so it never actually needed this reserved
+     strip underneath it; that reserved strip was just leaving a plain grey
+     gap below the map for no reason. */
+  @media (max-width: 860px){
+    #assistantBar{left:12px; right:12px; bottom:12px;}
+    #assistantBarInner{max-width:none;}
+  }
+
+  /* ---- Access gate ---- */
+  #gate{
+    position:fixed; inset:0; background:var(--bg); z-index:200;
+    display:flex; align-items:center; justify-content:center; padding:20px;
+  }
+  #gate.hidden{display:none;}
+  .gate-box{width:100%; max-width:340px; text-align:center;}
+  .gate-box .gate-logo{
+    width:64px;height:64px; object-fit:contain; margin:0 auto 18px; display:block;
+  }
+  .gate-box h2{font-size:17px; margin-bottom:6px;}
+  .gate-box .desc{color:var(--text-dim); font-size:13px; margin-bottom:18px;}
+  .gate-box input{width:100%; background:var(--panel); border:1px solid var(--line); color:var(--text); padding:11px 12px; border-radius:var(--radius); text-align:center; letter-spacing:.1em; font-size:15px;}
+  .gate-box .err{color:var(--danger); font-size:12px; margin-top:10px; min-height:14px;}
+  .gate-box button{width:100%; margin-top:12px;}
+
+  .notice-preview{background:var(--bg); border:1px solid var(--line); border-radius:3px; padding:12px 14px; font-size:13px; white-space:pre-wrap; overflow-wrap:break-word; line-height:1.6; color:var(--text); margin-bottom:14px;}
+  .notice-quicklinks{margin-top:10px;}
+  .notice-quicklinks a{display:block; font-size:14px; padding:6px 0; color:var(--accent);}
+
+  .rec-box-row{display:grid; grid-template-columns:repeat(auto-fit, minmax(145px,1fr)); gap:10px;}
+  .rec-box{
+    background:var(--bg); border:1px solid var(--line); border-radius:10px;
+    padding:14px 13px; text-align:left; display:flex; flex-direction:column; gap:6px;
+    font-family:inherit; color:var(--text);
+  }
+  .rec-box:hover{border-color:var(--accent); background:var(--panel);}
+  .rec-box .tag{align-self:flex-start;}
+  .rec-box-name{font-family:'Inter'; font-weight:700; font-size:14.5px; margin-top:2px;}
+  .rec-box-reason{font-size:12px; color:var(--text-dim); line-height:1.4;}
+  .rec-box-meta{font-size:11px; color:var(--text-faint); font-family:'Inter'; margin-top:auto; padding-top:4px;}
+
+  /* ---- Staleness banner ---- */
+  #staleBanner{
+    position:fixed; top:0; left:0; right:0; z-index:150;
+    background:var(--brand-light-black); color:#FFFFFF;
+    display:none; align-items:center; justify-content:center; gap:14px;
+    padding:9px 16px; font-size:13px; font-weight:600;
+  }
+  #staleBanner.show{display:flex;}
+  #staleBanner button{
+    border:none; border-radius:20px; padding:5px 14px; font-size:12px; font-weight:700; cursor:pointer;
+  }
+  #staleBanner .refresh-btn{background:var(--brand-yellow); color:var(--brand-light-black);}
+  #staleBanner .dismiss-btn{background:transparent; color:#FFFFFF; opacity:0.75; padding:5px 6px;}
+  #staleBanner .dismiss-btn:hover{opacity:1;}
+  body.has-stale-banner #app{margin-top:38px;}
+
+  @media (max-width: 860px){
+    #mobileTopBar{display:flex;}
+    #sidebar{
+      position:fixed; left:0; top:0; z-index:251; width:88%; max-width:340px;
+      height:100vh; height:100dvh; overflow-y:auto; -webkit-overflow-scrolling:touch;
+      transform:translateX(-100%); transition:transform .2s ease; box-shadow:4px 0 24px rgba(0,0,0,0.25);
+    }
+    #sidebar.mobile-open{transform:translateX(0);}
+    #sidebar .sidebar-foot{padding-bottom:calc(72px + env(safe-area-inset-bottom));}
+    #main{padding:20px 10px 40px; padding-top:70px;}
+    #main.flush{padding-top:56px;}
+    .row2,.row3,.dash-two-col,.dash-tasks-row,.dash-two-col.dispatch-third{grid-template-columns:1fr;}
+    /* The sidebar now sits above the top bar (fixed z-index), so it needs
+       its own complete header again rather than relying on the top bar
+       showing through underneath it. */
+    .sidebar-health-widget{margin:0 16px 8px;}
+    /* The sticky top bar already shows the current page title, so each
+       page's own h2 heading is redundant on mobile — hidden here, keeping
+       the description text underneath it since that's still useful. */
+    .page-head h2{display:none;}
+    .page-head{margin-bottom:14px;}
+    .cal-weeks{overflow-y:auto;}
+    /* Calendar header: for month mode, the current month/year now lives in
+       the sticky top bar instead, freeing this row entirely for controls —
+       year mode keeps its own label here since that one updates live as
+       you scroll the 3-year window, which the top bar doesn't track. */
+    .cal-nav-full{display:none;}
+    .cal-nav-compact{display:inline;}
+    .cal-head-month .month-label{display:none;}
+    .cal-head{gap:8px; flex-wrap:wrap;}
+    .cal-nav{width:100%; display:flex; align-items:center; gap:8px;}
+    .cal-mode-toggle{flex:1;}
+    .cal-mode-toggle .cal-mode-btn{width:50%; padding:10px 0; font-size:14px;}
+    .cal-nav-ptn{display:flex; gap:6px; flex-shrink:0;}
+    .cal-nav-ptn .btn{padding:8px 10px;}
+    /* This is purely about the fixed mobile top bar overlapping the top of
+       the map/calendar (it's an opaque 56px strip, unlike the assistant
+       bar's floating pill, which is fine to overlay) — independent of
+       whether the assistant bar is showing. */
+    #main.flush #mapWrap{height:calc(100vh - 56px);}
+    /* Calendar: no scrolling on a phone. Its height stops just above the assistant bar (--assistant-reserve is the bar plus its
+       margin), and the weeks share whatever is left, squeezing evenly. dvh = the visible height on phones with a collapsing URL bar. */
+    #main.flush #calWrap{height:calc(100vh - 56px - var(--assistant-reserve, 84px)); height:calc(100dvh - 56px - var(--assistant-reserve, 84px)); padding-bottom:4px;}
+    #calWrap .cal-weeks{overflow:hidden;}
+    #calWrap .cal-week-grid{overflow:hidden;}
+    #main.flush.has-assistant-pad{padding-bottom:0;}
+    /* Nav redesigned as a 2-column grid of boxes on mobile, icon-over-label,
+       matching the referenced Facebook-style shortcuts layout. */
+    nav{display:grid; grid-template-columns:1fr 1fr; gap:10px; padding:14px 16px;}
+    nav button{
+      flex-direction:column; justify-content:center; text-align:center; gap:8px;
+      border:1px solid var(--line); border-radius:12px; padding:18px 8px; margin-bottom:0;
+    }
+    nav button.active{box-shadow:none; border-color:var(--accent);}
+    nav .icon{width:26px; height:26px;}
+    /* Responsive table → card transform. Scoped to an explicit class so this
+       never touches any other table in the app (the Gantt, health-check
+       popups, etc. don't opt in). Same markup as desktop — data-label
+       attributes on each cell supply the labels shown here via ::before. */
+    table.responsive-table thead{display:none;}
+    table.responsive-table, table.responsive-table tbody, table.responsive-table tr, table.responsive-table td{display:block; width:100%; box-sizing:border-box;}
+    table.responsive-table tr{
+      border:1px solid var(--line); border-radius:10px; margin-bottom:10px; padding:10px 12px; background:var(--panel);
+    }
+    table.responsive-table td{
+      padding:6px 0; border:none; display:flex; align-items:center; gap:10px; flex-wrap:wrap;
+    }
+    table.responsive-table td[data-label]:not([data-label=""])::before{
+      content:attr(data-label); font-weight:600; color:var(--text-faint); font-size:10.5px; text-transform:uppercase; letter-spacing:.03em; flex-shrink:0; min-width:88px;
+    }
+    table.responsive-table td:not([data-label]){
+      font-weight:700; border-bottom:1px solid var(--line-soft); padding-bottom:8px; margin-bottom:4px;
+    }
+    /* Consistent, tighter spacing between Dashboard panels. .panel's margin
+       and .dash-two-col's gap were already equal (20px) — the visible
+       mismatch came from .panel-body's own bottom padding stacking on top
+       of that margin for single-column panels, which .dash-two-col's grid
+       gap never had to begin with. Shrinking panel-body's padding closes
+       most of that gap along with reducing overall wasted space. */
+    .panel{margin-bottom:12px;}
+    .dash-two-col,.dash-tasks-row{gap:12px; margin-bottom:12px;}
+    .dash-top-of-mind-body{max-height:400px;}
+    .panel-body{padding:10px 16px;}
+    /* Month calendar shrinks to fit 100% mobile width rather than scrolling
+       horizontally — a horizontal scroll-to-see-more gesture directly
+       conflicts with the swipe-to-change-month gesture on the same axis,
+       which is a worse problem than tighter day cells. */
+    #calWrap{padding:14px 12px;}
+    .modal-back{padding:16px 10px;}
+    .modal-actions{flex-wrap:wrap; gap:10px;}
+    .modal-actions > div:first-child{flex-basis:100%;}
+    .modal{padding:18px 16px 20px;}
+    .grade-slider-row .glabel{width:88px; font-size:11.5px;}
+    .gantt-label-spacer, .gantt-label{width:100px;}
+    .logi-pick-row{flex-wrap:wrap;}
+    .logi-pick-row .hint{flex-basis:100%; padding-left:0;}
+    .health-issue{flex-wrap:wrap; align-items:flex-start;}
+    .health-issue button{margin-top:8px; flex-basis:100%;}
+  }
+
+/* Toasts (v16.4): small corner notices. Click anywhere on one to dismiss it; "Go" jumps to the place that needs attention. */
+#suggestPill{ display:none; position:fixed; left:12px; bottom:12px; z-index:155; padding:7px 12px; font:600 12px 'Inter',sans-serif; color:var(--text-dim); background:var(--panel); border:1px solid var(--line); border-radius:16px; box-shadow:0 2px 8px rgba(0,0,0,.18); cursor:pointer; }
+#suggestPill.show{ display:block; }
+#toastStack{ position:fixed; right:16px; bottom:84px; z-index:99990; display:flex; flex-direction:column; gap:10px; align-items:flex-end; pointer-events:none; max-width:min(360px, calc(100vw - 32px)); }
+.toast{ pointer-events:auto; display:flex; align-items:center; gap:12px; background:var(--panel, #fff); color:var(--text, #1a1a1a); border:1px solid var(--line, #ddd); border-left:4px solid var(--accent, #c8102e); border-radius:10px; padding:10px 12px; box-shadow:0 6px 22px rgba(0,0,0,.28); font-size:13.5px; font-weight:600; cursor:pointer; animation:toastIn .22s ease-out; }
+.toast{ touch-action:pan-y; user-select:none; -webkit-user-select:none; }
+.toast .toast-go{ flex-shrink:0; background:var(--accent, #c8102e); color:#fff; border:0; border-radius:6px; padding:6px 12px; font-weight:700; font-size:12.5px; cursor:pointer; }
+.toast.leaving{ opacity:0; transform:translateX(24px); transition:all .18s ease-in; }
+@keyframes toastIn{ from{ opacity:0; transform:translateX(24px);} to{ opacity:1; transform:none;} }
+@media (prefers-reduced-motion: reduce){ .toast{ animation:none; } .toast.leaving{ transition:none; } }
+
+/* Voice mode (v16.6): big, hands-free-friendly controls */
+.voice-off{ display:none !important; }   /* Voice mode is switched off for now: set VOICE_ENABLED = true (and remove this line) to bring it back */
+.voice-big-btn{ display:none; flex-direction:column; align-items:center; justify-content:center; gap:4px; width:100%; margin:0 0 16px; padding:22px 16px; border:0; border-radius:14px; background:var(--accent, #c8102e); color:#fff; font-size:24px; font-weight:800; cursor:pointer; box-shadow:0 4px 14px rgba(0,0,0,.2); }
+.voice-big-btn span{ font-size:14px; font-weight:500; opacity:.9; }
+.voice-side-wrap{ padding:10px 12px 6px; }
+.voice-side-btn{ display:block; width:100%; padding:12px 14px; border:0; border-radius:10px; background:var(--accent, #c8102e); color:#fff; font-size:15px; font-weight:800; cursor:pointer; box-shadow:0 2px 8px rgba(0,0,0,.18); }
+.voice-side-btn:hover{ filter:brightness(1.08); }
+@media (max-width:860px){ .voice-big-btn{ display:flex; } .voice-side-wrap{ display:none; } }
+@media (max-width:700px){ .assigned-split{ grid-template-columns:1fr !important; } .assigned-split > div + div{ border-left:0 !important; padding-left:0 !important; border-top:1px solid var(--line); padding-top:10px; } }
+#voiceOverlay{ position:fixed; inset:0; z-index:100001; background:#101418; color:#fff; display:flex; flex-direction:column; padding:20px 18px calc(20px + env(safe-area-inset-bottom)); gap:14px; font-family:inherit; }
+#voiceOverlay .v-head{ display:flex; justify-content:space-between; align-items:center; font-size:15px; opacity:.8; letter-spacing:.04em; text-transform:uppercase; }
+#voiceOverlay .v-said{ font-size:28px; line-height:1.3; font-weight:700; flex:1; overflow:auto; }
+#voiceOverlay .v-heard{ font-size:20px; min-height:28px; color:#9fd3ff; }
+#voiceOverlay .v-state{ font-size:15px; opacity:.75; }
+#voiceOverlay .v-choices{ display:flex; flex-direction:column; gap:10px; }
+#voiceOverlay .v-choices button{ font-size:24px; font-weight:800; padding:20px; border-radius:14px; border:0; background:#fff; color:#101418; cursor:pointer; }
+#voiceOverlay .v-talkover{ background:transparent; color:#9fb3c8; border:1px solid #3a4450; border-radius:20px; padding:6px 12px; font-size:13px; cursor:pointer; }
+#voiceOverlay .v-said{ cursor:pointer; }
+#voiceOverlay .v-note{ font-size:15px; color:#ffd479; min-height:0; }
+#voiceOverlay .v-mic{ font-size:26px; font-weight:800; padding:22px; border-radius:14px; border:0; background:#4cd964; color:#101418; cursor:pointer; }
+#voiceOverlay .v-type{ display:flex; gap:8px; }
+#voiceOverlay .v-type input{ flex:1; font-size:18px; padding:14px; border-radius:12px; border:1px solid #3a4450; background:#1b222a; color:#fff; min-width:0; }
+#voiceOverlay .v-type button{ font-size:18px; font-weight:700; padding:0 18px; border-radius:12px; border:0; background:#3a4450; color:#fff; }
+#voiceOverlay .v-stop{ font-size:22px; font-weight:800; padding:18px; border-radius:14px; border:2px solid #ff6b6b; background:transparent; color:#ff6b6b; cursor:pointer; }
+#voiceOverlay .v-dot{ display:inline-block; width:10px; height:10px; border-radius:50%; background:#666; margin-right:8px; }
+#voiceOverlay.listening .v-dot{ background:#4cd964; animation:vpulse 1s infinite; }
+@keyframes vpulse{ 50%{ transform:scale(1.6); opacity:.5; } }
+.dispatch-eq > .panel{ margin-bottom:0; height:100%; box-sizing:border-box; }
+</style>
+<style>
+  .quota-bar{height:8px;border-radius:5px;background:var(--line);overflow:hidden;margin:8px 0 4px}.quota-bar>i{display:block;height:100%;background:var(--accent);border-radius:5px}
+  .quota-bar.ok>i{background:var(--ok)}
+  .sidebar-health-widget .grade-letter.sm{font-size:30px}
+  .sidebar-health-widget .qrow{font-size:10.5px;color:var(--text-dim);margin-top:6px;line-height:1.35;text-align:left}
+  .sidebar-health-widget .qrow b{color:var(--text)}
+  .cal-wrap{background:var(--panel);border:1px solid var(--line);border-radius:var(--radius);overflow:hidden}
+  .cal-head{display:grid;grid-template-columns:repeat(7,1fr);background:var(--panel-2);font-size:11px;text-transform:uppercase;letter-spacing:.04em;color:var(--text-dim);font-weight:700}
+  .cal-head div{padding:8px;text-align:center}
+  .cal-grid{display:grid;grid-template-columns:repeat(7,1fr)}
+  .cal-day{min-height:96px;border-top:1px solid var(--line-soft);border-left:1px solid var(--line-soft);padding:4px;font-size:11.5px;overflow:hidden}
+  .cal-day:nth-child(7n+1){border-left:none}.cal-day.dim{background:#fafcfc;color:var(--text-faint)}.cal-day.today .dn{background:var(--accent);color:#fff;border-radius:9px;padding:0 6px}
+  .cal-day .dn{font-weight:700;display:inline-block;margin-bottom:2px}
+  .chip{display:block;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;border-radius:4px;padding:1px 5px;margin-top:2px;font-size:11px;cursor:pointer;border:none;width:100%;text-align:left;font-family:inherit}
+  .chip.due{background:var(--brand-yellow);color:#4a3b00}.chip.job{background:#dfe8fb;color:var(--brand-blue)}.chip.won{background:#d8f0e0;color:#17613a}
+  .legend{display:flex;gap:14px;flex-wrap:wrap;font-size:12px;color:var(--text-dim);margin-bottom:10px;align-items:center}
+  .legend label{display:flex;align-items:center;gap:6px;cursor:pointer}.dot{width:12px;height:12px;border-radius:50%;display:inline-block;border:2px solid #fff;box-shadow:0 0 0 1px var(--line)}
+  #estMap{width:100%;height:calc(100vh - 150px);min-height:380px;border-radius:var(--radius);border:1px solid var(--line)}
+  .ro-note{font-size:12px;color:var(--text-dim);background:var(--panel-2);border-radius:8px;padding:8px 12px;margin-bottom:14px}
+  .hist-row{font-size:12px;padding:6px 0;border-bottom:1px solid var(--line-soft)}
+</style>
+</head>
+<body>
+<div id="gate"><div class="gate-box"><img class="gate-logo" src="../logo.png" alt=""><h2>Lucas Industrial</h2><div class="desc" id="gateDesc">Signing you in…</div>
+  <a class="btn primary" id="gateGo" href="../index.html#/login" target="_top" style="display:none;text-decoration:none;text-align:center">Go to sign-in</a></div></div>
+<div id="app">
+  <div id="mobileTopBar"><img id="mobileTopBarLogo" src="../logo.png" alt=""><div id="mobileTopBarTitle"></div>
+    <button id="mobileNavToggle" type="button" aria-label="Open menu"><svg viewBox="0 0 24 24" width="28" height="28" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="3" y1="6" x2="21" y2="6"/><line x1="3" y1="12" x2="21" y2="12"/><line x1="3" y1="18" x2="21" y2="18"/></svg></button></div>
+  <div id="mobileNavBackdrop"></div>
+  <div id="sidebar">
+    <div class="brand"><div class="mark"><img class="logo-img" src="../logo.png" alt="Lucas Industrial"></div><div class="sub">Estimating</div></div>
+    <div id="quotaWidget" class="sidebar-health-widget"></div>
+    <nav id="navList"></nav>
+    <div class="sidebar-foot"><div id="whoAmI" style="font-size:11px;color:var(--text-faint);margin-bottom:6px"></div><div style="font-size:9.5px;color:var(--text-faint);margin-top:8px"><span style="vertical-align:baseline">&reg;</span> Lucas Industrial</div></div>
+  </div>
+  <div id="main"></div>
+</div>
+<div class="modal-back" id="modalBack"><div class="modal" id="modalBody"></div></div>
+<script src="../config.js"></script>
+<script>
+const $ = s => document.querySelector(s);
+const esc = s => String(s == null ? '' : s).replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+const MAPS_KEY = 'AIzaSyDPrYv0sBUSzIj7QEehLw5rG2un1vJPUks';
+let TOKEN = null; try{ TOKEN = sessionStorage.getItem('go_token') || localStorage.getItem('go_token'); }catch(e){}
+let ME = null, PERMS = {}, BIDS = [], STATUSES = [], QUOTA = null, JOBS = null, CREW = null, VIEW = 'dashboard', FILTER = 'open', CAL = new Date(), MAPSHOW = { bids: true, won: true, lost: false, jobs: true };
+const canWrite = () => PERMS['estimator.estimates'] === 'write';
+const has = k => PERMS[k] && PERMS[k] !== 'none';
+async function api(method, path, body){
+  const r = await fetch(GO_CONFIG.API + '/api/estimator' + path, { method, headers: Object.assign({ 'Content-Type': 'application/json' }, TOKEN ? { Authorization: 'Bearer ' + TOKEN } : {}), body: body === undefined ? undefined : JSON.stringify(body) });
+  const j = await r.json().catch(() => ({})); if(!r.ok) throw Object.assign(new Error(j.error || 'Something went wrong'), j, { status: r.status }); return j;
+}
+const money = n => n == null ? '—' : '$' + Math.round(Number(n)).toLocaleString('en-US');
+const moneyShort = n => { n = Number(n) || 0; return n >= 1e6 ? '$' + (n / 1e6).toFixed(n % 1e6 ? 2 : 0).replace(/\.?0+$/, '') + 'M' : n >= 1e3 ? '$' + Math.round(n / 1e3) + 'K' : '$' + Math.round(n); };
+const iso = d => d.getFullYear() + '-' + String(d.getMonth() + 1).padStart(2, '0') + '-' + String(d.getDate()).padStart(2, '0');
+const STATUS_COL = { Draft: '#789696', Bidding: '#B8860B', Won: '#1E8449', Lost: '#D32F2F', 'No Bid': '#8B9D9D' };
+const tag = s => `<span style="display:inline-block;font-size:11px;font-weight:700;padding:2px 9px;border-radius:9px;background:${STATUS_COL[s]}22;color:${STATUS_COL[s]};border:1px solid ${STATUS_COL[s]}55">${esc(s)}</span>`;
+const fmtDate = d => d ? new Date(d + 'T12:00:00').toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' }) : '—';
+
+// ---------- start ----------
+async function boot(){
+  if(!TOKEN){ $('#gateDesc').textContent = 'Please sign in.'; $('#gateGo').style.display = ''; return; }
+  try{
+    const r = await fetch(GO_CONFIG.API + '/api/auth/me', { headers: { Authorization: 'Bearer ' + TOKEN } });
+    if(!r.ok) throw new Error('auth'); const me = await r.json(); ME = me.user; PERMS = me.permissions;
+  }catch(e){ $('#gateDesc').textContent = 'Your sign-in has ended.'; $('#gateGo').style.display = ''; return; }
+  if(!has('estimator.estimates')){ $('#gateDesc').textContent = 'You do not have access to the Estimator.'; return; }
+  $('#gate').classList.add('hidden'); $('#gate').style.display = 'none';
+  $('#whoAmI').textContent = ME.name + (ME.username ? ' (' + ME.username + ')' : '');
+  $('#mobileNavToggle').onclick = () => { $('#sidebar').classList.toggle('mobile-open'); $('#mobileNavBackdrop').classList.toggle('open'); };
+  $('#mobileNavBackdrop').onclick = closeNav;
+  await refresh(true);
+}
+const closeNav = () => { $('#sidebar').classList.remove('mobile-open'); $('#mobileNavBackdrop').classList.remove('open'); };
+async function refresh(first){
+  try{
+    const [b, q] = await Promise.all([api('GET', '/bids'), api('GET', '/quota')]);
+    BIDS = b.bids; STATUSES = b.statuses; QUOTA = q;
+  }catch(e){ $('#main').innerHTML = '<div class="empty">Could not load: ' + esc(e.message) + '</div>'; return; }
+  render();
+}
+const NAV = () => [['dashboard', 'Dashboard'], ['bids', 'Bids'], has('pm.people') ? ['crew', 'Crew & Subs'] : null, ['map', 'Map'], ['calendar', 'Calendar']].filter(Boolean);
+const ICON = { dashboard: '<rect x="3" y="3" width="7" height="7"/><rect x="14" y="3" width="7" height="7"/><rect x="14" y="14" width="7" height="7"/><rect x="3" y="14" width="7" height="7"/>', bids: '<path d="M16 4h2a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2H6a2 2 0 0 1-2-2V6a2 2 0 0 1 2-2h2"/><rect x="8" y="2" width="8" height="4" rx="1"/><path d="M9 12h6M9 16h6"/>', crew: '<path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 0 0-3-3.87M16 3.13a4 4 0 0 1 0 7.75"/>', map: '<path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0 1 18 0z"/><circle cx="12" cy="10" r="3"/>', calendar: '<rect x="3" y="4" width="18" height="18" rx="2"/><path d="M16 2v4M8 2v4M3 10h18"/>' };
+function quotaWidget(){
+  const q = QUOTA, w = $('#quotaWidget'); w.style.display = (ME && ME.role === 'estimator') ? '' : 'none';   // quotas are personal: only estimators carry one
+  if(!q || !(ME && ME.role === 'estimator')){ w.innerHTML = ''; return; }
+  const conv = q.conversion, tier = conv == null ? 'warn' : conv >= q.convTarget ? 'ok' : conv >= q.convTarget * .75 ? 'warn' : 'bad';
+  w.innerHTML = `<div class="grade-letter grade-text-${tier}">${conv == null ? '—' : conv.toFixed(1) + '%'}</div><div class="lbl">Conversion Rate</div><div class="grade-detail">goal ${q.convTarget}% · last 12 months</div>
+    <div class="quota-bar ${q.bidThisMonth >= q.bidTarget ? 'ok' : ''}"><i style="width:${Math.min(100, q.pctOfQuota)}%"></i></div>
+    <div class="qrow"><b>${moneyShort(q.bidThisMonth)}</b> of ${moneyShort(q.bidTarget)} bid this month (${q.pctOfQuota}%)</div>`;
+  w.onclick = () => { VIEW = 'dashboard'; closeNav(); render(); };
+}
+function render(){
+  $('#navList').innerHTML = NAV().map(([id, l]) => `<button data-view="${id}" class="${VIEW === id ? 'active' : ''}"><svg class="icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">${ICON[id]}</svg><span class="lbl">${l}</span></button>`).join('');
+  $('#navList').querySelectorAll('button').forEach(b => b.onclick = () => { VIEW = b.dataset.view; closeNav(); render(); });
+  $('#mobileTopBarTitle').textContent = (NAV().find(n => n[0] === VIEW) || [0, ''])[1];
+  quotaWidget();
+  const m = $('#main'); m.classList.toggle('flush', VIEW === 'map');
+  ({ dashboard, bids, crew, map, calendar })[VIEW](m);
+}
+
+// ---------- dashboard ----------
+function dashboard(el){
+  const q = QUOTA, open = BIDS.filter(b => b.status === 'Draft' || b.status === 'Bidding');
+  const openAmt = open.reduce((a, b) => a + b.amount, 0), todayS = iso(new Date());
+  const due = BIDS.filter(b => (b.status === 'Draft' || b.status === 'Bidding') && b.bidDue).sort((a, b) => a.bidDue.localeCompare(b.bidDue)).slice(0, 6);
+  const recent = BIDS.filter(b => b.status === 'Won' || b.status === 'Lost').sort((a, b) => (b.decidedOn || '').localeCompare(a.decidedOn || '')).slice(0, 6);
+  const conv = q.conversion;
+  el.innerHTML = `<div class="page-head"><div><h2>Dashboard</h2></div>${canWrite() ? '<button class="btn primary" id="newBid">+ New bid</button>' : ''}</div>
+  ${canWrite() ? '' : '<div class="ro-note">You can look at bids but not change them.</div>'}
+  <div class="stat-row">
+    <div class="stat"><div class="num">${moneyShort(q.bidThisMonth)}</div><div class="lbl">Bid this month · ${q.bidCount} bid${q.bidCount === 1 ? '' : 's'}</div></div>
+    <div class="stat"><div class="num">${conv == null ? '—' : conv.toFixed(1) + '%'}</div><div class="lbl">Conversion (dollars won)</div></div>
+    <div class="stat clickable" id="goOpen"><div class="num">${open.length}</div><div class="lbl">Open bids · ${moneyShort(openAmt)}</div></div>
+  </div>
+  <div class="panel"><div class="panel-head"><h3>Monthly quota — ${esc(new Date(q.month + '-15').toLocaleDateString('en-US', { month: 'long', year: 'numeric' }))}</h3></div><div class="panel-body">
+    <div style="display:flex;justify-content:space-between;font-size:13px"><span><b>${money(q.bidThisMonth)}</b> bid of ${money(q.bidTarget)}</span><span>${q.pctOfQuota}%</span></div>
+    <div class="quota-bar ${q.bidThisMonth >= q.bidTarget ? 'ok' : ''}" style="height:12px"><i style="width:${Math.min(100, q.pctOfQuota)}%"></i></div>
+    <div style="font-size:13px;margin-top:10px">Conversion: <b class="${conv == null ? '' : conv >= q.convTarget ? 'grade-text-ok' : 'grade-text-bad'}">${conv == null ? 'no decided bids yet' : conv.toFixed(1) + '%'}</b> (goal ${q.convTarget}%)
+      <span style="color:var(--text-faint)"> — ${money(q.wonAmount)} won / ${money(q.wonAmount + q.lostAmount)} decided, last 12 months${q.conversionByCount == null ? '' : '; ' + q.won + ' of ' + (q.won + q.lost) + ' bids by count'}</span></div></div></div>
+  <div class="dash-two-col" style="display:grid;grid-template-columns:1fr 1fr;gap:20px">
+    <div class="panel"><div class="panel-head"><h3>Bids due</h3></div><div class="panel-body">${due.length ? due.map(b => `<div class="mini-row"><button class="project-title-link" data-edit="${b.id}" type="button">${esc(b.name)}</button><div class="mini-row-meta" style="display:flex;gap:10px;font-size:12px;color:var(--text-dim)"><span>${fmtDate(b.bidDue)}${b.bidDue < todayS ? ' <b style="color:var(--status-delayed)">overdue</b>' : ''}</span><span>${money(b.amount)}</span></div></div>`).join('') : '<div class="empty">No bids waiting on a due date.</div>'}</div></div>
+    <div class="panel"><div class="panel-head"><h3>Recently decided</h3></div><div class="panel-body">${recent.length ? recent.map(b => `<div class="mini-row"><button class="project-title-link" data-edit="${b.id}" type="button">${esc(b.name)}</button><div class="mini-row-meta" style="display:flex;gap:10px;font-size:12px;color:var(--text-dim)"><span>${tag(b.status)}</span><span>${money(b.amount)}</span><span>${fmtDate(b.decidedOn)}</span></div></div>`).join('') : '<div class="empty">Nothing decided yet.</div>'}</div></div>
+  </div><div id="team"></div>`;
+  const nb = $('#newBid'); if(nb) nb.onclick = () => bidModal();
+  $('#goOpen').onclick = () => { VIEW = 'bids'; FILTER = 'open'; render(); };
+  el.querySelectorAll('[data-edit]').forEach(b => b.onclick = () => bidModal(Number(b.dataset.edit)));
+  if(has('admin.users')) teamQuota();
+}
+async function teamQuota(){
+  let r; try{ r = await api('GET', '/quota/all'); }catch(e){ return; }
+  const canSet = PERMS['admin.users'] === 'write';
+  $('#team').innerHTML = `<div class="panel"><div class="panel-head"><h3>Estimator quotas (everyone)</h3></div><div class="panel-body" style="padding:0"><table class="responsive-table"><thead><tr><th>Estimator</th><th>Bid this month</th><th>Quota</th><th>Conversion</th><th>Goal</th>${canSet ? '<th></th>' : ''}</tr></thead><tbody>
+  ${r.people.map(p => `<tr><td>${esc(p.name)} <span style="color:var(--text-faint)">${esc(p.username || '')}</span></td><td>${money(p.bidThisMonth)}</td><td>${money(p.bidTarget)} <span style="color:var(--text-faint)">(${p.pctOfQuota}%)</span></td><td>${p.conversion == null ? '—' : p.conversion.toFixed(1) + '%'}</td><td>${p.convTarget}%</td>${canSet ? `<td><button class="btn small ghost" data-setq="${p.userId}">Set goals</button></td>` : ''}</tr>`).join('') || '<tr><td colspan="6" class="empty">No estimators yet.</td></tr>'}</tbody></table></div></div>`;
+  document.querySelectorAll('[data-setq]').forEach(b => b.onclick = () => {
+    const p = r.people.find(x => x.userId == b.dataset.setq);
+    modal(`<h3 style="margin-top:0">Goals for ${esc(p.name)}</h3><div class="field"><label>Monthly bid quota ($)</label><input id="qb" type="number" min="0" step="1000" value="${p.bidTarget}"></div><div class="field"><label>Conversion goal (%)</label><input id="qc" type="number" min="0" max="100" step="0.5" value="${p.convTarget}"></div><div id="qe" style="color:var(--status-delayed)"></div>
+    <div style="display:flex;gap:8px;justify-content:flex-end"><button class="btn" id="qx">Cancel</button><button class="btn primary" id="qs">Save</button></div>`);
+    $('#qx').onclick = closeModal;
+    $('#qs').onclick = async () => { try{ await api('PUT', '/quota/' + p.userId, { bidTarget: $('#qb').value, convTarget: $('#qc').value }); closeModal(); if(p.userId == ME.id) await refresh(); else teamQuota(); }catch(e){ $('#qe').textContent = 'Could not save (' + e.message + ').'; } };
+  });
+}
+
+// ---------- bids ----------
+function bids(el){
+  const filters = [['open', 'Open'], ['Won', 'Won'], ['Lost', 'Lost'], ['No Bid', 'No bid'], ['all', 'All']];
+  const list = BIDS.filter(b => FILTER === 'all' || (FILTER === 'open' ? (b.status === 'Draft' || b.status === 'Bidding') : b.status === FILTER)).sort((a, b) => (a.bidDue || '9999').localeCompare(b.bidDue || '9999'));
+  el.innerHTML = `<div class="page-head"><div><h2>Bids</h2></div>${canWrite() ? '<button class="btn primary" id="newBid">+ New bid</button>' : ''}</div>
+  ${canWrite() ? '' : '<div class="ro-note">You can look at bids but not change them.</div>'}
+  <div style="display:flex;gap:8px;margin-bottom:16px;flex-wrap:wrap">${filters.map(([k, l]) => `<button class="btn small ${FILTER === k ? 'primary' : ''}" data-f="${k}">${l}</button>`).join('')}<button class="btn small ${FILTER === 'archived' ? 'primary' : ''}" data-f="archived">Archived</button></div>
+  <div class="panel"><div class="panel-body" style="padding:0"><div id="bidTable"></div></div></div>`;
+  const nb = $('#newBid'); if(nb) nb.onclick = () => bidModal();
+  el.querySelectorAll('[data-f]').forEach(b => b.onclick = async () => { FILTER = b.dataset.f; if(FILTER === 'archived'){ await showArchived(el); } else bids(el); });
+  if(FILTER === 'archived') return showArchived(el);
+  $('#bidTable').innerHTML = tableHtml(list);
+  wireTable(el);
+}
+function tableHtml(list){
+  return list.length ? `<table class="responsive-table"><thead><tr><th>Bid</th><th>Location</th><th>Customer</th><th>Amount</th><th>Status</th><th>Due</th><th>Estimator</th><th></th></tr></thead><tbody>
+  ${list.map(b => `<tr><td><button class="project-title-link" data-edit="${b.id}" type="button">${esc(b.name)}</button>${b.storeNumber ? '<br><span style="color:var(--text-faint);font-size:11.5px">Store ' + esc(b.storeNumber) + '</span>' : ''}</td>
+    <td data-label="Location">${esc([b.city, b.state].filter(Boolean).join(', ')) || '—'}</td><td data-label="Customer">${esc(b.customer) || '—'}</td><td data-label="Amount">${money(b.amount)}</td>
+    <td data-label="Status">${canWrite() && !b.archived ? `<select class="status-select" data-status="${b.id}" style="background:${STATUS_COL[b.status]}22;color:${STATUS_COL[b.status]};border:1px solid ${STATUS_COL[b.status]}55;border-radius:8px;padding:4px 8px;font-weight:700">${STATUSES.map(s => `<option ${s === b.status ? 'selected' : ''}>${s}</option>`).join('')}</select>` : tag(b.status)}</td>
+    <td data-label="Due">${fmtDate(b.bidDue)}</td><td data-label="Estimator">${esc(b.ownerName)}</td>
+    <td><button class="btn small ghost" data-edit="${b.id}">${canWrite() ? 'Edit' : 'View'}</button>${canWrite() ? (b.archived ? ` <button class="btn small ghost" data-unarch="${b.id}">Restore</button>` : ` <button class="btn small ghost" data-arch="${b.id}">Archive</button>`) : ''}</td></tr>`).join('')}</tbody></table>` : '<div class="empty">No bids here.</div>';
+}
+function wireTable(el){
+  el.querySelectorAll('[data-edit]').forEach(b => b.onclick = () => bidModal(Number(b.dataset.edit)));
+  el.querySelectorAll('[data-status]').forEach(s => s.onchange = async () => { try{ await api('PATCH', '/bids/' + s.dataset.status, { status: s.value }); await refresh(); }catch(e){ alert('Could not change status (' + e.message + ').'); } });
+  el.querySelectorAll('[data-arch]').forEach(b => b.onclick = async () => { if(!confirm('Archive this bid? It leaves the lists and your numbers but is kept on record.')) return; await api('POST', '/bids/' + b.dataset.arch + '/archive'); await refresh(); });
+  el.querySelectorAll('[data-unarch]').forEach(b => b.onclick = async () => { await api('POST', '/bids/' + b.dataset.unarch + '/unarchive'); FILTER = 'open'; await refresh(); });
+}
+async function showArchived(el){
+  const r = await api('GET', '/bids?archived=1'); BIDS_ARCH = r.bids.filter(b => b.archived);
+  $('#bidTable').innerHTML = tableHtml(BIDS_ARCH); wireTable(el);
+  el.querySelectorAll('[data-edit]').forEach(b => b.onclick = () => bidModal(Number(b.dataset.edit), BIDS_ARCH));
+}
+let BIDS_ARCH = [];
+
+// ---------- add / edit ----------
+function modal(html){ $('#modalBody').innerHTML = html; $('#modalBack').classList.add('open'); }
+function closeModal(){ $('#modalBack').classList.remove('open'); }
+function bidModal(id, pool){
+  const b = id ? (pool || BIDS).find(x => x.id === id) : null, ro = !canWrite() || (b && b.archived);
+  const d = b || { name: '', storeNumber: '', customer: '', address: '', city: '', state: '', lat: null, lon: null, amount: 0, status: 'Draft', bidDue: '', bidSubmitted: '', decidedOn: '', startDate: '', endDate: '', notes: '' };
+  const f = (lbl, idn, val, extra) => `<div class="field"><label>${lbl}</label><input id="${idn}" value="${esc(val == null ? '' : val)}" ${ro ? 'disabled' : ''} ${extra || ''}></div>`;
+  modal(`<div style="display:flex;justify-content:space-between;align-items:center"><h3 style="margin:0">${b ? (ro ? 'Bid' : 'Edit bid') : 'New bid'}</h3><button class="btn small ghost" id="mx" type="button">✕</button></div><div style="height:12px"></div>
+  <div class="row2">${f('Project name', 'f_name', d.name, 'placeholder="e.g. Costco #418 — Freezer Deck Steel"')}${f('Store #', 'f_store', d.storeNumber)}</div>
+  <div class="field"><label>Site address</label><input id="f_address" value="${esc(d.address)}" ${ro ? 'disabled' : ''} placeholder="Start typing a street address…" autocomplete="off"><div class="hint" id="f_geo" style="font-size:11.5px;color:var(--text-faint)">${d.lat != null ? 'Pinned on the map.' : 'Pick a suggestion to pin it on the map.'}</div></div>
+  <div class="row2">${f('City', 'f_city', d.city)}${f('State', 'f_state', d.state)}</div>
+  <div class="row2">${f('Customer / GC', 'f_customer', d.customer)}${f('Bid amount ($)', 'f_amount', d.amount, 'type="number" min="0" step="100"')}</div>
+  <div class="row2"><div class="field"><label>Status</label><select id="f_status" ${ro ? 'disabled' : ''}>${STATUSES.map(s => `<option ${s === d.status ? 'selected' : ''}>${s}</option>`).join('')}</select></div>${f('Bid due', 'f_due', d.bidDue, 'type="date"')}</div>
+  <div class="row2">${f('Submitted on', 'f_sub', d.bidSubmitted, 'type="date"')}${f('Decided on', 'f_dec', d.decidedOn, 'type="date"')}</div>
+  <div class="row2">${f('Planned start', 'f_start', d.startDate, 'type="date"')}${f('Planned end', 'f_end', d.endDate, 'type="date"')}</div>
+  <div class="field"><label>Notes</label><textarea id="f_notes" ${ro ? 'disabled' : ''}>${esc(d.notes)}</textarea></div>
+  <div id="fe" style="color:var(--status-delayed);margin-bottom:8px"></div>
+  ${b ? `<div style="font-size:12px;color:var(--text-dim);margin-bottom:10px">Estimator: <b>${esc(b.ownerName)}</b>${b.ownerUsername ? ' (' + esc(b.ownerUsername) + ')' : ''} · <button class="btn small ghost" id="hx" type="button">Change history</button></div><div id="hist"></div>` : ''}
+  <div style="display:flex;gap:8px;justify-content:flex-end"><button class="btn" id="mc" type="button">${ro ? 'Close' : 'Cancel'}</button>${ro ? '' : '<button class="btn primary" id="ms" type="button">Save</button>'}</div>`);
+  $('#mx').onclick = $('#mc').onclick = closeModal;
+  if(b) $('#hx').onclick = async () => { const r = await api('GET', '/bids/' + b.id + '/history'); $('#hist').innerHTML = '<div style="margin-bottom:10px">' + (r.history.map(h => `<div class="hist-row"><b>${esc(h.name || 'System')}</b>${h.username ? ' (' + esc(h.username) + ')' : ''} · ${esc(h.action)} · ${new Date(h.at).toLocaleString()}${h.changes ? '<br><span style="color:var(--text-dim)">' + esc(Object.entries(h.changes).map(([k, v]) => v && typeof v === 'object' && 'to' in v ? `${k}: ${v.from == null ? '—' : v.from} → ${v.to == null ? '—' : v.to}` : `${k}: ${v}`).join('; ')) + '</span>' : ''}</div>`).join('') || 'No history.') + '</div>'; };
+  if(ro) return;
+  let geo = { lat: d.lat, lon: d.lon };
+  loadMaps(() => {
+    const ac = new google.maps.places.Autocomplete($('#f_address'), { fields: ['formatted_address', 'geometry', 'address_components'], types: ['address'] });
+    ac.addListener('place_changed', () => { const p = ac.getPlace(); if(!p || !p.geometry) return;
+      geo = { lat: p.geometry.location.lat(), lon: p.geometry.location.lng() };
+      const comp = t => { const c = (p.address_components || []).find(x => x.types.includes(t)); return c ? c : null; };
+      const city = comp('locality') || comp('sublocality') || comp('administrative_area_level_3'), st = comp('administrative_area_level_1');
+      if(city) $('#f_city').value = city.long_name; if(st) $('#f_state').value = st.short_name;
+      $('#f_geo').textContent = 'Pinned on the map.'; });
+  });
+  $('#ms').onclick = async () => {
+    const body = { name: $('#f_name').value, storeNumber: $('#f_store').value, address: $('#f_address').value, city: $('#f_city').value, state: $('#f_state').value, customer: $('#f_customer').value,
+      amount: $('#f_amount').value || 0, status: $('#f_status').value, bidDue: $('#f_due').value, bidSubmitted: $('#f_sub').value, decidedOn: $('#f_dec').value, startDate: $('#f_start').value, endDate: $('#f_end').value, notes: $('#f_notes').value };
+    if(geo.lat != null){ body.lat = geo.lat; body.lon = geo.lon; }
+    try{ if(b) await api('PATCH', '/bids/' + b.id, body); else await api('POST', '/bids', body); closeModal(); await refresh(); }
+    catch(e){ $('#fe').textContent = e.error === 'name_required' ? 'Give the bid a name.' : e.error === 'bad_date' ? 'One of the dates is not valid.' : 'Could not save (' + e.message + ').'; }
+  };
+}
+function loadMaps(cb){
+  if(window.google && window.google.maps && window.google.maps.places) return cb();
+  const ex = document.getElementById('gmapsScript'); if(ex){ ex.addEventListener('load', cb); return; }
+  const s = document.createElement('script'); s.id = 'gmapsScript'; s.async = true; s.src = 'https://maps.googleapis.com/maps/api/js?key=' + encodeURIComponent(MAPS_KEY) + '&libraries=places'; s.onload = cb;
+  s.onerror = () => { const m = document.getElementById('estMap'); if(m) m.innerHTML = '<div class="empty" style="padding-top:40px">Google Maps could not load.</div>'; };
+  document.head.appendChild(s);
+}
+
+// ---------- crew & subs (read-only: the PM manages the workforce) ----------
+async function crew(el){
+  el.innerHTML = '<div class="page-head"><div><h2>Crew &amp; Subs</h2></div></div><div class="ro-note">For reference. The Project Manager manages the workforce.</div><div class="empty">Loading…</div>';
+  if(!CREW){ try{ CREW = (await api('GET', '/crew')).people; }catch(e){ el.innerHTML += ''; $('#main').querySelector('.empty').textContent = 'Could not load (' + e.message + ').'; return; } }
+  let q = '', type = 'all';
+  const draw = () => {
+    const list = CREW.filter(p => (type === 'all' || p.type === type) && (!q || (p.name + ' ' + p.trade + ' ' + p.city).toLowerCase().includes(q)));
+    $('#crewT').innerHTML = list.length ? `<table class="responsive-table"><thead><tr><th>Name</th><th>Type</th><th>Trade</th><th>Location</th><th>Availability</th></tr></thead><tbody>${list.map(p => `<tr><td><b>${esc(p.name)}</b></td><td data-label="Type">${esc(p.type === 'sub' ? 'Sub' : p.type === 'crew' ? 'Crew' : p.type)}</td><td data-label="Trade">${esc(p.trade) || '—'}</td><td data-label="Location">${esc([p.city, p.state].filter(Boolean).join(', ')) || '—'}</td><td data-label="Availability">${esc(p.availability) || '—'}</td></tr>`).join('')}</tbody></table>` : '<div class="empty">No one matches.</div>';
+  };
+  el.innerHTML = `<div class="page-head"><div><h2>Crew &amp; Subs</h2></div></div><div class="ro-note">For reference only. The Project Manager manages the workforce.</div>
+  <div style="display:flex;gap:8px;margin-bottom:14px;flex-wrap:wrap"><input id="cq" placeholder="Search name, trade or city" style="padding:8px 12px;border:1px solid var(--line);border-radius:8px;min-width:240px">${[['all', 'All'], ['crew', 'Crew'], ['sub', 'Subs']].map(([k, l]) => `<button class="btn small ${k === 'all' ? 'primary' : ''}" data-t="${k}">${l}</button>`).join('')}</div>
+  <div class="panel"><div class="panel-body" style="padding:0" id="crewT"></div></div>`;
+  $('#cq').oninput = e => { q = e.target.value.toLowerCase(); draw(); };
+  el.querySelectorAll('[data-t]').forEach(b => b.onclick = () => { type = b.dataset.t; el.querySelectorAll('[data-t]').forEach(x => x.classList.toggle('primary', x === b)); draw(); });
+  draw();
+}
+
+// ---------- map: bids and active jobs, told apart ----------
+async function loadJobs(){ if(JOBS === null){ if(has('pm.projects')){ try{ JOBS = (await api('GET', '/active-jobs')).jobs; }catch(e){ JOBS = []; } } else JOBS = []; } return JOBS; }
+async function map(el){
+  const jobs = await loadJobs();
+  el.innerHTML = `<div style="padding:14px 18px 0"><div class="legend">
+    <label><input type="checkbox" data-m="jobs" ${MAPSHOW.jobs ? 'checked' : ''}> <span class="dot" style="background:#013CAE"></span> Active jobs (${jobs.filter(j => j.lat != null).length})</label>
+    <label><input type="checkbox" data-m="bids" ${MAPSHOW.bids ? 'checked' : ''}> <span class="dot" style="background:#FFDC4B"></span> Open bids</label>
+    <label><input type="checkbox" data-m="won" ${MAPSHOW.won ? 'checked' : ''}> <span class="dot" style="background:#1E8449"></span> Won</label>
+    <label><input type="checkbox" data-m="lost" ${MAPSHOW.lost ? 'checked' : ''}> <span class="dot" style="background:#D32F2F"></span> Lost</label></div></div>
+    <div style="padding:0 18px 18px"><div id="estMap"></div></div>`;
+  el.querySelectorAll('[data-m]').forEach(c => c.onchange = () => { MAPSHOW[c.dataset.m] = c.checked; drawMarkers(); });
+  loadMaps(() => {
+    MAP = new google.maps.Map($('#estMap'), { center: { lat: 35.5, lng: -84 }, zoom: 6, mapTypeControl: false, streetViewControl: false }); INFO = new google.maps.InfoWindow(); MARKERS = []; drawMarkers(true);
+  });
+}
+let MAP = null, INFO = null, MARKERS = [];
+function drawMarkers(fit){
+  if(!MAP) return; MARKERS.forEach(m => m.setMap(null)); MARKERS = [];
+  const bounds = new google.maps.LatLngBounds();
+  const add = (lat, lon, color, stroke, html) => { if(lat == null || lon == null) return;
+    const mk = new google.maps.Marker({ map: MAP, position: { lat, lng: lon }, icon: { path: google.maps.SymbolPath.CIRCLE, scale: 9, fillColor: color, fillOpacity: 1, strokeColor: stroke, strokeWeight: 2 } });
+    mk.addListener('click', () => { INFO.setContent(html); INFO.open(MAP, mk); }); MARKERS.push(mk); bounds.extend(mk.getPosition()); };
+  if(MAPSHOW.jobs) (JOBS || []).forEach(j => add(j.lat, j.lon, '#013CAE', '#fff', `<b>${esc(j.name)}</b><br>Active job · ${esc(j.status)}<br>${esc([j.city, j.state].filter(Boolean).join(', '))}<br>${fmtDate(j.start)} – ${fmtDate(j.end)}`));
+  BIDS.forEach(b => { const open = b.status === 'Draft' || b.status === 'Bidding';
+    if((open && !MAPSHOW.bids) || (b.status === 'Won' && !MAPSHOW.won) || (b.status === 'Lost' && !MAPSHOW.lost) || b.status === 'No Bid') return;
+    add(b.lat, b.lon, open ? '#FFDC4B' : b.status === 'Won' ? '#1E8449' : '#D32F2F', open ? '#7A5D00' : '#fff', `<b>${esc(b.name)}</b><br>${esc(b.status)} bid · ${money(b.amount)}<br>${esc(b.customer)}<br>${esc([b.city, b.state].filter(Boolean).join(', '))}${b.bidDue ? '<br>Due ' + fmtDate(b.bidDue) : ''}`); });
+  if(fit && MARKERS.length){ MAP.fitBounds(bounds, 60); if(MARKERS.length === 1) MAP.setZoom(10); }
+}
+
+// ---------- calendar: bid due dates and active-job spans ----------
+async function calendar(el){
+  const jobs = await loadJobs();
+  const y = CAL.getFullYear(), mo = CAL.getMonth(), first = new Date(y, mo, 1), start = new Date(y, mo, 1 - first.getDay()), todayS = iso(new Date());
+  const cells = []; for(let i = 0; i < 42; i++){ const d = new Date(start.getFullYear(), start.getMonth(), start.getDate() + i); cells.push(d); }
+  const dayHtml = d => { const s = iso(d), ev = [];
+    BIDS.forEach(b => { if(b.bidDue === s && (b.status === 'Draft' || b.status === 'Bidding')) ev.push(`<button class="chip due" data-bid="${b.id}" title="Bid due">Due: ${esc(b.name)}</button>`); if(b.status === 'Won' && b.startDate && b.endDate && b.startDate <= s && s <= b.endDate) ev.push(`<button class="chip won" data-bid="${b.id}" title="Won, not yet in PM">${esc(b.name)}</button>`); });
+    jobs.forEach(j => { if(j.start && j.end && j.start <= s && s <= j.end) ev.push(`<span class="chip job" title="Active job">${esc(j.name)}</span>`); });
+    return `<div class="cal-day ${d.getMonth() !== mo ? 'dim' : ''} ${s === todayS ? 'today' : ''}"><span class="dn">${d.getDate()}</span>${ev.slice(0, 4).join('')}${ev.length > 4 ? `<span style="font-size:10.5px;color:var(--text-faint)">+${ev.length - 4} more</span>` : ''}</div>`; };
+  el.innerHTML = `<div class="page-head"><div><h2>Calendar</h2></div><div style="display:flex;gap:8px;align-items:center"><button class="btn small" id="cp">←</button><b style="min-width:150px;text-align:center">${first.toLocaleDateString('en-US', { month: 'long', year: 'numeric' })}</b><button class="btn small" id="cn">→</button><button class="btn small" id="ct">Today</button></div></div>
+  <div class="legend"><span><span class="dot" style="background:#FFDC4B"></span> Bid due</span><span><span class="dot" style="background:#dfe8fb"></span> Active job</span><span><span class="dot" style="background:#d8f0e0"></span> Won bid (planned dates)</span></div>
+  <div class="cal-wrap"><div class="cal-head">${['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'].map(d => `<div>${d}</div>`).join('')}</div><div class="cal-grid">${cells.map(dayHtml).join('')}</div></div>`;
+  $('#cp').onclick = () => { CAL = new Date(y, mo - 1, 1); calendar(el); }; $('#cn').onclick = () => { CAL = new Date(y, mo + 1, 1); calendar(el); }; $('#ct').onclick = () => { CAL = new Date(); calendar(el); };
+  el.querySelectorAll('[data-bid]').forEach(b => b.onclick = () => bidModal(Number(b.dataset.bid)));
+}
+boot();
+</script>
+</body>
+</html>

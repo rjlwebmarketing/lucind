@@ -1,6 +1,6 @@
 <!doctype html>
 <html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
-<title>Lucas Industrial</title>
+<meta name="app-build" content="5.0.0"><title>Lucas Industrial</title>
 <style>
 @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap');
 :root{
@@ -26,7 +26,7 @@ h1{font-size:19px;margin:0 0 4px}h2{font-size:17px;margin:0 0 10px}.mut{color:va
 .top img{width:30px;height:30px;object-fit:contain}.top b{font-size:15px}.top small{display:block;font-size:10px;color:var(--faint);text-transform:uppercase;letter-spacing:.08em;line-height:1}
 .top .sp{flex:1}.top a{color:var(--mut);cursor:pointer;text-decoration:none;font-weight:500}.top a:hover{color:var(--ink)}
 #menuBtn{display:none;background:var(--panel-2);border:1px solid var(--line);border-radius:var(--radius);padding:5px 10px;cursor:pointer;font-weight:600}
-.layout{display:flex;min-height:calc(100vh - 50px)}
+.layout{display:flex;min-height:calc(100vh - 74px)}
 .side{width:230px;background:var(--panel-2);border-right:1px solid var(--line);padding:12px 10px;flex-shrink:0}
 .side .sec{font-size:11px;text-transform:uppercase;color:var(--faint);margin:16px 8px 4px;letter-spacing:.08em;font-weight:600}
 .side a{display:block;padding:8px 12px;border-radius:10px;color:var(--mut);cursor:pointer;text-decoration:none;font-weight:600;font-size:13.5px;margin-bottom:2px}.side a:hover{background:#fff;color:var(--ink)}.side a.on{background:#fff;color:var(--ink);box-shadow:inset 3px 0 0 var(--acc)}
@@ -38,10 +38,17 @@ table{border-collapse:collapse;width:100%}th,td{text-align:left;padding:8px;bord
 .tabs{display:flex;gap:6px;margin-bottom:14px}.tabs button{background:#fff;border:1px solid var(--line);border-radius:var(--radius);padding:7px 14px;cursor:pointer;font-weight:600}.tabs button.on{background:var(--brand-yellow);border-color:var(--brand-yellow)}
 .modal{position:fixed;inset:0;background:rgba(0,0,0,.4);display:flex;align-items:center;justify-content:center;padding:16px}.modal .card{max-width:640px;width:100%;max-height:90vh;overflow:auto;margin:0}
 .pw{font:15px ui-monospace,Menlo,monospace;background:#FFF8D6;border:1px dashed #b89a1c;padding:10px;border-radius:6px;user-select:all}
-/* PM and Pay Apps bring their own menu, so the main menu tucks away on that page */
-body.fullpage .side{display:none}body.fullpage.menu-open .side{display:block;position:fixed;top:50px;left:0;bottom:0;z-index:50;box-shadow:4px 0 16px rgba(0,0,0,.15)}
-body.fullpage #menuBtn{display:inline-block}
-@media(max-width:760px){.layout{flex-direction:column}.side{width:auto}#menuBtn{display:inline-block}.side{display:none}body.menu-open .side{display:block}.main{padding:16px}}
+/* global menu: always present, left of the logo */
+#menuBtn{display:inline-flex;align-items:center;justify-content:center;width:36px;height:36px;font-size:19px;line-height:1;padding:0}
+#gm{position:fixed;top:50px;left:0;bottom:0;width:260px;background:#fff;border-right:1px solid var(--line);box-shadow:4px 0 16px rgba(0,0,0,.12);z-index:60;padding:12px 10px;overflow:auto;display:none}
+body.gm-open #gm{display:block}
+#gm a{display:block;padding:10px 12px;border-radius:10px;color:var(--ink);cursor:pointer;text-decoration:none;font-weight:600;font-size:14px;margin-bottom:2px}#gm a:hover{background:var(--panel-2)}#gm a.on{background:var(--brand-yellow)}
+#gm .gsep{height:1px;background:var(--line);margin:8px 4px}#gm .glab{font-size:10.5px;text-transform:uppercase;letter-spacing:.08em;color:var(--faint);margin:10px 12px 4px;font-weight:600}
+#gfoot{position:fixed;left:0;right:0;bottom:0;height:24px;background:#fff;border-top:1px solid var(--line);display:flex;gap:16px;align-items:center;padding:0 14px;font-size:11px;color:var(--faint);z-index:40}#gfoot #gstat a{cursor:pointer}
+#gmShade{position:fixed;inset:50px 0 0 0;z-index:55;display:none}body.gm-open #gmShade{display:block}
+body.fullpage .side{display:none}
+.tiles{display:grid;grid-template-columns:repeat(auto-fill,minmax(220px,1fr));gap:14px}.tiles a{display:block;text-decoration:none;color:var(--ink);background:var(--card);border:1px solid var(--line);border-radius:var(--radius);padding:16px;font-weight:700}.tiles a small{display:block;font-weight:400;color:var(--mut);margin-top:4px}.tiles a:hover{border-color:var(--brand-blue)}
+@media(max-width:760px){.layout{flex-direction:column}.side{width:auto}.main{padding:16px}}
 </style></head><body>
 <div id="app"></div>
 <script src="config.js"></script>
@@ -63,7 +70,7 @@ async function api(method, path, body){
   if(!r.ok) throw Object.assign(new Error(j.message || j.error || ('http_' + r.status)), { code: j.error, status: r.status, data: j });
   return j;
 }
-const MSG = { bad_credentials: 'Email or password is not right.', locked: 'Too many tries. Try again in 15 minutes, or use "Forgot password".', account_disabled: 'This account has been turned off. Ask the Builder.', link_invalid_or_expired: 'That link has expired or was already used. Request a new one.', no_free_seat: 'All seats are in use. Turn off someone who has left first.', email_in_use: 'That email already has an account.', username_in_use: 'That username is taken.', bad_username: 'Usernames are 2-39 characters: letters, numbers, dot, dash or underscore, no spaces.', forbidden: 'You do not have access to that.', too_many_requests: 'Too many requests. Wait a few minutes.', wrong_current_password: 'Current password is not right.', last_builder: 'There must always be one active Builder.' };
+const MSG = { bad_credentials: 'Email or password is not right.', locked: 'Too many tries. Try again in 15 minutes, or use "Forgot password".', account_disabled: 'This account has been turned off. Ask the Builder.', link_invalid_or_expired: 'That link has expired or was already used. Request a new one.', email_in_use: 'That email already has an account.', username_in_use: 'That username is taken.', bad_username: 'Usernames are 2-39 characters: letters, numbers, dot, dash or underscore, no spaces.', forbidden: 'You do not have access to that.', too_many_requests: 'Too many requests. Wait a few minutes.', wrong_current_password: 'Current password is not right.', last_builder: 'There must always be one active Builder.' };
 const say = e => MSG[e.code] || e.message || 'Something went wrong.';
 
 // ---------- routing ----------
@@ -114,46 +121,70 @@ function viewChange(){
   };
 }
 
+// ---------- version, always on screen ----------
+const BUILD = (document.querySelector('meta[name=app-build]') || {}).content || '';
+let STALE = false;
+function paintFooter(){ const v = $('#gver'), st = $('#gstat'); if(!v) return; v.textContent = 'v' + BUILD;
+  st.innerHTML = STALE ? '<a style="color:var(--bad)" id="gre">&#9888;&#65039; Update available — click to reload</a>' : '<span style="color:var(--ok)">&#10003; Up to date</span>';
+  const re = $('#gre'); if(re) re.onclick = () => location.reload(); }
+async function checkBuild(){ try{ const r = await fetch(location.pathname + '?b=' + Date.now(), { cache: 'no-store' }); const t = await r.text(); const m = t.match(/name="app-build" content="([^"]*)"/); if(m && m[1] !== BUILD){ STALE = true; paintFooter(); } }catch(e){} }
+setInterval(checkBuild, 5 * 60 * 1000);
+
 // ---------- signed-in shell ----------
 // Modules register themselves here: MODULES['pm.dispatch'] = { render(el, ctx) {...} }. The shell only shows panes the person may open.
 const MODULES = {};
+const menuItem = k => (ME.menu || []).find(m => m.key === k);
+const firstPane = m => m.sections[0].panes[0].key;
+const DESC = { estimator: 'Estimates, customers and the price book', pm: 'Projects, dispatch, crew, pay apps and close-out', admin: 'People, audit trail, analytics and sensitive data', builder: 'Infrastructure, connections and role templates' };
+// Where a menu item goes: Project Manager opens the whole embedded app; the others open their first permitted screen.
+const FRAMED = { pm: 'pm/index.html?v=3.5', estimator: 'estimator/index.html?v=1' };   // branches that open as a whole app
+// Screens that are one of the PM app's own tool windows, opened on their own from the Builder / Admin menus.
+const TOOLS = { 'builder.pmsettings': 'settings', 'builder.devtools': 'devTasks', 'builder.architecture': 'architecture', 'builder.data': 'data', 'admin.requests': 'requests' };
+const menuHref = m => FRAMED[m.key] ? '#/' + m.key : '#/' + firstPane(m);
+const menuOf = path => FRAMED[path] ? path : (path.split('.')[0] === 'estimator' ? 'estimator' : path.split('.')[0] === 'sensitive' ? 'admin' : path.split('.')[0]);
 function shell(path){
-  // Project Management and Pay Apps live together in one embedded app (it hides the tabs a person may not use), so they share one menu entry.
-  const opsOpen = ME.nav.some(s => s.key === 'pm' || s.key === 'payapps');
-  const navHtml = (opsOpen ? `<div class="sec">Operations</div><a data-p="pm" class="${path === 'pm' ? 'on' : ''}" href="#/pm">Project Management &amp; Pay Apps</a>` : '') +
-    ME.nav.filter(s => s.key !== 'pm' && s.key !== 'payapps').map(s => `<div class="sec">${esc(s.label)}</div>` + s.panes.map(p => `<a data-p="${p.key}" class="${path === p.key ? 'on' : ''}" href="#/${p.key}">${esc(p.label)}</a>`).join('')).join('');
-  $('#app').innerHTML = `<div class="top"><button id="menuBtn" type="button">&#9776; Menu</button><img src="logo.png" alt=""><div><b>Lucas Industrial</b><small>Company platform</small></div><span class="sp"></span><span>${esc(ME.user.name)}</span><a id="lo">Sign out</a></div>
-  <div class="layout"><div class="side"><a href="#/home" class="${path === 'home' ? 'on' : ''}">Home</a>${navHtml}</div><div class="main" id="main"></div></div>`;
-  document.body.classList.toggle('fullpage', path === 'pm'); document.body.classList.remove('menu-open');
-  $('#menuBtn').onclick = () => document.body.classList.toggle('menu-open');
-  document.querySelectorAll('.side a').forEach(a => a.addEventListener('click', () => document.body.classList.remove('menu-open')));
+  // Short links such as #/admin or #/builder resolve to the first screen this person may open.
+  const mi = menuItem(path);
+  if(mi && !FRAMED[path]){ location.replace(menuHref(mi)); return; }
+  const cur = menuOf(path), curItem = menuItem(cur);
+  const gm = (ME.menu || []).map(m => (m.key === 'admin' || m.key === 'builder' ? '' : '') + `<a href="${menuHref(m)}" data-m="${m.key}" class="${cur === m.key && path !== 'home' ? 'on' : ''}">${esc(m.label)}</a>`).join('');
+  // Second-level menu for the native sections (Estimator, Admin, Builder). Project Manager brings its own tabs.
+  const side = (curItem && !FRAMED[path]) ? curItem.sections.map(sec => `<div class="sec">${esc(sec.label)}</div>` + sec.panes.map(p => `<a href="#/${p.key}" class="${path === p.key ? 'on' : ''}">${esc(p.label)}</a>`).join('')).join('') : '';
+  $('#app').innerHTML = `<div class="top"><button id="menuBtn" type="button" class="btn sec" aria-label="Main menu" title="Main menu">&#9776;</button><a href="#/home" style="display:flex;align-items:center;gap:12px;color:inherit" title="Home"><img src="logo.png" alt=""><div><b>Lucas Industrial</b><small>Company platform</small></div></a><span class="sp"></span><span>${esc(ME.user.name)}</span><a id="lo">Sign out</a></div>
+  <div id="gmShade"></div><div id="gfoot"><span id="gver"></span><span id="gstat"></span><span>&reg; Lucas Industrial</span></div><nav id="gm" aria-label="Main menu">${gm}</nav>
+  <div class="layout">${side ? `<div class="side">${side}</div>` : ''}<div class="main" id="main"></div></div>`;
+  paintFooter(); document.body.classList.remove('gm-open'); document.body.classList.toggle('fullpage', !!FRAMED[path]);
+  const toggle = () => document.body.classList.toggle('gm-open');
+  $('#menuBtn').onclick = toggle; $('#gmShade').onclick = toggle;
+  document.querySelectorAll('#gm a').forEach(a => a.addEventListener('click', () => document.body.classList.remove('gm-open')));
   $('#lo').onclick = async () => { try{ await api('POST', '/auth/logout'); }catch(e){} saveTok(null); ME = null; location.hash = '#/login'; };
   const el = $('#main'), level = ME.permissions[path];
   if(path === 'home') return home(el);
-  if(path === 'pm'){
-    if(!opsOpen) return el.innerHTML = '<div class="card">You do not have access to this section.</div>';
+  if(FRAMED[path]){
+    if(!menuItem(path)) return el.innerHTML = '<div class="card">You do not have access to this section.</div>';
     el.style.padding = '0';
-    el.innerHTML = '<iframe id="pmFrame" src="pm/index.html" title="Project Management" style="border:0;width:100%;height:calc(100vh - 46px);display:block"></iframe>';
+    el.innerHTML = '<iframe id="appFrame" src="' + FRAMED[path] + '" title="' + esc(menuItem(path).label) + '" style="border:0;width:100%;height:calc(100vh - 74px);display:block"></iframe>';
     return;
   }
   if(!level || level === 'none') return el.innerHTML = '<div class="card">You do not have access to this section.</div>';
+  if(TOOLS[path]){ el.style.padding = '0'; el.innerHTML = '<iframe id="appFrame" src="pm/index.html?v=3.5&tool=' + TOOLS[path] + '" title="' + esc(allLabel(path)) + '" style="border:0;width:100%;height:calc(100vh - 74px);display:block"></iframe>'; return; }
   if(path === 'admin.users') return adminUsers(el);
   if(path === 'admin.audit') return adminAudit(el);
+  if(path === 'builder.settings') return builderSettings(el);
+  if(path === 'builder.roles') return builderRoles(el);
   if(MODULES[path]) return MODULES[path].render(el, { api, me: ME, level, esc });
-  el.innerHTML = `<div class="card"><h2>${esc(path)}</h2><div class="mut">This section is being built. Your access level: <b>${esc(level)}</b>.</div></div>`;
+  el.innerHTML = `<div class="card"><h2>${esc(allLabel(path))}</h2><div class="mut">This section is being built. Your access level: <b>${esc(level)}</b>.</div></div>`;
 }
+function allLabel(path){ for(const m of ME.menu || []) for(const s of m.sections) for(const p of s.panes) if(p.key === path) return p.label; return path; }
 function home(el){
-  el.innerHTML = `<div class="card"><h2>Welcome, ${esc(ME.user.name.split(' ')[0])}</h2><div class="mut">Your menu on the left shows only the sections you have been given access to.</div></div>`;
-  if(ME.nav.some(s => s.key === 'pm' || s.key === 'payapps')) el.innerHTML += '<div class="card"><a href="#/pm"><b>Open Project Management &amp; Pay Apps</b></a></div>';
+  el.innerHTML = `<div class="card"><h2>Welcome, ${esc(ME.user.name.split(' ')[0])}</h2><div class="mut">The menu at the top left is always there. It lists only what you have been given access to.</div></div>` +
+    '<div class="tiles">' + (ME.menu || []).map(m => `<a href="${menuHref(m)}">${esc(m.label)}<small>${esc(DESC[m.key] || '')}</small></a>`).join('') + '</div>';
 }
 
 // ---------- Users & Access ----------
 async function adminUsers(el){
   const canW = ME.permissions['admin.users'] === 'write';
-  el.innerHTML = '<div class="tabs"><button data-t="u" class="on">People</button><button data-t="s">Seats</button><button data-t="r">Role templates</button></div><div id="tab"></div>';
-  const tabs = el.querySelectorAll('.tabs button');
-  tabs.forEach(b => b.onclick = () => { tabs.forEach(x => x.classList.toggle('on', x === b)); ({ u: tabPeople, s: tabSeats, r: tabRoles })[b.dataset.t](el.querySelector('#tab'), canW); });
-  tabPeople(el.querySelector('#tab'), canW);
+  el.innerHTML = '<div id="tab"></div>'; tabPeople(el.querySelector('#tab'), canW);
 }
 function modal(html){ const m = document.createElement('div'); m.className = 'modal'; m.innerHTML = '<div class="card">' + html + '</div>'; document.body.appendChild(m); m.close = () => m.remove(); m.addEventListener('click', e => { if(e.target === m) m.close(); }); return m; }
 const when = t => t ? new Date(t).toLocaleString() : '—';
@@ -162,8 +193,8 @@ async function tabPeople(el, canW){
   const [u, cat] = await Promise.all([api('GET', '/admin/users'), api('GET', '/admin/catalog')]);
   const roleLabel = k => (cat.roles.find(r => r.key === k) || {}).label || k;
   el.innerHTML = `<div class="card"><div class="row" style="align-items:center"><h2 style="margin:0">People</h2>${canW ? '<button class="btn" id="add" style="flex:0">+ Add person</button>' : ''}</div>
-  <table><tr><th>Name</th><th>Username</th><th>Email</th><th>Role</th><th>Seat</th><th>Status</th><th>Last sign-in</th><th></th></tr>
-  ${u.users.map(x => `<tr><td>${esc(x.name)}</td><td>${esc(x.username || '')}</td><td>${esc(x.email)}</td><td>${esc(roleLabel(x.role))}</td><td>${x.seat || '—'}</td><td><span class="tag ${x.status === 'active' ? 'act' : 'dis'}">${esc(x.status)}</span></td><td>${when(x.lastLoginAt)}</td><td>${canW ? `<button class="btn sec sm" data-id="${x.id}">Manage</button>` : ''}</td></tr>`).join('')}</table></div>`;
+  <table><tr><th>Name</th><th>Username</th><th>Email</th><th>Role</th><th>Status</th><th>Last sign-in</th><th></th></tr>
+  ${u.users.map(x => `<tr><td>${esc(x.name)}</td><td>${esc(x.username || '')}</td><td>${esc(x.email)}</td><td>${esc(roleLabel(x.role))}</td><td><span class="tag ${x.status === 'active' ? 'act' : 'dis'}">${esc(x.status)}</span></td><td>${when(x.lastLoginAt)}</td><td>${canW ? `<button class="btn sec sm" data-id="${x.id}">Manage</button>` : ''}</td></tr>`).join('')}</table></div>`;
   if(!canW) return;
   el.querySelector('#add').onclick = () => addPerson(cat, () => tabPeople(el, canW));
   el.querySelectorAll('button[data-id]').forEach(b => b.onclick = () => managePerson(u.users.find(x => x.id == b.dataset.id), cat, () => tabPeople(el, canW)));
@@ -177,23 +208,23 @@ function addPerson(cat, done){
   m.querySelector('#x').onclick = m.close;
   m.querySelector('#ok').onclick = async () => {
     try{ const r = await api('POST', '/admin/users', { name: m.querySelector('#n').value, email: m.querySelector('#e').value, username: m.querySelector('#un').value, role: m.querySelector('#r').value, mode: m.querySelector('#md').value });
-      if(r.temporaryPassword){ m.querySelector('.card').innerHTML = `<h2>Person added (seat ${r.seat})</h2><p>Give them this temporary password. It is shown only once. They will choose their own at first sign-in.</p><div class="pw">${esc(r.temporaryPassword)}</div><div style="margin-top:12px"><button class="btn" id="d">Done</button></div>`; m.querySelector('#d').onclick = () => { m.close(); done(); }; }
+      if(r.temporaryPassword){ m.querySelector('.card').innerHTML = `<h2>Person added</h2><p>Give them this temporary password. It is shown only once. They will choose their own at first sign-in.</p><div class="pw">${esc(r.temporaryPassword)}</div><div style="margin-top:12px"><button class="btn" id="d">Done</button></div>`; m.querySelector('#d').onclick = () => { m.close(); done(); }; }
       else { m.close(); done(); } }catch(e){ m.querySelector('#m').textContent = say(e); }
   };
 }
 function managePerson(u, cat, done){
   const isBuilder = ME.user.role === 'builder', ov = u.overrides || {};
   const roles = cat.roles.filter(r => r.key !== 'builder' || isBuilder);
-  const grid = cat.sections.map(s => `<tr><th colspan="2">${esc(s.label)}</th></tr>` + s.panes.map(p => {
+  const grid = cat.sections.filter(s => !s.builderOnly).map(s => `<tr><th colspan="2">${esc(s.label)}</th></tr>` + s.panes.map(p => {
     const locked = (p.key.startsWith('admin.') || p.key.startsWith('sensitive.')) && !isBuilder;
     return `<tr><td>${esc(p.label)}</td><td><select data-k="${p.key}" ${locked || u.role === 'builder' ? 'disabled' : ''}><option value="">Role default</option>${cat.levels.map(l => `<option value="${l}" ${ov[p.key] === l ? 'selected' : ''}>${l}</option>`).join('')}</select></td></tr>`;
   }).join('')).join('');
-  const m = modal(`<h2>${esc(u.name)}</h2><div class="mut">${esc(u.username || '')} · ${esc(u.email)} · seat ${u.seat || '—'} · ${esc(u.status)}</div>
+  const m = modal(`<h2>${esc(u.name)}</h2><div class="mut">${esc(u.username || '')} · ${esc(u.email)} · ${esc(u.status)}</div>
   <div class="row"><div><label>Name</label><input id="n" value="${esc(u.name)}"></div><div><label>Username</label><input id="un" value="${esc(u.username || '')}" autocapitalize="none" spellcheck="false"></div><div><label>Email</label><input id="e" value="${esc(u.email)}"></div><div><label>Role</label><select id="r">${roles.map(r => `<option value="${r.key}" ${u.role === r.key ? 'selected' : ''}>${esc(r.label)}</option>`).join('')}</select></div></div>
   <div style="margin-top:8px"><button class="btn sm" id="sv">Save details</button></div><div id="m"></div><hr>
   <h2 style="font-size:15px">Access for this person only</h2><div class="mut">Leave on "Role default" unless this person needs more or less than their role.</div>
   <table>${grid}</table><div style="margin-top:8px"><button class="btn sm" id="sp" ${u.role === 'builder' ? 'disabled' : ''}>Save access</button></div><hr>
-  <div class="row"><button class="btn sec sm" id="tp">Set temporary password</button><button class="btn sec sm" id="em">Email a reset link</button>${u.status === 'active' ? '<button class="btn bad sm" id="dis">Turn off (frees seat)</button>' : '<button class="btn sm" id="en">Turn back on</button>'}</div>
+  <div class="row"><button class="btn sec sm" id="tp">Set temporary password</button><button class="btn sec sm" id="em">Email a reset link</button>${u.status === 'active' ? '<button class="btn bad sm" id="dis">Turn off</button>' : '<button class="btn sm" id="en">Turn back on</button>'}</div>
   <div style="margin-top:12px;text-align:right"><button class="btn sec" id="x">Close</button></div>`);
   const msg = (t, ok) => { m.querySelector('#m').innerHTML = `<div class="${ok ? 'okm' : 'err'}">${esc(t)}</div>`; };
   const run = fn => async () => { try{ await fn(); }catch(e){ msg(say(e)); } };
@@ -202,24 +233,52 @@ function managePerson(u, cat, done){
   m.querySelector('#sp').onclick = run(async () => { const perms = {}; m.querySelectorAll('select[data-k]').forEach(s => { if(s.disabled) return; const v = s.value || null; if((ov[s.dataset.k] || null) !== v) perms[s.dataset.k] = v; }); await api('PUT', '/admin/users/' + u.id + '/permissions', { perms }); msg('Access saved.', true); });
   m.querySelector('#tp').onclick = run(async () => { if(!confirm('Set a new temporary password? Their current sessions end.')) return; const r = await api('POST', '/admin/users/' + u.id + '/reset-password', { mode: 'temp' }); m.querySelector('#m').innerHTML = `<div class="okm">Temporary password (shown once):</div><div class="pw">${esc(r.temporaryPassword)}</div>`; });
   m.querySelector('#em').onclick = run(async () => { await api('POST', '/admin/users/' + u.id + '/reset-password', { mode: 'email' }); msg('Link emailed.', true); });
-  const d = m.querySelector('#dis'); if(d) d.onclick = run(async () => { if(!confirm('Turn off ' + u.name + '? They are signed out now and the seat is freed. Their history stays.')) return; await api('POST', '/admin/users/' + u.id + '/disable'); m.close(); done(); });
+  const d = m.querySelector('#dis'); if(d) d.onclick = run(async () => { if(!confirm('Turn off ' + u.name + '? They are signed out now and cannot sign in. Everything they did stays on record under their name.')) return; await api('POST', '/admin/users/' + u.id + '/disable'); m.close(); done(); });
   const en = m.querySelector('#en'); if(en) en.onclick = run(async () => { await api('POST', '/admin/users/' + u.id + '/enable'); m.close(); done(); });
 }
-async function tabSeats(el){
-  const r = await api('GET', '/admin/seats');
-  el.innerHTML = '<div class="card"><h2>Seats</h2><div class="mut">A seat is a slot. When someone leaves, turn them off and the seat opens for the next hire. Past occupants stay on record.</div><table><tr><th>Seat</th><th>Now</th><th>Previous occupants</th></tr>' +
-    r.seats.map(s => `<tr><td>${s.id}</td><td>${s.occupant ? esc(s.occupant.name) + ' <span class="mut">' + esc(s.occupant.email) + '</span>' : '<span class="mut">open</span>'}</td><td>${s.history.filter(h => h.releasedAt).map(h => esc(h.name) + ' (' + new Date(h.assignedAt).toLocaleDateString() + '–' + new Date(h.releasedAt).toLocaleDateString() + ')').join('<br>') || '—'}</td></tr>`).join('') + '</table></div>';
-}
+async function builderRoles(el){ el.innerHTML = '<div id="tab"></div>'; return tabRoles(el.querySelector('#tab')); }
 async function tabRoles(el){
   const [r, cat] = await Promise.all([api('GET', '/admin/roles'), api('GET', '/admin/catalog')]);
   const isB = ME.user.role === 'builder';
-  el.innerHTML = '<div class="card"><h2>Role templates</h2><div class="mut">The starting access for each role. Changing a template changes everyone in that role (their personal exceptions stay).</div><div style="overflow:auto"><table><tr><th>Pane</th>' + r.roles.map(x => `<th>${esc(x.label)}</th>`).join('') + '</tr>' +
-    cat.sections.map(s => `<tr><th colspan="${r.roles.length + 1}">${esc(s.label)}</th></tr>` + s.panes.map(p => `<tr><td>${esc(p.label)}</td>` + r.roles.map(x => `<td><select data-r="${x.key}" data-k="${p.key}" ${(!isB || x.key === 'builder') ? 'disabled' : ''}>${cat.levels.map(l => `<option ${x.perms[p.key] === l ? 'selected' : ''}>${l}</option>`).join('')}</select></td>`).join('') + '</tr>').join('')).join('') + '</table></div></div>';
+  el.innerHTML = '<div class="card"><h2>Roles &amp; Templates</h2><div class="mut">The starting access for each role. Changing a template changes everyone in that role (their personal exceptions stay).</div><div style="overflow:auto"><table><tr><th>Pane</th>' + r.roles.map(x => `<th>${esc(x.label)}</th>`).join('') + '</tr>' +
+    cat.sections.filter(s => !s.builderOnly).map(s => `<tr><th colspan="${r.roles.length + 1}">${esc(s.label)}</th></tr>` + s.panes.map(p => `<tr><td>${esc(p.label)}</td>` + r.roles.map(x => `<td><select data-r="${x.key}" data-k="${p.key}" ${(!isB || x.key === 'builder') ? 'disabled' : ''}>${cat.levels.map(l => `<option ${x.perms[p.key] === l ? 'selected' : ''}>${l}</option>`).join('')}</select></td>`).join('') + '</tr>').join('')).join('') + '</table></div></div>';
   el.querySelectorAll('select[data-r]:not([disabled])').forEach(s => s.onchange = async () => { try{ await api('PUT', '/admin/roles/' + s.dataset.r, { perms: { [s.dataset.k]: s.value } }); }catch(e){ alert(say(e)); } });
+}
+async function builderSettings(el){
+  el.innerHTML = '<div class="card"><h2>Settings &amp; Connections</h2><div class="mut">Loading…</div></div>';
+  let sy; try{ sy = await api('GET', '/admin/system'); }catch(e){ el.innerHTML = '<div class="card err">' + esc(say(e)) + '</div>'; return; }
+  const yn = (ok, good, bad) => `<span class="tag ${ok ? 'act' : 'dis'}">${esc(ok ? good : bad)}</span>`;
+  const up = s => s > 3600 ? Math.floor(s / 3600) + ' h ' + Math.floor(s % 3600 / 60) + ' min' : Math.floor(s / 60) + ' min';
+  const u = sy.users || {};
+  const row = (k, v) => `<tr><td style="width:240px">${k}</td><td>${v}</td></tr>`;
+  el.innerHTML = `<div class="card"><h2>System</h2><table>
+    ${row('Database', yn(sy.database.ok, 'Connected', 'Not reachable'))}
+    ${row('Server', 'Node ' + esc(sy.node) + ' · up ' + up(sy.uptimeSeconds))}
+    ${row('App address', esc(sy.app.appUrl))}
+    ${row('People', esc((u.active || 0) + ' active, ' + (u.disabled || 0) + ' turned off'))}</table></div>
+  <div class="card"><h2>Email</h2><table>
+    ${row('Sending', yn(sy.mail.live, 'Live (' + sy.mail.provider + ')', 'Not sending — mode: ' + sy.mail.provider))}
+    ${row('Sender address', esc(sy.mail.from || 'not set'))}
+    ${row('Resend key', yn(sy.mail.keySet, 'Set', 'Missing'))}</table>
+    <div class="mut" style="margin-top:8px">Until sending is live, invite and reset links are written to the server log instead of emailed. Keys are set in Railway, never here.</div></div>
+  <div class="card"><h2>AI</h2><table>${row('Anthropic key', yn(sy.ai.keySet, 'Set', 'Missing'))}</table></div>
+  <div class="card"><h2>Google Drive archive</h2><table>
+    ${row('Sign-in client', yn(sy.google.oauthConfigured, 'Configured', 'Missing client ID / secret'))}
+    ${row('Token encryption key', yn(sy.google.driveKeySet, 'Set', 'Missing'))}
+    ${row('Callback base', esc(sy.google.publicBackendUrl || 'not set'))}
+    ${row('Connection', '<span id="dst" class="mut">checking…</span>')}</table>
+    <div class="row" style="margin-top:10px"><button class="btn sm" id="dc" style="flex:0">Connect Drive</button><button class="btn sec sm" id="dt" style="flex:0">Test</button><button class="btn sec sm" id="dd" style="flex:0">Disconnect</button></div><div id="dm"></div></div>`;
+  const pm = (m, p, b) => fetch(GO_CONFIG.API + '/pm/api' + p, { method: m, headers: { 'Content-Type': 'application/json', Authorization: 'Bearer ' + TOKEN }, body: b ? JSON.stringify(b) : undefined }).then(async r => { const j = await r.json().catch(() => ({})); if(!r.ok) throw Object.assign(new Error(j.error || 'failed'), j); return j; });
+  const note = (t, ok) => { $('#dm').innerHTML = `<div class="${ok ? 'okm' : 'err'}">${esc(t)}</div>`; };
+  const status = async () => { try{ const r = await pm('GET', '/archive/drive/status'); $('#dst').innerHTML = yn(r.connected, 'Connected' + (r.email ? ' as ' + esc(r.email) : ''), 'Not connected'); }catch(e){ $('#dst').textContent = 'Could not check'; } };
+  status();
+  $('#dc').onclick = async () => { try{ const r = await pm('POST', '/archive/drive/connect-url', {}); if(r.url) window.open(r.url, '_blank'); else note('No link returned.'); }catch(e){ note(e.message); } };
+  $('#dt').onclick = async () => { try{ await pm('POST', '/archive/drive/test', {}); note('Drive responded.', true); }catch(e){ note(e.message); } };
+  $('#dd').onclick = async () => { if(!confirm('Disconnect Google Drive? Archiving stops until it is connected again.')) return; try{ await pm('POST', '/archive/drive/disconnect', {}); note('Disconnected.', true); status(); }catch(e){ note(e.message); } };
 }
 async function adminAudit(el){
   const r = await api('GET', '/admin/audit?limit=200');
-  el.innerHTML = '<div class="card"><h2>Audit log</h2><table><tr><th>When</th><th>Who</th><th>Action</th><th>Detail</th></tr>' + r.entries.map(e => `<tr><td>${when(e.at)}</td><td>${esc(e.name || 'System')}<div class="mut">${esc(e.email || '')}</div></td><td>${esc(e.action)}</td><td class="mut">${esc(e.detail ? JSON.stringify(e.detail) : '')}</td></tr>`).join('') + '</table></div>';
+  el.innerHTML = '<div class="card"><h2>Audit log</h2><table><tr><th>When</th><th>Who</th><th>Action</th><th>Detail</th></tr>' + r.entries.map(e => `<tr><td>${when(e.at)}</td><td>${esc(e.name || 'System')}${e.username ? ' <span class="mut">(' + esc(e.username) + ')</span>' : ''}<div class="mut">${esc(e.email || '')}</div></td><td>${esc(e.action)}</td><td class="mut">${esc(e.detail ? JSON.stringify(e.detail) : '')}</td></tr>`).join('') + '</table></div>';
 }
 route();
 </script></body></html>

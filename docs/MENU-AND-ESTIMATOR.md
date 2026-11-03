@@ -1,0 +1,19 @@
+# Global menu, Estimator, Admin and Builder (v5)
+
+## The menu
+A button left of the logo is on every screen. It lists only what the signed-in person may open:
+- **Estimator** - the Estimator app (own look-alike of the PM app): Dashboard, Bids, Crew & Subs (read-only), Map, Calendar.
+- **Project Manager** - the whole PM app (projects, dispatch, crew, proposals, pay apps, close-out, map, calendar, logistics AI).
+- **Admin** (Owner, and Builder) - Users & Access, Audit Log, Analytics (placeholder), Removal Requests, and the Sensitive Data screens.
+- **Builder** (Builder only, never grantable) - Settings & Connections, Roles & Templates, PM Settings & Rules, Dev Backlog, System Architecture, Import / Export Data.
+Version, "Up to date" and the trademark line are always on screen along the bottom.
+
+## Estimator
+- Bids: Draft, Bidding, Won, Lost, No Bid. Never deleted - archived. Every change is stored with the person's name and username (`est_bid_history`).
+- Quota (per Estimator, shown only to Estimators): default $2.2M bid per month and 12% conversion; the Owner/Builder set goals per person (`est_quotas`).
+- Conversion = dollars won / dollars decided (won + lost), trailing 12 months. A count-based figure is also returned.
+- Map separates active jobs (from the PM board; names, places, dates only) from bids. Calendar shows bid due dates and job spans.
+- PMs do not see bids. The Owner may grant a person view-only access to the Estimator pane in Users & Access.
+
+## Next
+Estimator -> PM hand-off (which bid fields carry into a Project; which the PM may not edit), Analytics (per-person views, density maps, sub award rate), toasts between roles.

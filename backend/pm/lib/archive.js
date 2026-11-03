@@ -3,6 +3,7 @@
 // point leaves the project exactly as it was.
 const crypto = require('crypto');
 const pool = require('../config/db');
+const actor = require('../../lib/actor');
 const store = require('./boardStore');
 const makeCalc = require('./calc');
 const packet = require('./packet');
@@ -20,11 +21,11 @@ async function readBoard() {
   return { row: rows[0], board: JSON.parse(rows[0].data_json) };
 }
 async function logsFor(projectId) {
-  const [ev] = await pool.query('SELECT created_at, role, field, kind, old_value, new_value FROM project_events WHERE project_id = ? ORDER BY id ASC', [projectId]);
-  const [ar] = await pool.query('SELECT created_at, role, path, kind, old_value, new_value FROM money_archive WHERE project_id = ? ORDER BY id ASC', [projectId]);
+  const [ev] = await pool.query('SELECT created_at, role, user_id, user_name, user_username, field, kind, old_value, new_value FROM project_events WHERE project_id = ? ORDER BY id ASC', [projectId]);
+  const [ar] = await pool.query('SELECT created_at, role, user_id, user_name, user_username, path, kind, old_value, new_value FROM money_archive WHERE project_id = ? ORDER BY id ASC', [projectId]);
   return {
-    events: ev.map(r => ({ at: Number(r.created_at), by: r.role, field: r.field, kind: r.kind, oldValue: r.old_value, newValue: r.new_value })),
-    archive: ar.map(r => ({ at: Number(r.created_at), by: r.role, path: r.path, kind: r.kind, oldValue: r.old_value, newValue: r.new_value })),
+    events: ev.map(r => ({ at: Number(r.created_at), by: r.role, byName: actor.labelOf(r.user_name, r.user_username), byUserId: r.user_id == null ? null : Number(r.user_id), field: r.field, kind: r.kind, oldValue: r.old_value, newValue: r.new_value })),
+    archive: ar.map(r => ({ at: Number(r.created_at), by: r.role, byName: actor.labelOf(r.user_name, r.user_username), byUserId: r.user_id == null ? null : Number(r.user_id), path: r.path, kind: r.kind, oldValue: r.old_value, newValue: r.new_value })),
   };
 }
 function findProject(board, projectId) {
@@ -59,7 +60,7 @@ function stubFor(p, info, snap) {
   stub.assignedIds = []; stub.requiredSkills = []; stub.blockers = []; stub.contacts = [];
   stub.phases = (p.phases || []).map(ph => ({ id: ph.id, number: ph.number, status: ph.status, plannedStart: ph.plannedStart, plannedEnd: ph.plannedEnd }));
   stub.money = { contractOriginal: 0, percentComplete: 100, changeOrders: [], payApps: [], subDeals: [], notes: '' };
-  stub.closed = { at: info.closedAt, by: info.role, packetName: info.pdfName, packetId: info.packetId, summary: snap.summary, years: snap.years };
+  stub.closed = { at: info.closedAt, by: info.role, byName: actor.label(actor.current()), byUserId: actor.current() ? actor.current().id : null, packetName: info.pdfName, packetId: info.packetId, summary: snap.summary, years: snap.years };
   return stub;
 }
 
@@ -79,7 +80,7 @@ async function closeProject(projectId, role, req) {
     const projectHash = sha(JSON.stringify(project));
     const closedAt = new Date().toISOString();
     const logs = await logsFor(projectId);
-    const pk = await packet.buildPacket(board, project, calc, { events: logs.events, archive: logs.archive, by: role, closedAt, generatedAt: closedAt });
+    const pk = await packet.buildPacket(board, project, calc, { events: logs.events, archive: logs.archive, by: role, byName: actor.label(actor.current()), byUserId: actor.current() ? actor.current().id : null, closedAt, generatedAt: closedAt });
 
     let pdfFile, jsonFile;
     try {
@@ -90,8 +91,8 @@ async function closeProject(projectId, role, req) {
 
     const snap = calc.projectCloseSnapshot(project);
     const info = { closedAt, role, pdfName: pk.pdfName, packetId: pk.packetId };
-    await pool.query('INSERT INTO closed_packets (created_at, project_id, project_code, project_name, closed_by, packet_id, pdf_name, json_name, pdf_file_id, json_file_id, pdf_link, sha256) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)',
-      [Date.now(), projectId, project.code || '', String(project.name || '').slice(0, 200), role, pk.packetId, pk.pdfName, pk.jsonName, pdfFile.id, jsonFile.id, pdfFile.link, pk.sha256]);
+    await pool.query('INSERT INTO closed_packets (created_at, project_id, project_code, project_name, closed_by, packet_id, pdf_name, json_name, pdf_file_id, json_file_id, pdf_link, sha256, user_id, user_name, user_username) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)',
+      [Date.now(), projectId, project.code || '', String(project.name || '').slice(0, 200), role, pk.packetId, pk.pdfName, pk.jsonName, pdfFile.id, jsonFile.id, pdfFile.link, pk.sha256].concat(actor.cols()));
 
     // Shrink the project (compare-and-swap, same as every other save).
     let revision = null;
@@ -113,8 +114,8 @@ async function closeProject(projectId, role, req) {
 
     await pool.query('DELETE FROM money_archive WHERE project_id = ?', [projectId]);
     await pool.query('DELETE FROM project_events WHERE project_id = ?', [projectId]);
-    await pool.query('INSERT INTO project_events (created_at, role, project_id, project_code, project_name, field, kind, old_value, new_value) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)',
-      [Date.now(), role, projectId, project.code || '', String(project.name || '').slice(0, 200), 'Project', 'changed', 'Completed', ('Closed out - packet ' + pk.pdfName).slice(0, 480)]);
+    await pool.query('INSERT INTO project_events (created_at, role, project_id, project_code, project_name, field, kind, old_value, new_value, user_id, user_name, user_username) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)',
+      [Date.now(), role, projectId, project.code || '', String(project.name || '').slice(0, 200), 'Project', 'changed', 'Completed', ('Closed out - packet ' + pk.pdfName).slice(0, 480)].concat(actor.cols()));
     return { ok: true, revision, name: pk.pdfName, packetId: pk.packetId, link: pdfFile.link, code: project.code };
   } finally { lock = null; }
 }

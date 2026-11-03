@@ -3,7 +3,7 @@ const pool = require('../config/db');
 const { hashPassword, verifyPassword, burnTime, passwordProblem } = require('../lib/password');
 const { newToken, sha256 } = require('../lib/tokens');
 const { createSession, revokeSessions, effectivePerms, publicUser, requireAuth } = require('../lib/auth');
-const { SECTIONS, lvl } = require('../lib/catalog');
+const { MENU, SECTIONS, lvl } = require('../lib/catalog');
 const { limiter } = require('../lib/throttle');
 const { audit } = require('../lib/audit');
 const { sendMail, resetEmail } = require('../lib/mailer');
@@ -14,9 +14,14 @@ const emailOf = v => String(v || '').trim().toLowerCase();
 // Sign in (or ask for a reset) with a username or an email address.
 const findUser = async id => { const k = emailOf(id); const [rows] = await pool.query(k.includes('@') ? 'SELECT * FROM users WHERE email = ?' : 'SELECT * FROM users WHERE username = ?', [k]); return rows[0]; };
 
-// Which sections/panes show in the menu (the server still checks every call; this only drives the navigation).
-function navFor(perms){
-  return SECTIONS.map(s => ({ key: s.key, label: s.label, panes: s.panes.filter(p => lvl(perms[p.key]) >= 1).map(p => ({ key: p.key, label: p.label, level: perms[p.key] })) })).filter(s => s.panes.length);
+// The global menu: top-level items, each with the panes this person may open (the server still checks every call).
+function menuFor(perms){
+  return MENU.map(m => ({ key: m.key, label: m.label, sections: SECTIONS.filter(s => s.menu === m.key)
+      .map(s => ({ key: s.key, label: s.label, panes: s.panes.filter(p => lvl(perms[p.key]) >= 1).map(p => ({ key: p.key, label: p.label, level: perms[p.key] })) }))
+      
+      .filter(s => s.panes.length) }))
+    // The Admin menu belongs to people who hold an admin pane; a lone sensitive-data grant (e.g. PM reading contract values) does not open it.
+    .filter(m => m.sections.length && (m.key !== 'admin' || m.sections.some(s => s.key === 'admin')));
 }
 
 router.post('/login', limiter('login', 30, 15 * 60 * 1000), async (req, res) => {
@@ -47,7 +52,7 @@ router.post('/logout', requireAuth, async (req, res) => {
 });
 
 router.get('/me', requireAuth, async (req, res) => {
-  res.json({ user: publicUser(req.user), permissions: req.perms, nav: navFor(req.perms) });
+  res.json({ user: publicUser(req.user), permissions: req.perms, menu: menuFor(req.perms) });
 });
 
 // Always answers the same way, whether or not the address has an account.

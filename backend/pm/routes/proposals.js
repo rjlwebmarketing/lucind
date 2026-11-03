@@ -139,7 +139,7 @@ router.post('/links', requireAuth(...STAFF), wrap(async (req, res) => {
   if (!rows.length) {
     const [all] = await pool.query('SELECT id FROM proposal_links LIMIT ' + (MAX_LINKS + 1));
     if (all.length > MAX_LINKS) return res.status(429).json({ error: 'too_many_links' });
-    try { await pool.query('INSERT INTO proposal_links (project_id, invite_id, person_id, created_at, created_by) VALUES (?, ?, ?, ?, ?)', [projectId, inviteId, personId || null, Date.now(), req.auth.role]); } catch (e) {}
+    try { await pool.query('INSERT INTO proposal_links (project_id, invite_id, person_id, created_at, created_by, user_id, user_name, user_username) VALUES (?, ?, ?, ?, ?, ?, ?, ?)', [projectId, inviteId, personId || null, Date.now(), req.auth.role].concat(require('../../lib/actor').cols())); } catch (e) {}
     [rows] = await pool.query('SELECT id FROM proposal_links WHERE project_id = ? AND invite_id = ?', [projectId, inviteId]);
   }
   const linkId = Number(rows[0].id);
@@ -159,7 +159,7 @@ router.post('/links/batch', requireAuth(...STAFF), wrap(async (req, res) => {
     if (!inviteId || personId === null || !infoFor(board, projectId, inviteId, Date.now())) { out.push({ inviteId, error: 'no_such_invitation' }); continue; }
     let [rows] = await pool.query('SELECT id FROM proposal_links WHERE project_id = ? AND invite_id = ?', [projectId, inviteId]);
     if (!rows.length) {
-      try { await pool.query('INSERT INTO proposal_links (project_id, invite_id, person_id, created_at, created_by) VALUES (?, ?, ?, ?, ?)', [projectId, inviteId, personId || null, Date.now(), req.auth.role]); } catch (e) {}
+      try { await pool.query('INSERT INTO proposal_links (project_id, invite_id, person_id, created_at, created_by, user_id, user_name, user_username) VALUES (?, ?, ?, ?, ?, ?, ?, ?)', [projectId, inviteId, personId || null, Date.now(), req.auth.role].concat(require('../../lib/actor').cols())); } catch (e) {}
       [rows] = await pool.query('SELECT id FROM proposal_links WHERE project_id = ? AND invite_id = ?', [projectId, inviteId]);
     }
     const linkId = Number(rows[0].id);

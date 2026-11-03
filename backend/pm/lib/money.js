@@ -167,8 +167,8 @@ async function writeArchive(pool, role, changes) {
   }
   for (const c of rows) {
     await pool.query(
-      'INSERT INTO money_archive (created_at, role, project_id, project_name, path, kind, old_value, new_value) VALUES (?, ?, ?, ?, ?, ?, ?, ?)',
-      [now, role, String(c.projectId).slice(0, 64), String(c.projectName).slice(0, 200), String(c.path).slice(0, 250), c.kind, c.oldV, c.newV]);
+      'INSERT INTO money_archive (created_at, role, project_id, project_name, path, kind, old_value, new_value, user_id, user_name, user_username) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)',
+      [now, role, String(c.projectId).slice(0, 64), String(c.projectName).slice(0, 200), String(c.path).slice(0, 250), c.kind, c.oldV, c.newV].concat(require('../../lib/actor').cols()));
   }
   return rows.length;
 }

@@ -226,9 +226,9 @@ async function writeSnapshot(json, obj, reason, savedBy, force = true, minGapMs 
   const gz = await gzip(Buffer.from(json, 'utf8'));
   await pool.query(
     `INSERT INTO board_history
-       (created_at, reason, saved_by, revision, projects_n, people_n, skills_n, bytes, sha256, data_gz)
-     VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
-    [Date.now(), reason, savedBy || null, rev, c.projects, c.people, c.skills, Buffer.byteLength(json), hash, gz]);
+       (created_at, reason, saved_by, revision, projects_n, people_n, skills_n, bytes, sha256, data_gz, user_id, user_name, user_username)
+     VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+    [Date.now(), reason, savedBy || null, rev, c.projects, c.people, c.skills, Buffer.byteLength(json), hash, gz].concat(require('../../lib/actor').cols()));
   enforceRowCap().catch(e => console.error('history cap failed', e));
   maybePrune().catch(e => console.error('prune failed', e));
   return true;

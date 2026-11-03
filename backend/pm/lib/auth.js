@@ -8,10 +8,11 @@ const crypto = require('crypto');
 const platform = require('../../lib/auth');
 const { lvl } = require('../../lib/catalog');
 const platformAudit = require('../../lib/audit').audit;
+const actor = require('../../lib/actor');
 
 // URL prefix (after /pm/api) -> the pane that gates it. Anything not listed is refused to non-Builders.
 const PANE_BY_PREFIX = {
-  '/data': 'pm.projects', '/ai': 'pm.logistics_ai', '/admin': 'admin.settings',
+  '/data': 'pm.projects', '/ai': 'pm.logistics_ai', '/admin': 'pm.projects',
   '/suggestions': 'pm.projects', '/requests': 'pm.projects', '/presence': 'pm.projects', '/house-rules': 'pm.projects',
   '/intake': 'pm.people', '/proposals': 'pm.proposals', '/money': 'payapps.main', '/archive': 'payapps.closeout'
 };
@@ -40,11 +41,12 @@ function requireAuth(...roles){
     }
     if(roles.length && !roles.includes(role)) return res.status(403).json({ error: 'forbidden' });
     req.auth = { role, tokenHash: req.sessionHash, user: req.user };
-    next();
+    // Everything below this point can ask "who is this?" (lib/actor) when it writes a record.
+    actor.runAs(req.user, () => next());
   });
 }
 async function audit(event, req, role, detail){
-  const user = req && req.user ? { id: req.user.id, name: req.user.name, email: req.user.email } : null;
+  const user = req && req.user ? { id: req.user.id, name: req.user.name, username: req.user.username, email: req.user.email } : null;
   return platformAudit(user, 'pm.' + String(event).slice(0, 55), null, null, detail || null, req && req.ip);
 }
 function wrap(fn){

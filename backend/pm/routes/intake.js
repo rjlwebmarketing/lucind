@@ -127,8 +127,8 @@ router.post('/invites', requireAuth(...STAFF), wrap(async (req, res) => {
 
   const token = crypto.randomBytes(24).toString('base64url');
   await pool.query(
-    'INSERT INTO intake_invites (token_hash, kind, name_hint, email_hint, created_at, expires_at, created_by) VALUES (?, ?, ?, ?, ?, ?, ?)',
-    [sha256(token), kind, name || null, email || null, now, now + INVITE_TTL_MS, req.auth.role]);
+    'INSERT INTO intake_invites (token_hash, kind, name_hint, email_hint, created_at, expires_at, created_by, user_id, user_name, user_username) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)',
+    [sha256(token), kind, name || null, email || null, now, now + INVITE_TTL_MS, req.auth.role].concat(require('../../lib/actor').cols()));
   await audit('invite_created', req, req.auth.role, `${kind}${name ? ' for ' + name : ''}`);
   res.json({ token, expiresAt: now + INVITE_TTL_MS });
 }));

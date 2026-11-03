@@ -14,9 +14,9 @@ router.get('/archive', requireAuth('builder', 'owner'), wrap(async (req, res) =>
   if (Number.isFinite(before)) { where.push('id < ?'); params.push(before); }
   if (project) { where.push('project_id = ?'); params.push(project); }
   const [rows] = await pool.query(
-    'SELECT id, created_at, role, project_id, project_name, path, kind, old_value, new_value FROM money_archive' +
+    'SELECT id, created_at, role, user_name, user_username, project_id, project_name, path, kind, old_value, new_value FROM money_archive' +
     (where.length ? ' WHERE ' + where.join(' AND ') : '') + ' ORDER BY id DESC LIMIT ' + limit, params);
-  res.json({ items: rows.map(r => ({ id: Number(r.id), at: Number(r.created_at), by: r.role, projectId: r.project_id, project: r.project_name,
+  res.json({ items: rows.map(r => ({ id: Number(r.id), at: Number(r.created_at), by: r.role, byName: require('../../lib/actor').labelOf(r.user_name, r.user_username), projectId: r.project_id, project: r.project_name,
     path: r.path, kind: r.kind, oldValue: r.old_value, newValue: r.new_value })) });
 }));
 
@@ -26,9 +26,9 @@ router.get('/project-log', requireAuth('builder', 'owner'), wrap(async (req, res
   const limit = Math.min(1000, Math.max(1, parseInt(req.query.limit, 10) || 300));
   const project = typeof req.query.project === 'string' ? req.query.project.slice(0, 64) : '';
   const [rows] = await pool.query(
-    'SELECT id, created_at, role, project_id, project_code, project_name, field, kind, old_value, new_value FROM project_events' +
+    'SELECT id, created_at, role, user_name, user_username, project_id, project_code, project_name, field, kind, old_value, new_value FROM project_events' +
     (project ? ' WHERE project_id = ?' : '') + ' ORDER BY id DESC LIMIT ' + limit, project ? [project] : []);
-  res.json({ items: rows.map(r => ({ id: Number(r.id), at: Number(r.created_at), by: r.role, projectId: r.project_id, code: r.project_code,
+  res.json({ items: rows.map(r => ({ id: Number(r.id), at: Number(r.created_at), by: r.role, byName: require('../../lib/actor').labelOf(r.user_name, r.user_username), projectId: r.project_id, code: r.project_code,
     project: r.project_name, field: r.field, kind: r.kind, oldValue: r.old_value, newValue: r.new_value })) });
 }));
 

@@ -1,6 +1,6 @@
 // Creates the platform tables on startup (CREATE TABLE IF NOT EXISTS: safe on every boot) and seeds the first data.
-// Principle: people are NEVER deleted. A person who leaves is disabled (seat freed); their name and e-mail stay on every
-// record they touched, and a new hire gets a new person record in the seat.
+// Principle: people are NEVER deleted. A person who leaves is turned off; their id, name, username and e-mail stay on every
+// record they touched, and a new hire is always a new person record.
 const pool = require('../config/db');
 const { ROLE_DEFAULTS, expand, PANE_KEYS } = require('./catalog');
 const { hashPassword, randomPassword } = require('./password');
@@ -36,7 +36,6 @@ const DDL = [
     must_change_password INT NOT NULL DEFAULT 1,
     failed_count INT NOT NULL DEFAULT 0,
     locked_until BIGINT NOT NULL DEFAULT 0,
-    seat_id INT NULL,
     last_login_at BIGINT NULL,
     created_at BIGINT NOT NULL,
     created_by BIGINT NULL,
@@ -48,22 +47,6 @@ const DDL = [
     perm_key VARCHAR(64) NOT NULL,
     level VARCHAR(8) NOT NULL,
     PRIMARY KEY (user_id, perm_key)
-  ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4`,
-
-  `CREATE TABLE IF NOT EXISTS seats (
-    id INT NOT NULL PRIMARY KEY,
-    label VARCHAR(60) NOT NULL
-  ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4`,
-
-  `CREATE TABLE IF NOT EXISTS seat_history (
-    id BIGINT UNSIGNED NOT NULL AUTO_INCREMENT PRIMARY KEY,
-    seat_id INT NOT NULL,
-    user_id BIGINT NOT NULL,
-    user_name VARCHAR(120) NOT NULL,
-    user_email VARCHAR(190) NOT NULL,
-    assigned_at BIGINT NOT NULL,
-    released_at BIGINT NULL,
-    KEY idx_seat (seat_id)
   ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4`,
 
   `CREATE TABLE IF NOT EXISTS sessions (
@@ -94,6 +77,7 @@ const DDL = [
     at BIGINT NOT NULL,
     user_id BIGINT NULL,
     user_name VARCHAR(120) NULL,
+    user_username VARCHAR(40) NULL,
     user_email VARCHAR(190) NULL,
     action VARCHAR(64) NOT NULL,
     entity_type VARCHAR(40) NULL,
@@ -102,7 +86,49 @@ const DDL = [
     ip VARCHAR(64) NULL,
     KEY idx_at (at),
     KEY idx_user (user_id)
-  ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4`
+  ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4`,
+  `CREATE TABLE IF NOT EXISTS est_bids (
+    id BIGINT UNSIGNED NOT NULL AUTO_INCREMENT PRIMARY KEY,
+    name VARCHAR(200) NOT NULL,
+    store_number VARCHAR(40) NULL,
+    customer VARCHAR(200) NULL,
+    address VARCHAR(255) NULL,
+    city VARCHAR(100) NULL,
+    state VARCHAR(40) NULL,
+    lat DOUBLE NULL,
+    lon DOUBLE NULL,
+    amount DECIMAL(14,2) NOT NULL DEFAULT 0,
+    status VARCHAR(16) NOT NULL DEFAULT 'Draft',
+    owner_id BIGINT NULL,
+    owner_name VARCHAR(120) NULL,
+    owner_username VARCHAR(40) NULL,
+    bid_due VARCHAR(10) NULL,
+    bid_submitted VARCHAR(10) NULL,
+    decided_on VARCHAR(10) NULL,
+    start_date VARCHAR(10) NULL,
+    end_date VARCHAR(10) NULL,
+    notes TEXT NULL,
+    archived INT NOT NULL DEFAULT 0,
+    created_at BIGINT NOT NULL,
+    updated_at BIGINT NOT NULL
+  ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4`,
+  // Every create/change/archive of a bid, kept forever, with who did it.
+  `CREATE TABLE IF NOT EXISTS est_bid_history (
+    id BIGINT UNSIGNED NOT NULL AUTO_INCREMENT PRIMARY KEY,
+    bid_id BIGINT NOT NULL,
+    at BIGINT NOT NULL,
+    user_id BIGINT NULL,
+    user_name VARCHAR(120) NULL,
+    user_username VARCHAR(40) NULL,
+    action VARCHAR(24) NOT NULL,
+    changes TEXT NULL
+  ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4`,
+  `CREATE TABLE IF NOT EXISTS est_quotas (
+    user_id BIGINT NOT NULL PRIMARY KEY,
+    bid_target DECIMAL(14,2) NOT NULL,
+    conv_target DOUBLE NOT NULL,
+    updated_at BIGINT NOT NULL
+  ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4`,
 ];
 
 async function getSetting(k, dflt){ const [r] = await pool.query('SELECT v FROM settings WHERE k = ?', [k]); return r.length ? r[0].v : dflt; }
@@ -122,14 +148,24 @@ async function seedRoles(){
     for(const k of PANE_KEYS) await pool.query('INSERT INTO role_permissions (role_key, perm_key, level) VALUES (?, ?, ?)', [key, k, full[k]]);
   }
 }
-async function seedSeats(){
-  const n = Math.max(1, Number(await getSetting('seat_count', '10')) || 10);
-  await setSetting('seat_count', n);
-  const [have] = await pool.query('SELECT id FROM seats');
-  const haveSet = new Set(have.map(r => Number(r.id)));
-  for(let i = 1; i <= n; i++) if(!haveSet.has(i)) await pool.query('INSERT INTO seats (id, label) VALUES (?, ?)', [i, 'Seat ' + i]);
+// First boot only: create the Builder account. The Builder cannot be locked out by role edits.
+// One-time template upgrades for databases seeded by an earlier version.
+async function upgradeRoleTemplates(){
+  if(await getSetting('tpl_owner_users_write', '') === '1') return;
+  // The Owner can add, turn off and reset people (never the Builder, never role templates or sensitive/admin access).
+  await pool.query("UPDATE role_permissions SET level = 'write' WHERE role_key = 'owner' AND perm_key = 'admin.users' AND level = 'read'");
+  await setSetting('tpl_owner_users_write', '1');
 }
-// First boot only: create the Builder account. The Builder has no seat (seats are for staff) and cannot be locked out by role edits.
+// v5: the Estimator branch. The Owner gets the new Analytics pane; the Estimator may view (not manage) crew & subs and see the calendar.
+async function upgradeTemplatesV5(){
+  if(await getSetting('tpl_v5_estimator', '') === '1') return;
+  const set = async (role, key, level) => { await pool.query('DELETE FROM role_permissions WHERE role_key = ? AND perm_key = ?', [role, key]); await pool.query('INSERT INTO role_permissions (role_key, perm_key, level) VALUES (?, ?, ?)', [role, key, level]); };
+  await set('owner', 'admin.analytics', 'write');
+  // PMs are handed won jobs, not bids: no looking back into the Estimator unless the Owner grants view-only per person.
+  await pool.query("DELETE FROM role_permissions WHERE role_key = 'pm' AND perm_key LIKE 'estimator.%'");
+  await set('estimator', 'pm.people', 'read'); await set('estimator', 'pm.calendar', 'read');
+  await setSetting('tpl_v5_estimator', '1');
+}
 async function bootstrapBuilder(){
   const [n] = await pool.query('SELECT COUNT(*) AS c FROM users');
   if(Number(n[0].c) > 0) return;
@@ -171,7 +207,8 @@ async function migrateUsernames(){
 async function ensureSchema(){
   for(const sql of DDL) await pool.query(sql);
   try{ await pool.query('ALTER TABLE sessions ADD COLUMN remember INT NOT NULL DEFAULT 0'); }catch(e){ /* already there */ }
+  try{ await pool.query('ALTER TABLE audit_log ADD COLUMN user_username VARCHAR(40) NULL'); }catch(e){ /* already there */ }
   await migrateUsernames();
-  await seedRoles(); await seedSeats(); await bootstrapBuilder();
+  await seedRoles(); await upgradeRoleTemplates(); await upgradeTemplatesV5(); await bootstrapBuilder();
 }
 module.exports = { ensureSchema, getSetting, setSetting, USERNAME_RE, usernameFromEmail, freeUsername };
