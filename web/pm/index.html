@@ -1085,7 +1085,7 @@ async function resolveAddressesForActions(actions){
   return geocoded;
 }
 
-let DATA = { criteria: ["Speed","Dependability","Workmanship"], skills: [], projects: [], people: [], settings: { googleMapsApiKey: "AIzaSyDekOwGJYu8ZJIs1rqO5CDcXekcbuA3i3E", driveClientId: "714309449796-28eek36edt2j170bpalvrsj0o4hb2mbr.apps.googleusercontent.com", driveParentFolderId: "", boardLink: "", latestKnownVersion: "" }, devTasks: [], devHowTos: [], acknowledgedIssues: {}, revision: 0 };
+let DATA = { criteria: ["Speed","Dependability","Workmanship"], skills: [], projects: [], people: [], settings: { googleMapsApiKey: "AIzaSyDPrYv0sBUSzIj7QEehLw5rG2un1vJPUks", driveClientId: "198249406437-enslhkb0q8jonau5nd9pch3elebioial.apps.googleusercontent.com", driveParentFolderId: "", boardLink: "", latestKnownVersion: "" }, devTasks: [], devHowTos: [], acknowledgedIssues: {}, revision: 0 };
 let VIEW = 'dashboard';
 let STORAGE_READY = false;
 let SHARED_MODE = true;
@@ -1333,7 +1333,7 @@ async function loadData(){
       throw e;
     }
   }
-  if(!DATA.settings) DATA.settings = { googleMapsApiKey: "AIzaSyDekOwGJYu8ZJIs1rqO5CDcXekcbuA3i3E", driveClientId: "714309449796-28eek36edt2j170bpalvrsj0o4hb2mbr.apps.googleusercontent.com", driveParentFolderId: "", boardLink: "", latestKnownVersion: "" };
+  if(!DATA.settings) DATA.settings = { googleMapsApiKey: "AIzaSyDPrYv0sBUSzIj7QEehLw5rG2un1vJPUks", driveClientId: "198249406437-enslhkb0q8jonau5nd9pch3elebioial.apps.googleusercontent.com", driveParentFolderId: "", boardLink: "", latestKnownVersion: "" };
   if(!DATA.acknowledgedIssues) DATA.acknowledgedIssues = {};
   if(!DATA.skills) DATA.skills = [];
   if(!DATA.deactivatedSkills) DATA.deactivatedSkills = [];
@@ -1341,8 +1341,8 @@ async function loadData(){
   if(DATA.settings.latestKnownVersion===undefined) DATA.settings.latestKnownVersion = "";
   if(ROLE === 'builder' && (!DATA.devHowTos || !DATA.devHowTos.length)) DATA.devHowTos = seedDevHowTos();
   if(!DATA.devHowTos) DATA.devHowTos = [];
-  if(!DATA.settings.googleMapsApiKey) DATA.settings.googleMapsApiKey = "AIzaSyDekOwGJYu8ZJIs1rqO5CDcXekcbuA3i3E";
-  if(DATA.settings.driveClientId===undefined) DATA.settings.driveClientId = "714309449796-28eek36edt2j170bpalvrsj0o4hb2mbr.apps.googleusercontent.com";
+  if(!DATA.settings.googleMapsApiKey) DATA.settings.googleMapsApiKey = "AIzaSyDPrYv0sBUSzIj7QEehLw5rG2un1vJPUks";
+  if(DATA.settings.driveClientId===undefined) DATA.settings.driveClientId = "198249406437-enslhkb0q8jonau5nd9pch3elebioial.apps.googleusercontent.com";
   if(DATA.settings.driveParentFolderId===undefined) DATA.settings.driveParentFolderId = "";
   if(DATA.settings.boardLink===undefined) DATA.settings.boardLink = "";
   if(DATA.settings.rankingProximityWeight===undefined) DATA.settings.rankingProximityWeight = 50;
