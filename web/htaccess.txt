@@ -1,12 +1,15 @@
 # Lucas Industrial - clean addresses (go.lucasindustrial.us/pm, /estimator, /admin/users ...)
-# Any address that is not a real file is handed to the app (index.html). Real files (config.js, logo.png, app/*.html, pm/proposal.html, pm/profile.html) are served as they are.
+# Any address that is not a real file is handed to the app (index.html).
+# Real files (config.js, logo.png, app/*.html, pm/proposal.html, pm/profile.html) are served as they are.
 Options -Indexes
 DirectoryIndex index.html
 DirectorySlash Off
+# Safety net: if the server says "forbidden" (an address that is a folder) or "not found", the app answers instead.
+ErrorDocument 403 /index.html
+ErrorDocument 404 /index.html
 <IfModule mod_rewrite.c>
 RewriteEngine On
 RewriteBase /
-# a missing file that has an extension is a real 404, not the app
 RewriteCond %{REQUEST_URI} \.[A-Za-z0-9]+$
 RewriteRule ^ - [L]
 RewriteCond %{REQUEST_FILENAME} !-f

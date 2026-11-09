@@ -1,6 +1,6 @@
 <!doctype html>
 <html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
-<meta name="app-build" content="8.0.0"><title>Lucas Industrial</title>
+<meta name="app-build" content="8.1.0"><title>Lucas Industrial | Platform</title><link rel="icon" type="image/png" href="/logo.png"><link rel="apple-touch-icon" href="/logo.png">
 <style>
 @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap');
 :root{
@@ -45,7 +45,7 @@ body.gm-open #gm{display:block}
 .topnav{display:flex;gap:4px;align-items:center}.topnav a{padding:7px 14px;border-radius:999px;color:var(--ink);text-decoration:none;font-weight:600;font-size:13.5px;cursor:pointer;white-space:nowrap}.topnav a:hover{background:var(--panel-2)}.topnav a.on{background:var(--brand-yellow)}
 /* wide screens: the menu lies across the top bar; narrow screens (tablet portrait, phone): it folds into the button */
 @media(max-width:860px){#menuBtn{display:inline-flex;align-items:center;justify-content:center;width:36px;height:36px;font-size:19px;line-height:1;padding:0}.topnav{display:none}#uname{display:none}}
-@media(min-width:861px){#gm,/* notifications (toasts): one stack for the whole company app, in every branch */
+/* notifications (toasts): one stack for the whole company app, in every branch */
 #toastStack{position:fixed;right:16px;bottom:40px;z-index:99990;display:flex;flex-direction:column;gap:10px;align-items:flex-end;pointer-events:none;max-width:min(380px,calc(100vw - 32px))}
 .toast{pointer-events:auto;display:flex;align-items:center;gap:12px;background:#fff;color:var(--ink);border:1px solid var(--line);border-left:4px solid var(--brand-blue);border-radius:10px;padding:10px 12px;box-shadow:0 6px 22px rgba(0,0,0,.28);font-size:13.5px;font-weight:600;cursor:pointer;animation:toastIn .22s ease-out;user-select:none}
 .toast small{display:block;font-weight:400;color:var(--mut);font-size:11px;margin-top:2px}
@@ -53,7 +53,7 @@ body.gm-open #gm{display:block}
 .toast.leaving{opacity:0;transform:translateX(24px);transition:all .18s ease-in}
 .toastmore{pointer-events:auto;font-size:12px;color:#fff;background:rgba(0,0,0,.65);border-radius:12px;padding:3px 10px;cursor:pointer}
 @keyframes toastIn{from{opacity:0;transform:translateX(24px)}to{opacity:1;transform:none}}
-#gmShade{display:none !important}
+@media(min-width:861px){#gm,#gmShade{display:none !important}
 /* wide screens: the logo block is as wide as the branch sidebar (220px), so the menu starts just over the page title and the D of Dashboard */
 .top .brandlink{width:204px;flex-shrink:0}.topnav{margin-left:8px}.top .sp.l{display:none}
 .side{width:220px}.main{padding:24px 34px}}
@@ -103,7 +103,13 @@ window.addEventListener('popstate', route);
 document.addEventListener('click', e => { const a = e.target.closest && e.target.closest('a[href^="/"]'); if(!a || a.target || e.metaKey || e.ctrlKey || e.shiftKey || e.button) return; e.preventDefault(); navTo(a.getAttribute('href')); });
 // Old bookmarks and e-mailed links used #/something: turn them into the clean address once.
 (function(){ const h = location.hash; if(/^#\//.test(h)){ const t = h.slice(1).replace(/^(\/[a-z]+)\.([a-z]+)/, '$1/$2'); history.replaceState(null, '', t); } })();
+const BRANCH_NAMES = { home: 'Platform', estimator: 'Estimator', pm: 'Project Manager', admin: 'Admin', builder: 'Builder' };
+function setTitle(page){ document.title = 'Lucas Industrial | ' + (page || 'Platform'); }
+function titleForPath(){ const seg = location.pathname.replace(/^\/+|\/+$/g, '').split('/'); const b = BRANCH_NAMES[seg[0]] || 'Platform';
+  if(seg[0] === 'home' || !seg[0]) return 'Platform'; const sub = seg[1] ? seg[1].replace(/[-_]/g, ' ').replace(/\b\w/g, c => c.toUpperCase()) : ''; return sub ? b + ' · ' + sub : b; }
+window.addEventListener('message', e => { if(e.origin === location.origin && e.data && e.data.type === 'title' && e.data.page) setTitle(e.data.page); });
 async function route(){
+  setTitle(titleForPath());
   const { path, q } = parts();
   if(path === 'reset') return viewReset(q.get('token') || '');
   if(path === 'forgot') return viewForgot();
@@ -112,7 +118,8 @@ async function route(){
   if(ME.user.mustChangePassword) return viewChange();
   // The page is newer than the server: the server has not finished updating (or its update failed). Say so instead of showing empty menus.
   if(!ME.menu){ plain('<h1>Almost there</h1><div class="mut">This page is newer than the server it talks to. The server has not finished updating, or its update failed. In Railway, open the LucInd service, Deployments, and check that the latest deployment says Active. If it says Failed, open it and read the log.</div><p><button class="btn" onclick="location.reload()">Check again</button></p>'); return; }
-  if(path === 'login' || !path) { navTo('/home', true); return; }
+  // First landing after signing in: the branch of the person's first (primary) role, else the first menu item they have.
+  if(path === 'login' || !path) { const m = ME.menu || [], pref = { estimator: 'estimator', pm: 'pm' }[ME.user.role], pick = m.find(x => x.key === pref) || m[0]; navTo(pick ? menuHref(pick) : '/home', true); return; }
   shell(path);
 }
 function plain(html){ document.body.classList.remove('fullpage', 'menu-open'); $('#app').innerHTML = '<div class="center"><img class="logo" src="/logo.png" alt="Lucas Industrial"><div class="box">' + html + '</div></div>'; }
@@ -124,7 +131,7 @@ function viewLogin(){
   <label style="display:flex;align-items:center;gap:8px;margin:12px 0 0;font-size:13px;color:var(--ink)"><input id="rem" type="checkbox" style="width:auto"> Keep me signed in for 30 days</label><div class="mut" style="font-size:11px;margin:2px 0 0 24px">Only on a device that is yours.</div>
   <div id="m" class="err"></div><button class="btn" id="go" style="width:100%">Sign in</button>
   <p style="text-align:center"><a href="/forgot">Forgot password?</a></p>`);
-  const go = async () => { try{ const r = await api('POST', '/auth/login', { login: $('#em').value, password: $('#pw').value, remember: $('#rem').checked }); saveTok(r.token, $('#rem').checked); ME = null; navTo('/home', true); }catch(e){ $('#m').textContent = say(e); } };
+  const go = async () => { try{ const r = await api('POST', '/auth/login', { login: $('#em').value, password: $('#pw').value, remember: $('#rem').checked }); saveTok(r.token, $('#rem').checked); ME = null; navTo('/', true); }catch(e){ $('#m').textContent = say(e); } };
   $('#go').onclick = go; $('#pw').onkeydown = e => { if(e.key === 'Enter') go(); };
 }
 function viewForgot(){
@@ -146,7 +153,7 @@ function viewChange(){
   <div id="m" class="err"></div><button class="btn" id="go" style="width:100%">Save</button>`);
   $('#go').onclick = async () => {
     if($('#p1').value !== $('#p2').value) { $('#m').textContent = 'The two passwords do not match.'; return; }
-    try{ await api('POST', '/auth/change-password', { current: $('#cur').value, password: $('#p1').value }); ME = null; navTo('/home', true); }catch(e){ $('#m').textContent = say(e); }
+    try{ await api('POST', '/auth/change-password', { current: $('#cur').value, password: $('#p1').value }); ME = null; navTo('/', true); }catch(e){ $('#m').textContent = say(e); }
   };
 }
 

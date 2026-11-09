@@ -20,6 +20,7 @@ app.get('/api/health', (req, res) => res.json({ ok: true, service: 'lucas-go', t
 app.use('/api/auth', require('./routes/auth'));
 app.use('/api/admin', require('./routes/admin'));
 app.use('/api/estimator', require('./routes/estimator'));
+app.use('/api/media', require('./routes/media'));
 app.use('/api/notifications', require('./routes/notifications'));
 app.use('/pm', pm.router);
 // Future modules mount here, each behind requireAuth + requirePerm on its own panes:

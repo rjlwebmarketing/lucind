@@ -864,12 +864,12 @@
     <div class="brand"><div class="mark"><img class="logo-img" src="/logo.png" alt="Lucas Industrial"><h1>Bids &amp;<br>Estimation</h1></div></div>
     <div id="quotaWidget" class="sidebar-health-widget"></div>
     <nav id="navList"></nav>
-    <div class="sidebar-foot"><div id="whoAmI" style="font-size:11px;color:var(--text-faint);margin-bottom:6px"></div><div style="font-size:9.5px;color:var(--text-faint);margin-top:8px"><span style="vertical-align:baseline">&reg;</span> Lucas Industrial</div></div>
   </div>
   <div id="main"></div>
 </div>
 <div class="modal-back" id="modalBack"><div class="modal" id="modalBody"></div></div>
 <script src="/config.js"></script>
+<script src="/app/media.js"></script>
 <script>
 const $ = s => document.querySelector(s);
 const esc = s => String(s == null ? '' : s).replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
@@ -899,7 +899,7 @@ async function boot(){
   }catch(e){ $('#gateDesc').textContent = 'Your sign-in has ended.'; $('#gateGo').style.display = ''; return; }
   if(!has('estimator.estimates')){ $('#gateDesc').textContent = 'You do not have access to the Estimator.'; return; }
   $('#gate').classList.add('hidden'); $('#gate').style.display = 'none';
-  $('#whoAmI').textContent = ME.name + (ME.username ? ' (' + ME.username + ')' : '');
+  // (name/user and company line live in the app footer now)
   $('#mobileNavToggle').onclick = () => { $('#sidebar').classList.toggle('mobile-open'); $('#mobileNavBackdrop').classList.toggle('open'); };
   $('#mobileNavBackdrop').onclick = closeNav;
   await refresh(true);
@@ -916,7 +916,7 @@ const NAV = () => [['dashboard', 'Dashboard'], ['bids', 'Bids'], has('pm.people'
 const ICON = { dashboard: '<rect x="3" y="3" width="7" height="7"/><rect x="14" y="3" width="7" height="7"/><rect x="14" y="14" width="7" height="7"/><rect x="3" y="14" width="7" height="7"/>', bids: '<path d="M16 4h2a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2H6a2 2 0 0 1-2-2V6a2 2 0 0 1 2-2h2"/><rect x="8" y="2" width="8" height="4" rx="1"/><path d="M9 12h6M9 16h6"/>', crew: '<path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 0 0-3-3.87M16 3.13a4 4 0 0 1 0 7.75"/>', map: '<path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0 1 18 0z"/><circle cx="12" cy="10" r="3"/>', calendar: '<rect x="3" y="4" width="18" height="18" rx="2"/><path d="M16 2v4M8 2v4M3 10h18"/>' };
 function quotaWidget(){
   // Same box as Logistics Health in the PM: big figure, label under it, small grey line under that. Not clickable.
-  const q = QUOTA, w = $('#quotaWidget'), mine = !!(ME && (ME.roles || [ME.role]).includes('estimator'));   // quotas are personal: only estimators carry one
+  const q = QUOTA, w = $('#quotaWidget'), mine = !!(ME && (ME.role === 'builder' || (ME.roles || [ME.role]).includes('estimator')));   // quotas are personal: only estimators carry one
   w.style.display = mine ? '' : 'none';
   if(!q || !mine){ w.innerHTML = ''; return; }
   w.innerHTML = `<div class="grade-letter" style="color:var(--accent)">${moneyShort(q.bidThisMonth)}</div><div class="lbl">Monthly Bid Total</div><div class="grade-detail">Conversion rate ${q.conversion == null ? '—' : q.conversion.toFixed(1) + '%'}</div>`;
@@ -926,6 +926,7 @@ function render(){
   $('#navList').querySelectorAll('button').forEach(b => b.onclick = () => { VIEW = b.dataset.view; closeNav(); render(); });
   $('#mobileTopBarTitle').textContent = (NAV().find(n => n[0] === VIEW) || [0, ''])[1];
   quotaWidget();
+  try{ const nm = (NAV().find(n => n[0] === VIEW) || [0, 'Estimator'])[1]; document.title = nm + ' | Lucas Industrial'; if(window.parent !== window) window.parent.postMessage({ type: 'title', page: 'Estimator · ' + nm }, location.origin); }catch(e){}
   const m = $('#main'); m.classList.toggle('flush', VIEW === 'map'); m.style.padding = '';
   ({ dashboard, bids, crew, map, calendar })[VIEW](m);
 }
@@ -1023,10 +1024,12 @@ function bidModal(id, pool){
   <div class="row2">${f('Submitted on', 'f_sub', d.bidSubmitted, 'type="date"')}${f('Decided on', 'f_dec', d.decidedOn, 'type="date"')}</div>
   <div class="row2">${f('Planned start', 'f_start', d.startDate, 'type="date"')}${f('Planned end', 'f_end', d.endDate, 'type="date"')}</div>
   <div class="field"><label>Notes</label><textarea id="f_notes" ${ro ? 'disabled' : ''}>${esc(d.notes)}</textarea></div>
+  ${b ? '<div id="bidMedia"></div>' : '<div class="hint" style="font-size:11.5px;color:var(--text-faint);margin-bottom:10px">Save the bid first, then reopen it to attach foundation drawings and documents.</div>'}
   <div id="fe" style="color:var(--status-delayed);margin-bottom:8px"></div>
   ${b ? `<div style="font-size:12px;color:var(--text-dim);margin-bottom:10px">Estimator: <b>${esc(b.ownerName)}</b>${b.ownerUsername ? ' (' + esc(b.ownerUsername) + ')' : ''} · <button class="btn small ghost" id="hx" type="button">Change history</button></div><div id="hist"></div>` : ''}
   <div style="display:flex;gap:8px;justify-content:flex-end"><button class="btn" id="mc" type="button">${ro ? 'Close' : 'Cancel'}</button>${ro ? '' : '<button class="btn primary" id="ms" type="button">Save</button>'}</div>`);
   $('#mx').onclick = $('#mc').onclick = closeModal;
+  if(b && window.MediaPanel) MediaPanel.mount($('#bidMedia'), { type: 'bid', id: b.id, api: GO_CONFIG.API, token: () => TOKEN, me: () => ME && ME.id });
   if(b) $('#hx').onclick = async () => { const r = await api('GET', '/bids/' + b.id + '/history'); $('#hist').innerHTML = '<div style="margin-bottom:10px">' + (r.history.map(h => `<div class="hist-row"><b>${esc(h.name || 'System')}</b>${h.username ? ' (' + esc(h.username) + ')' : ''} · ${esc(h.action)} · ${new Date(h.at).toLocaleString()}${h.changes ? '<br><span style="color:var(--text-dim)">' + esc(Object.entries(h.changes).map(([k, v]) => v && typeof v === 'object' && 'to' in v ? `${k}: ${v.from == null ? '—' : v.from} → ${v.to == null ? '—' : v.to}` : `${k}: ${v}`).join('; ')) + '</span>' : ''}</div>`).join('') || 'No history.') + '</div>'; };
   if(ro) return;
   let geo = { lat: d.lat, lon: d.lon };

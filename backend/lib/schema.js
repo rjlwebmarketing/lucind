@@ -110,6 +110,27 @@ const DDL = [
     dismissed_at BIGINT NULL,
     PRIMARY KEY (user_id, notification_id)
   ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4`,
+  `CREATE TABLE IF NOT EXISTS media_files (
+    id BIGINT UNSIGNED NOT NULL AUTO_INCREMENT PRIMARY KEY,
+    entity_type VARCHAR(16) NOT NULL,
+    entity_id VARCHAR(64) NOT NULL,
+    name VARCHAR(200) NOT NULL,
+    stored_name VARCHAR(80) NOT NULL,
+    mime VARCHAR(100) NOT NULL,
+    size BIGINT NOT NULL,
+    sha256 CHAR(64) NOT NULL,
+    kind VARCHAR(24) NOT NULL DEFAULT 'Other',
+    caption VARCHAR(500) NULL,
+    uploaded_by BIGINT NULL,
+    uploaded_by_name VARCHAR(120) NULL,
+    uploaded_by_username VARCHAR(40) NULL,
+    uploaded_at BIGINT NOT NULL,
+    hidden TINYINT NOT NULL DEFAULT 0,
+    hidden_by_name VARCHAR(120) NULL,
+    hidden_at BIGINT NULL,
+    hidden_reason VARCHAR(300) NULL,
+    KEY idx_entity (entity_type, entity_id)
+  ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4`,
   `CREATE TABLE IF NOT EXISTS user_roles (
     user_id BIGINT NOT NULL,
     role_key VARCHAR(32) NOT NULL,
@@ -236,6 +257,7 @@ async function migrateUsernames(){
 async function ensureSchema(){
   for(const sql of DDL) await pool.query(sql);
   try{ await pool.query('ALTER TABLE sessions ADD COLUMN remember INT NOT NULL DEFAULT 0'); }catch(e){ /* already there */ }
+  try{ await pool.query('ALTER TABLE est_bids ADD COLUMN project_id VARCHAR(64) NULL'); }catch(e){ /* already there */ }
   try{ await pool.query('ALTER TABLE audit_log ADD COLUMN user_username VARCHAR(40) NULL'); }catch(e){ /* already there */ }
   await migrateUsernames();
   await seedRoles(); await upgradeRoleTemplates(); await upgradeTemplatesV5(); await bootstrapBuilder();

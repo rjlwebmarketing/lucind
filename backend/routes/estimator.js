@@ -178,4 +178,15 @@ router.get('/crew', requirePerm('pm.people', 'read'), wrap(async (req, res) => {
   res.json({ people: b.people.map(p => ({ id: String(p.id), type: p.type || '', name: p.name || '', trade: p.trade || '', city: p.city || '', state: p.state || '', availability: p.availability || '' })) });
 }));
 
+// Hand-off hook: tie a bid to the PM project it became, so the bid's documents show up inside that project. Needs write on both sides.
+router.post('/bids/:id/link-project', W, requirePerm('pm.projects', 'write'), wrap(async (req, res) => {
+  const pid = req.body && req.body.projectId != null ? String(req.body.projectId).slice(0, 64) : '';
+  const [b] = await pool.query('SELECT id FROM est_bids WHERE id = ?', [Number(req.params.id) || 0]);
+  if(!b.length) return res.status(404).json({ error: 'not_found' });
+  await pool.query('UPDATE est_bids SET project_id = ? WHERE id = ?', [pid || null, b[0].id]);
+  await history(b[0].id, req.user, 'link_project', { projectId: pid || null });
+  await audit(req.user, 'estimator.link_project', 'bid', b[0].id, { projectId: pid || null }, req.ip);
+  res.json({ ok: true });
+}));
+
 module.exports = router;

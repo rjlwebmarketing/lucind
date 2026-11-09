@@ -928,6 +928,7 @@
 
 <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
 <script src="/config.js"></script>
+<script src="/app/media.js"></script>
 <script>
 /* =========================================================
    DATA LAYER
@@ -7659,6 +7660,7 @@ const PAGE_TITLES = {
 function updatePageTitle(){
   const label = PAGE_TITLES[VIEW] || 'Dashboard';
   document.title = `${label} | Lucas Industrial`;
+  try{ if(window.parent !== window) window.parent.postMessage({ type: 'title', page: 'Project Manager · ' + label }, location.origin); }catch(e){}
   const mobileTitle = document.getElementById('mobileTopBarTitle');
   if(mobileTitle){
     if(VIEW==='calendar' && calViewMode==='month'){
@@ -8044,6 +8046,7 @@ function openProjectModal(id, offcanvas, returnToPersonId, prefill){
       <button class="btn small" id="addContactBtn" type="button" style="margin-top:8px;">Add contact</button>
     </div>
 
+    ${!isNew ? '<div id="projMedia"></div>' : '<div class="hint" style="margin-bottom:10px">Files (drawings, photos, bid documents) can be added once the project is saved.</div>'}
     <div id="dupWarningProj"></div>
 
     <div class="modal-actions">
@@ -8058,6 +8061,7 @@ function openProjectModal(id, offcanvas, returnToPersonId, prefill){
   let contacts = JSON.parse(JSON.stringify(d.contacts||[]));
   let assignedIds = [...(d.assignedIds||[])];
   let addressOverride = null;
+  if(!isNew && window.MediaPanel && document.getElementById('projMedia')) MediaPanel.mount(document.getElementById('projMedia'), { type: 'project', id: d.id, api: GO_CONFIG.API, token: () => AUTH_TOKEN, me: () => GO_USER && GO_USER.id });
 
   function renderContactList(){
     const el = document.getElementById('contactList');
