@@ -25,7 +25,8 @@ const SECTIONS = [
     { key: 'pm.people', shared: true, label: 'Crew & Subcontractors' },
     { key: 'pm.proposals', label: 'Request For Proposals' },
     { key: 'pm.calendar', shared: true, label: 'Calendar & Map' },
-    { key: 'pm.logistics_ai', label: 'Logistics AI' } ] },
+    { key: 'pm.logistics_ai', label: 'Logistics AI' },
+    { key: 'pm.catalog', label: 'Catalog (view, for change orders)' } ] },
   { key: 'payapps', menu: 'pm', label: 'Pay Apps', panes: [
     { key: 'payapps.main', label: 'Pay Apps' },
     { key: 'payapps.closeout', label: 'Close Out & Archive' } ] },
@@ -57,7 +58,7 @@ const ROLE_DEFAULTS = {
   builder:   { label: 'Builder', system: true, perms: { '*': 'write' } },
   owner:     { label: 'Owner', perms: { 'estimator.*': 'write', 'pm.*': 'write', 'payapps.*': 'write', 'sensitive.*': 'write', 'admin.*': 'write', 'admin.audit': 'read' } },
   estimator: { label: 'Estimator', perms: { 'estimator.*': 'write', 'pm.projects': 'read', 'pm.people': 'read', 'pm.calendar': 'read', 'sensitive.estimate_costs': 'write', 'sensitive.contract_values': 'read' } },
-  pm:        { label: 'Project Manager', perms: { 'pm.*': 'write', 'payapps.*': 'write', 'sensitive.contract_values': 'read' } },
+  pm:        { label: 'Project Manager', perms: { 'pm.*': 'write', 'pm.catalog': 'read', 'payapps.*': 'write', 'sensitive.contract_values': 'read' } },
   ar_ap:     { label: 'AR / AP', perms: { 'payapps.*': 'write', 'pm.projects': 'read', 'sensitive.contract_values': 'read' } }
 };
 

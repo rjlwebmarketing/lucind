@@ -4,6 +4,10 @@ const express = require('express');
 const pool = require('../config/db');
 const { requireAuth, requirePerm, blockUntilPasswordChanged } = require('../lib/auth');
 const { audit } = require('../lib/audit');
+const handoff = require('../lib/handoff');
+const codes = require('../lib/codes');
+const tasksLib = require('../lib/tasks');
+const { notify } = require('../lib/notify');
 
 const router = express.Router();
 router.use(requireAuth, blockUntilPasswordChanged);
@@ -22,7 +26,7 @@ const shape = b => ({ id: Number(b.id), name: b.name, storeNumber: b.store_numbe
   lat: b.lat == null ? null : Number(b.lat), lon: b.lon == null ? null : Number(b.lon), amount: Number(b.amount), status: b.status,
   ownerId: b.owner_id == null ? null : Number(b.owner_id), ownerName: b.owner_name || '', ownerUsername: b.owner_username || '',
   bidDue: b.bid_due || '', bidSubmitted: b.bid_submitted || '', decidedOn: b.decided_on || '', startDate: b.start_date || '', endDate: b.end_date || '',
-  notes: b.notes || '', archived: !!b.archived, createdAt: Number(b.created_at), updatedAt: Number(b.updated_at) });
+  notes: b.notes || '', projectId: b.project_id || null, code: b.project_code || '', clonedFrom: b.cloned_from == null ? null : Number(b.cloned_from), archived: !!b.archived, createdAt: Number(b.created_at), updatedAt: Number(b.updated_at) });
 
 // field name in the API -> column, with a cleaner for each
 const FIELDS = {
@@ -44,9 +48,22 @@ function statusDates(next, status){
   if(status === 'Draft' || status === 'Bidding'){ if(status === 'Draft') next.bid_submitted = null; next.decided_on = null; }
 }
 
+// A bid (Draft or Bidding) whose work was supposed to start is treated as Lost (it stays on record and can be cloned; nothing is deleted). Its documents carry into any clone without being copied (see routes/media.js).
+// Runs whenever the list is read; the bid keeps its dates and the change is written to its history as "auto_lost".
+async function autoLose(){
+  const [rows] = await pool.query("SELECT id, status, start_date FROM est_bids WHERE status IN ('Draft', 'Bidding') AND archived = 0 AND start_date IS NOT NULL AND start_date <> '' AND start_date <= ?", [today()]);
+  for(const b of rows){
+    const [u] = await pool.query("UPDATE est_bids SET status = 'Lost', decided_on = ?, updated_at = ? WHERE id = ? AND status = ?", [b.start_date, Date.now(), b.id, b.status]);
+    if(u.affectedRows){ await history(b.id, { id: null, name: 'System', username: null }, 'auto_lost', { status: { from: b.status, to: 'Lost' }, reason: 'project start date ' + b.start_date + ' arrived' }); await audit(null, 'bid.auto_lost', 'bid', b.id, { startDate: b.start_date }, null); }
+  }
+}
+
 router.get('/bids', R, wrap(async (req, res) => {
+  await autoLose();
   const [rows] = await pool.query('SELECT * FROM est_bids' + (req.query.archived === '1' ? '' : ' WHERE archived = 0') + ' ORDER BY id DESC');
-  res.json({ statuses: STATUSES, bids: rows.map(shape) });
+  // Won + handed off but no GC contract on file yet -> awaitingContract (drives the "Awaiting Contract" bubble and the Add Contract button)
+  const have = new Set((await pool.query('SELECT project_id FROM est_contracts'))[0].map(x => String(x.project_id)));
+  res.json({ statuses: STATUSES, bids: rows.map(r => Object.assign(shape(r), { awaitingContract: r.status === 'Won' && !!r.project_id && !have.has(String(r.project_id)) })) });
 }));
 
 router.post('/bids', W, wrap(async (req, res) => {
@@ -67,6 +84,7 @@ router.post('/bids', W, wrap(async (req, res) => {
   }
   row.owner_id = owner.id; row.owner_name = owner.name; row.owner_username = owner.username || null;
   row.created_at = row.updated_at = Date.now();
+  row.project_code = (await codes.nextCodes(1))[0];   // the company-wide project number, from the first moment the bid exists
   const cols = Object.keys(row);
   const [ins] = await pool.query('INSERT INTO est_bids (' + cols.join(', ') + ') VALUES (' + cols.map(() => '?').join(', ') + ')', cols.map(c => row[c]));
   await history(ins.insertId, req.user, 'create', { name: row.name, amount: row.amount || 0, status });
@@ -178,6 +196,32 @@ router.get('/crew', requirePerm('pm.people', 'read'), wrap(async (req, res) => {
   res.json({ people: b.people.map(p => ({ id: String(p.id), type: p.type || '', name: p.name || '', trade: p.trade || '', city: p.city || '', state: p.state || '', availability: p.availability || '' })) });
 }));
 
+// The estimate itself (lines, rows, tax, notes) is stored whole, as the customer sees it. Saves are refused if someone saved a newer copy meanwhile.
+router.get('/bids/:id/estimate', R, wrap(async (req, res) => {
+  const [e] = await pool.query('SELECT doc, updated_at FROM est_estimates WHERE bid_id = ?', [Number(req.params.id) || 0]);
+  if(!e.length) return res.json({ estimate: null, updatedAt: null });
+  let doc = null; try{ doc = JSON.parse(e[0].doc); }catch(x){}
+  res.json({ estimate: doc, updatedAt: Number(e[0].updated_at) });
+}));
+router.put('/bids/:id/estimate', W, wrap(async (req, res) => {
+  const id = Number(req.params.id) || 0, est = req.body && req.body.estimate;
+  const [b] = await pool.query('SELECT id, archived, status FROM est_bids WHERE id = ?', [id]);
+  if(!b.length) return res.status(404).json({ error: 'not_found' });
+  if(Number(b[0].archived)) return res.status(409).json({ error: 'archived' });
+  if(b[0].status === 'Lost') return res.status(409).json({ error: 'lost_clone_instead' });   // a Lost bid is kept exactly as submitted; clone it to revise
+  if(!est || !Array.isArray(est.lines) || est.lines.length > 400) return res.status(400).json({ error: 'bad_estimate' });
+  const doc = JSON.stringify(est); if(doc.length > 2000000) return res.status(413).json({ error: 'too_large' });
+  const [cur] = await pool.query('SELECT updated_at FROM est_estimates WHERE bid_id = ?', [id]); const now = Date.now();
+  if(cur.length){
+    if(req.body.updatedAt != null && Number(req.body.updatedAt) !== Number(cur[0].updated_at)) return res.status(409).json({ error: 'changed_elsewhere' });
+    await pool.query('UPDATE est_estimates SET doc = ?, updated_at = ?, updated_by = ? WHERE bid_id = ?', [doc, now, req.user.name, id]);
+  }else await pool.query('INSERT INTO est_estimates (bid_id, doc, updated_at, updated_by) VALUES (?, ?, ?, ?)', [id, doc, now, req.user.name]);
+  const sub = est.lines.reduce((a, l) => a + (Number(l.amount) || 0), 0);
+  await history(id, req.user, 'estimate', { lines: est.lines.length, subtotal: Math.round(sub * 100) / 100 });
+  await audit(req.user, 'estimator.estimate_save', 'bid', id, { lines: est.lines.length }, req.ip);
+  res.json({ ok: true, updatedAt: now });
+}));
+
 // Hand-off hook: tie a bid to the PM project it became, so the bid's documents show up inside that project. Needs write on both sides.
 router.post('/bids/:id/link-project', W, requirePerm('pm.projects', 'write'), wrap(async (req, res) => {
   const pid = req.body && req.body.projectId != null ? String(req.body.projectId).slice(0, 64) : '';
@@ -188,5 +232,262 @@ router.post('/bids/:id/link-project', W, requirePerm('pm.projects', 'write'), wr
   await audit(req.user, 'estimator.link_project', 'bid', b[0].id, { projectId: pid || null }, req.ip);
   res.json({ ok: true });
 }));
+
+// ---- Hand-off: Won bid -> PM project --------------------------------------------------------------
+// Needs only estimator write: it builds the project from this bid's own estimate (the person never touches the PM board directly),
+// and it is recorded in the bid history and the audit log. It refuses to run twice for one bid.
+router.get('/bids/:id/handoff', R, wrap(async (req, res) => {
+  const [b] = await pool.query('SELECT * FROM est_bids WHERE id = ?', [Number(req.params.id) || 0]);
+  if(!b.length) return res.status(404).json({ error: 'not_found' });
+  const [e] = await pool.query('SELECT doc FROM est_estimates WHERE bid_id = ?', [b[0].id]);
+  let doc = null; try{ doc = e.length ? JSON.parse(e[0].doc) : null; }catch(x){}
+  const c = doc ? handoff.contractFrom(b[0], doc, '', 0) : null;
+  res.json({ status: b[0].status, projectId: b[0].project_id || null, code: b[0].project_code || '', hasEstimate: !!c,
+    scopes: doc ? handoff.scopeBreak(doc) : [],
+    preview: c ? { lines: c.lines.length, subtotal: c.subtotal, tax: c.tax, total: c.total, estimateNumber: c.source.estimateNumber } : null });
+}));
+// Clone: a new Draft bid (own project number) with the old bid's details and estimate, so the original submission is never touched.
+// Used when a GC comes back months later (new terms, addendums, a different scope, or after trouble with another contractor) and prices have moved.
+router.post('/bids/:id/clone', W, wrap(async (req, res) => {
+  const [r] = await pool.query('SELECT * FROM est_bids WHERE id = ?', [Number(req.params.id)]);
+  if(!r.length) return res.status(404).json({ error: 'not_found' });
+  const o = r[0], root = o.cloned_from || o.id;
+  const [cnt] = await pool.query('SELECT COUNT(*) AS n FROM est_bids WHERE cloned_from = ?', [root]);
+  const rev = Number(cnt[0].n) + 2;
+  const base = String(o.name).replace(/\s+[\u2013-]\s+Rev \d+$/i, '');
+  const now = Date.now(), row = {
+    name: str(base + ' \u2013 Rev ' + rev, 200), store_number: o.store_number, customer: o.customer, address: o.address, city: o.city, state: o.state, lat: o.lat, lon: o.lon,
+    amount: o.amount, status: 'Draft', owner_id: req.user.id, owner_name: req.user.name, owner_username: req.user.username || null,
+    start_date: o.start_date, end_date: o.end_date, notes: o.notes, cloned_from: root, cloned_parent: o.id, created_at: now, updated_at: now
+  };
+  row.project_code = (await codes.nextCodes(1))[0];
+  const cols = Object.keys(row);
+  const [ins] = await pool.query('INSERT INTO est_bids (' + cols.join(', ') + ') VALUES (' + cols.map(() => '?').join(', ') + ')', cols.map(c => row[c]));
+  const [e] = await pool.query('SELECT doc FROM est_estimates WHERE bid_id = ?', [o.id]);
+  let lines = 0;
+  if(e.length){
+    let doc = null; try{ doc = JSON.parse(e[0].doc); }catch(x){}
+    if(doc){
+      doc.clonedFrom = { bidId: Number(o.id), code: o.project_code || '', number: doc.number || '', date: doc.date || '' };
+      doc.number = ''; doc.date = today(); delete doc.submissions;          // new estimate number/date; the old Sent history stays with the original
+      (doc.lines || []).forEach(l => { l.repriceCheck = true; });             // every line is flagged "check prices" until the estimator clears it
+      lines = (doc.lines || []).length;
+      await pool.query('INSERT INTO est_estimates (bid_id, doc, updated_at, updated_by) VALUES (?, ?, ?, ?)', [ins.insertId, JSON.stringify(doc), now, req.user.name]);
+    }
+  }
+  await history(ins.insertId, req.user, 'clone', { from: Number(o.id), fromCode: o.project_code || '', rev, lines });
+  await history(o.id, req.user, 'cloned', { to: Number(ins.insertId), rev });
+  await audit(req.user, 'bid.clone', 'bid', ins.insertId, { from: Number(o.id), rev }, req.ip);
+  const [n] = await pool.query('SELECT * FROM est_bids WHERE id = ?', [ins.insertId]);
+  res.json({ bid: shape(n[0]) });
+}));
+
+router.post('/bids/:id/handoff', W, wrap(async (req, res) => {
+  const id = Number(req.params.id) || 0;
+  const [b] = await pool.query('SELECT * FROM est_bids WHERE id = ?', [id]);
+  if(!b.length) return res.status(404).json({ error: 'not_found' });
+  const bid = b[0];
+  if(Number(bid.archived)) return res.status(409).json({ error: 'archived' });
+  if(bid.status !== 'Won') return res.status(409).json({ error: 'not_won', message: 'Mark the bid Won first.' });
+  if(bid.project_id) return res.status(409).json({ error: 'already_handed_off', projectId: bid.project_id });
+  const [e] = await pool.query('SELECT doc FROM est_estimates WHERE bid_id = ?', [id]);
+  let doc = null; try{ doc = e.length ? JSON.parse(e[0].doc) : null; }catch(x){}
+  if(!doc || !Array.isArray(doc.lines) || !doc.lines.length) return res.status(409).json({ error: 'no_estimate', message: 'Build the estimate first; its lines become the contract.' });
+  const now = Date.now();
+  const names = handoff.scopeBreak(doc).map(x => x.scope);
+  const want = Array.isArray(req.body && req.body.scopes) ? req.body.scopes.map(String).filter(x => names.includes(x)) : [];
+  if(Array.isArray(req.body && req.body.scopes) && req.body.scopes.length && !want.length) return res.status(400).json({ error: 'bad_scopes', message: 'None of those scopes are on the estimate.' });
+  const contract = handoff.contractFrom(bid, doc, req.user.name, now, want.length ? want : null);
+  const project = handoff.projectFrom(bid, contract, now);
+  let out;
+  try{ out = await handoff.addToBoard(project, req.user.role_key === 'builder' ? 'builder' : (req.user.role_key === 'owner' ? 'owner' : 'manager')); }
+  catch(x){ if(x && x.status === 503) return res.status(503).json({ error: 'busy' }); throw x; }
+  // claim the bid only if nobody else did meanwhile
+  const [u] = await pool.query('UPDATE est_bids SET project_id = ?, updated_at = ? WHERE id = ? AND project_id IS NULL', [out.projectId, now, id]);
+  await history(id, req.user, 'handoff', { projectId: out.projectId, code: out.code, lines: contract.lines.length, total: contract.total, scopes: contract.scopes ? contract.scopes.map(x => x.scope) : undefined });
+  await audit(req.user, 'estimator.handoff', 'bid', id, { projectId: out.projectId, code: out.code, total: contract.total }, req.ip);
+  try{ await notify({ kind: 'handoff', text: (bid.name || 'A project') + ' was handed off from the Estimator (' + out.code + ').', route: '/pm', toPane: 'pm.projects', toLevel: 'write', from: req.user }); }catch(x){ console.error('handoff notify failed', x); }
+  res.json({ ok: true, projectId: out.projectId, code: out.code, lines: contract.lines.length, total: contract.total, claimed: u.affectedRows === 1 });
+}));
+
+// ---- Dashboard: next steps worked out from each bid, the person's own to-dos, and the monthly analytics ----
+const canSeeAll = req => !!(req.perms && req.perms['admin.users'] && req.perms['admin.users'] !== 'none');
+router.get('/tasks', R, wrap(async (req, res) => {
+  const all = req.query.all === '1' && canSeeAll(req);
+  const [bids] = await pool.query("SELECT * FROM est_bids WHERE archived = 0 AND status IN ('Draft', 'Bidding', 'Won')" + (all ? '' : ' AND owner_id = ?'), all ? [] : [req.user.id]);
+  const ids = bids.map(b => Number(b.id)), docs = {}, hasFiles = new Set();
+  if(ids.length){
+    const ph = ids.map(() => '?').join(',');
+    const [d] = await pool.query('SELECT bid_id, doc FROM est_estimates WHERE bid_id IN (' + ph + ')', ids);
+    d.forEach(x => { try{ docs[x.bid_id] = JSON.parse(x.doc); }catch(e){} });
+    const [all2] = await pool.query('SELECT id, cloned_parent FROM est_bids WHERE cloned_parent IS NOT NULL OR id IN (' + ph + ')', ids);
+    const parent = {}; all2.forEach(x => { parent[Number(x.id)] = x.cloned_parent ? Number(x.cloned_parent) : 0; });
+    const [fc] = await pool.query("SELECT DISTINCT entity_id FROM media_files WHERE entity_type = 'bid' AND hidden = 0");
+    const withFiles = new Set(fc.map(x => Number(x.entity_id)));
+    for(const id of ids){ let cur = id, n = 0; while(cur && n++ < 25){ if(withFiles.has(cur)){ hasFiles.add(id); break; } cur = parent[cur] || 0; } }
+  }
+  const noContract = new Set();
+  const pids = bids.filter(b => b.status === 'Won' && b.project_id).map(b => String(b.project_id));
+  if(pids.length){ const [have] = await pool.query('SELECT project_id FROM est_contracts WHERE project_id IN (' + pids.map(() => '?').join(',') + ')', pids); const got = new Set(have.map(x => String(x.project_id))); pids.forEach(x => { if(!got.has(x)) noContract.add(x); }); }
+  const auto = tasksLib.autoTasks({ bids, docs, hasFiles, today: today(), noContract });
+  const [mine] = await pool.query('SELECT t.*, b.name AS bid_name, b.project_code AS bid_code FROM est_tasks t LEFT JOIN est_bids b ON b.id = t.bid_id WHERE t.user_id = ? AND (t.done = 0 OR t.done_at > ?) ORDER BY t.done, t.due IS NULL, t.due, t.id', [req.user.id, Date.now() - 24 * 3600 * 1000]);
+  res.json({ auto, mine: mine.map(t => ({ id: Number(t.id), text: t.text, due: t.due || '', done: !!Number(t.done), bidId: t.bid_id == null ? null : Number(t.bid_id), bidName: t.bid_name || '', code: t.bid_code || '' })), all, canAll: canSeeAll(req) });
+}));
+router.post('/tasks', W, wrap(async (req, res) => {
+  const b = req.body || {}, text = str(String(b.text || '').trim(), 300); if(!text) return res.status(400).json({ error: 'text_required' });
+  if(!dateOk(b.due)) return res.status(400).json({ error: 'bad_date' });
+  let bidId = null; if(b.bidId){ const [x] = await pool.query('SELECT id FROM est_bids WHERE id = ?', [Number(b.bidId)]); if(!x.length) return res.status(400).json({ error: 'bad_bid' }); bidId = x[0].id; }
+  const [r] = await pool.query('INSERT INTO est_tasks (user_id, bid_id, text, due, created_at) VALUES (?, ?, ?, ?, ?)', [req.user.id, bidId, text, b.due || null, Date.now()]);
+  res.json({ id: Number(r.insertId) });
+}));
+router.patch('/tasks/:id', W, wrap(async (req, res) => {
+  const b = req.body || {}, sets = [], vals = [];
+  if(b.done !== undefined){ sets.push('done = ?', 'done_at = ?'); vals.push(b.done ? 1 : 0, b.done ? Date.now() : null); }
+  if(b.text !== undefined){ const t = str(String(b.text).trim(), 300); if(!t) return res.status(400).json({ error: 'text_required' }); sets.push('text = ?'); vals.push(t); }
+  if(b.due !== undefined){ if(!dateOk(b.due)) return res.status(400).json({ error: 'bad_date' }); sets.push('due = ?'); vals.push(b.due || null); }
+  if(!sets.length) return res.json({ ok: true });
+  const [r] = await pool.query('UPDATE est_tasks SET ' + sets.join(', ') + ' WHERE id = ? AND user_id = ?', [...vals, Number(req.params.id) || 0, req.user.id]);
+  if(!r.affectedRows) return res.status(404).json({ error: 'not_found' });
+  res.json({ ok: true });
+}));
+router.delete('/tasks/:id', W, wrap(async (req, res) => {
+  await pool.query('DELETE FROM est_tasks WHERE id = ? AND user_id = ?', [Number(req.params.id) || 0, req.user.id]);
+  res.json({ ok: true });
+}));
+// Analytics: bid totals, conversion and awards by month. Counts archived bids too (history); "mine" unless the person may see everyone.
+router.get('/analytics', R, wrap(async (req, res) => {
+  const all = req.query.all === '1' && canSeeAll(req), n = [6, 12, 24].includes(Number(req.query.months)) ? Number(req.query.months) : 12;
+  const [rows] = await pool.query('SELECT status, amount, bid_submitted, decided_on, owner_id FROM est_bids' + (all ? '' : ' WHERE owner_id = ?'), all ? [] : [req.user.id]);
+  res.json(Object.assign({ all, canAll: canSeeAll(req), monthsBack: n }, tasksLib.monthly(rows, today().slice(0, 7), n)));
+}));
+
+// ---- Product catalog (Price Book & Rates pane) ----------------------------------------------------
+const { lvl } = require('../lib/catalog');
+// Reading the catalog: Price Book access (Owner/Estimator) or the PM's view-only catalog pane. Editing stays with the Price Book.
+const PB_R = (req, res, next) => (req.perms && (lvl(req.perms['estimator.pricebook']) >= 1 || lvl(req.perms['pm.catalog']) >= 1)) ? next() : res.status(403).json({ error: 'forbidden', need: 'pm.catalog:read' });
+const PB_W = requirePerm('estimator.pricebook', 'write');
+const UNITS = ['ea', 'ft', 'lb', 'hr', 'day', 'ls', 'sf', 'ton', 'mi'];
+const ICONS = ['steel', 'bolt', 'tool', 'wrench', 'truck', 'bed', 'fuel', 'paint', 'forklift', 'crane', 'doc', 'box'];   // built-in pictograms (the screen draws them) for items with no photo
+const CATS = ['Materials', 'Consumables', 'Fabrication', 'Installation', 'Transport', 'Lodging & Per Diem', 'Coatings', 'Other'];
+const catOne = async id => { const [x] = await pool.query('SELECT c.*, i.updated_at AS image_at FROM est_catalog c LEFT JOIN est_catalog_images i ON i.item_id = c.id WHERE c.id = ?', [id]); return x[0]; };
+const catShape = r => ({ id: Number(r.id), category: r.category, name: r.name, stockNo: r.stock_no || '', description: r.description || '', unit: r.unit, unitPrice: r.unit_price == null ? null : Number(r.unit_price),
+  taxable: !!Number(r.taxable), notes: r.notes || '', source: r.source || '', icon: r.icon || '', imageAt: r.image_at ? Number(r.image_at) : null, active: !!Number(r.active), updatedAt: Number(r.updated_at), updatedBy: r.updated_by || '' });
+// Categories (the filter bubbles on the Catalog pane) live in est_catalog_cats; the first read seeds the standard set plus any category an item already uses.
+async function catList(){
+  let [rows] = await pool.query('SELECT name FROM est_catalog_cats ORDER BY sort_no, name');
+  if(!rows.length){
+    const [used] = await pool.query('SELECT DISTINCT category FROM est_catalog');
+    const names = CATS.concat(used.map(u => u.category).filter(c => c && !CATS.includes(c))); const now = Date.now();
+    for(let i = 0; i < names.length; i++) await pool.query('INSERT IGNORE INTO est_catalog_cats (name, sort_no, created_at, created_by) VALUES (?, ?, ?, ?)', [names[i], i, now, 'System']);
+    rows = names.map(name => ({ name }));
+  }
+  return rows.map(r => r.name);
+}
+function catClean(b, partial, cats){
+  const o = {};
+  const set = (k, col, v) => { if(!partial || b[k] !== undefined) o[col] = v; };
+  set('category', 'category', cats.includes(b.category) ? b.category : (cats.includes('Materials') ? 'Materials' : cats[0]));
+  set('name', 'name', str(b.name, 200) || '');
+  set('stockNo', 'stock_no', str(b.stockNo, 80) || null);
+  set('description', 'description', str(b.description, 4000) || null);
+  set('unit', 'unit', UNITS.includes(b.unit) ? b.unit : 'ea');
+  set('unitPrice', 'unit_price', b.unitPrice === '' || b.unitPrice == null ? null : Math.max(0, num(b.unitPrice) || 0));
+  set('taxable', 'taxable', b.taxable === false || b.taxable === 0 ? 0 : 1);
+  set('notes', 'notes', str(b.notes, 2000) || null);
+  set('source', 'source', str(b.source, 120) || null);
+  set('icon', 'icon', ICONS.includes(b.icon) ? b.icon : null);
+  return o;
+}
+router.get('/catalog', PB_R, wrap(async (req, res) => {
+  const [rows] = await pool.query('SELECT c.*, i.updated_at AS image_at FROM est_catalog c LEFT JOIN est_catalog_images i ON i.item_id = c.id ORDER BY c.active DESC, c.category, c.name');
+  res.json({ items: rows.map(catShape), categories: await catList(), units: UNITS });
+}));
+router.post('/catalog', PB_W, wrap(async (req, res) => {
+  const o = catClean(req.body || {}, false, await catList());
+  if(!o.name) return res.status(400).json({ error: 'name_required' });
+  const now = Date.now();
+  const [r] = await pool.query('INSERT INTO est_catalog (category, name, stock_no, description, unit, unit_price, taxable, notes, source, icon, active, created_at, updated_at, updated_by) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 1, ?, ?, ?)',
+    [o.category, o.name, o.stock_no, o.description, o.unit, o.unit_price, o.taxable, o.notes, o.source, o.icon || null, now, now, req.user.name]);
+  await audit(req.user, 'catalog.add', 'catalog', r.insertId, { name: o.name, unitPrice: o.unit_price }, req.ip);
+  res.json(catShape(await catOne(r.insertId)));
+}));
+router.patch('/catalog/:id', PB_W, wrap(async (req, res) => {
+  const id = Number(req.params.id) || 0;
+  const [cur] = await pool.query('SELECT * FROM est_catalog WHERE id = ?', [id]);
+  if(!cur.length) return res.status(404).json({ error: 'not_found' });
+  const cats = await catList();
+  if(req.body && req.body.category !== undefined && !cats.includes(req.body.category)) return res.status(400).json({ error: 'bad_category' });
+  const o = catClean(req.body || {}, true, cats);
+  if('name' in o && !o.name) return res.status(400).json({ error: 'name_required' });
+  const keys = Object.keys(o); const ch = {};
+  keys.forEach(k => { if(String(cur[0][k] == null ? '' : cur[0][k]) !== String(o[k] == null ? '' : o[k])) ch[k] = { from: cur[0][k], to: o[k] }; });
+  if(!Object.keys(ch).length) return res.json(catShape(await catOne(id)));
+  await pool.query('UPDATE est_catalog SET ' + keys.map(k => k + ' = ?').join(', ') + ', updated_at = ?, updated_by = ? WHERE id = ?', keys.map(k => o[k]).concat([Date.now(), req.user.name, id]));
+  await audit(req.user, 'catalog.edit', 'catalog', id, ch, req.ip);
+  res.json(catShape(await catOne(id)));
+}));
+// Item picture: the screen shrinks the photo (max 1600 px, JPEG) before sending; the server still checks type, size and the file's own signature.
+const IMG_OK = { 'image/jpeg': b => b[0] === 0xFF && b[1] === 0xD8, 'image/png': b => b.slice(0, 8).equals(Buffer.from([0x89, 0x50, 0x4E, 0x47, 0x0D, 0x0A, 0x1A, 0x0A])), 'image/webp': b => b.slice(0, 4).toString() === 'RIFF' && b.slice(8, 12).toString() === 'WEBP' };
+router.put('/catalog/:id/image', PB_W, express.raw({ type: () => true, limit: '4mb' }), wrap(async (req, res) => {
+  const id = Number(req.params.id) || 0, body = req.body, mime = String(req.headers['content-type'] || '').split(';')[0].trim().toLowerCase();
+  const [it] = await pool.query('SELECT id, name FROM est_catalog WHERE id = ?', [id]); if(!it.length) return res.status(404).json({ error: 'not_found' });
+  if(!Buffer.isBuffer(body) || !body.length) return res.status(400).json({ error: 'empty_file' });
+  if(!IMG_OK[mime]) return res.status(415).json({ error: 'use_jpg_png_or_webp' });
+  if(!IMG_OK[mime](body)) return res.status(415).json({ error: 'file_does_not_match_its_type' });
+  const now = Date.now();
+  await pool.query('INSERT INTO est_catalog_images (item_id, mime, size, data, updated_at, updated_by) VALUES (?, ?, ?, ?, ?, ?) ON DUPLICATE KEY UPDATE mime = VALUES(mime), size = VALUES(size), data = VALUES(data), updated_at = VALUES(updated_at), updated_by = VALUES(updated_by)', [id, mime, body.length, body, now, req.user.name]);
+  await audit(req.user, 'catalog.image_set', 'catalog', id, { name: it[0].name, bytes: body.length }, req.ip);
+  res.json(catShape(await catOne(id)));
+}));
+router.post('/catalog/:id/image/remove', PB_W, wrap(async (req, res) => {
+  const id = Number(req.params.id) || 0;
+  const [r] = await pool.query('DELETE FROM est_catalog_images WHERE item_id = ?', [id]);
+  if(r.affectedRows) await audit(req.user, 'catalog.image_remove', 'catalog', id, null, req.ip);
+  res.json({ ok: true });
+}));
+router.get('/catalog/:id/image', PB_R, wrap(async (req, res) => {
+  const [r] = await pool.query('SELECT mime, data, updated_at FROM est_catalog_images WHERE item_id = ?', [Number(req.params.id) || 0]);
+  if(!r.length) return res.status(404).json({ error: 'no_image' });
+  res.set({ 'Content-Type': r[0].mime, 'Cache-Control': 'private, max-age=31536000, immutable', 'X-Content-Type-Options': 'nosniff', 'Content-Security-Policy': "default-src 'none'; sandbox" });
+  res.send(r[0].data);   // the screen asks for ?v=<imageAt>, so a replaced picture is a new address and the old one can be cached for good
+}));
+// Add / rename / delete a category (filter bubble). Delete only when no item (retired ones included) is filed under it, so nothing is ever orphaned.
+const catName = v => String(v == null ? '' : v).replace(/\s+/g, ' ').trim().slice(0, 40);
+router.post('/catalog-categories', PB_W, wrap(async (req, res) => {
+  const name = catName(req.body && req.body.name); if(!name) return res.status(400).json({ error: 'name_required' });
+  const cats = await catList(); if(cats.some(c => c.toLowerCase() === name.toLowerCase())) return res.status(409).json({ error: 'already_exists' });
+  await pool.query('INSERT INTO est_catalog_cats (name, sort_no, created_at, created_by) VALUES (?, ?, ?, ?)', [name, cats.length, Date.now(), req.user.name]);
+  await audit(req.user, 'catalog.category_add', 'catalog', null, { name }, req.ip);
+  res.json({ categories: await catList() });
+}));
+router.patch('/catalog-categories', PB_W, wrap(async (req, res) => {
+  const from = catName(req.body && req.body.from), to = catName(req.body && req.body.to); if(!from || !to) return res.status(400).json({ error: 'name_required' });
+  const cats = await catList(); if(!cats.includes(from)) return res.status(404).json({ error: 'not_found' });
+  if(from !== to && cats.some(c => c.toLowerCase() === to.toLowerCase() && c !== from)) return res.status(409).json({ error: 'already_exists' });
+  if(from !== to){
+    await pool.query('UPDATE est_catalog_cats SET name = ? WHERE name = ?', [to, from]);
+    await pool.query('UPDATE est_catalog SET category = ? WHERE category = ?', [to, from]);
+    await audit(req.user, 'catalog.category_rename', 'catalog', null, { from, to }, req.ip);
+  }
+  res.json({ categories: await catList() });
+}));
+router.post('/catalog-categories/delete', PB_W, wrap(async (req, res) => {
+  const name = catName(req.body && req.body.name); const cats = await catList(); if(!cats.includes(name)) return res.status(404).json({ error: 'not_found' });
+  const [n] = await pool.query('SELECT COUNT(*) AS n FROM est_catalog WHERE category = ?', [name]);
+  if(Number(n[0].n) > 0) return res.status(409).json({ error: 'category_in_use', count: Number(n[0].n) });
+  await pool.query('DELETE FROM est_catalog_cats WHERE name = ?', [name]);
+  await audit(req.user, 'catalog.category_delete', 'catalog', null, { name }, req.ip);
+  res.json({ categories: await catList() });
+}));
+// "Remove" = retire. The item stays on every estimate that used it and can be restored.
+[['retire', 0], ['restore', 1]].forEach(([verb, val]) => {
+  router.post('/catalog/:id/' + verb, PB_W, wrap(async (req, res) => {
+    const id = Number(req.params.id) || 0;
+    const [r] = await pool.query('UPDATE est_catalog SET active = ?, updated_at = ?, updated_by = ? WHERE id = ?', [val, Date.now(), req.user.name, id]);
+    if(!r.affectedRows) return res.status(404).json({ error: 'not_found' });
+    await audit(req.user, 'catalog.' + verb, 'catalog', id, null, req.ip);
+    res.json({ ok: true });
+  }));
+});
 
 module.exports = router;

@@ -5405,6 +5405,21 @@ function moneyRound(v){ return Math.round(v * 100) / 100; }
 function moneyClamp(v, lo, hi){ return Math.min(hi, Math.max(lo, v)); }
 function moneySum(list, f){ return moneyRound((list || []).reduce((a, x) => a + moneyNum(f(x)), 0)); }
 function moneyLive(list){ return (list || []).filter(x => x && !x.void); }
+// ---- pay-app wording: how each contract line is worded on the pay app. Lives in money.payLines (the contract itself stays locked).
+// payLines[contractLineId] = { partId: { n, title, amount } }  (objects, not lists, so re-splitting a line is never "deleting an entry")
+const PL_STANDARD_GENERAL = ['Mobilization', 'Fuel Cost Increase', 'Equipment & Transport', 'Lodging & Per Diem', 'Admin, Tax Application Fee'];
+function payLinesFor(m, line){
+  const o = m && m.payLines && m.payLines[line.id];
+  if(o && typeof o === 'object'){ const a = Object.keys(o).map(k => ({ id: k, n: Number(o[k].n) || 0, title: String(o[k].title || ''), amount: moneyNum(o[k].amount) })).sort((x, y) => x.n - y.n); if(a.length) return a; }
+  return [{ id: 'main', n: 1, title: line.payAppTitle || line.title, amount: moneyNum(line.amount), plain: true }];
+}
+function plSuggest(line){
+  const heads = (line.rows || []).filter(r => r.head && String(r.text || '').trim()).map(r => String(r.text).replace(/\s+/g, ' ').trim());
+  if(heads.length > 1) return { src: 'the headings on this line', titles: heads };
+  if(/general/i.test(line.title || '')) return { src: 'the five standard General lines', titles: PL_STANDARD_GENERAL.slice() };
+  return null;
+}
+const plCents = n => Math.round(moneyNum(n) * 100);
 function newMoney(){ return { contractOriginal: 0, percentComplete: 0, changeOrders: [], payApps: [], subDeals: [], notes: '' }; }
 // Gives a project its money block (an empty one if it never had any) and makes sure the lists exist.
 function ensureMoney(p){
@@ -5466,7 +5481,10 @@ function moneySummary(p){
   const subPaid = moneySum(deals, dealPaid);
   const subRequested = moneySum(deals, dealRequested);
   const lab = (typeof projectLaborCost === 'function') ? projectLaborCost(p, moneyLaborCtx()) : { total: 0, byPhase: {}, unknown: [], people: [] };
-  const margin = moneyRound(contract - committed - lab.total);
+  // Margin is figured on the contract WITHOUT sales tax (tax is passed through, not earned). Legacy projects with no locked contract block carry no tax split.
+  const taxIn = moneyRound(((m.contract && m.contract.locked) ? moneyNum(m.contract.tax) : 0) + moneySum(cos.filter(c => c.status === 'approved'), c => c.tax));
+  const contractNet = moneyRound(contract - taxIn);
+  const margin = moneyRound(contractNet - committed - lab.total);
   const props = moneyLive((p && p.bids && p.bids.proposals) || []).filter(x => x.status !== 'awarded');
   const dispatchBackup = d => { const h = d.phaseId ? ((p && p.phases) || []).find(x => x.id === d.phaseId) : p; return !!(h && h.backupId) || (!d.phaseId && ((p && p.phases) || []).length > 0 && ((p && p.phases) || []).some(x => x.backupId)); };
   const missingBackups = primaries.filter(d => !dispatchBackup(d) && !deals.some(b => b.role === 'backup' && b.status !== 'dropped' && (b.phaseId || '') === (d.phaseId || '')) &&
@@ -5477,7 +5495,7 @@ function moneySummary(p){
     outstanding: moneyRound(billed - received), toBillProgress, toBillChange, toBill: moneyRound(toBillProgress + toBillChange),
     committed, subPaid, subRequested, subOwed: moneyRound(Math.max(0, committed - subPaid - subRequested)),
     laborCost: lab.total, laborByPhase: lab.byPhase, laborUnknown: lab.unknown, laborPeople: lab.people || [], totalCost: moneyRound(committed + lab.total),
-    margin, marginPct: contract > 0 ? moneyRound(margin / contract * 100) : null, cash: moneyRound(received - subPaid),
+    margin, contractNet, taxIn, marginPct: contractNet > 0 ? moneyRound(margin / contractNet * 100) : null, cash: moneyRound(received - subPaid),
     missingBackups, hasMoney: orig > 0 || deals.length > 0 || apps.length > 0 || cos.length > 0
   };
 }
@@ -5631,7 +5649,7 @@ function projectCloseSnapshot(p){
   moneyLive(m.subDeals).forEach(d => moneyLive(d.payments).forEach(y => { const yy = moneyYearOf(moneyPaidDate(y)); if(yy) ys.add(yy); }));
   ys.forEach(y => { const a = moneyYearActivity(p, y); years[y] = { billed: a.billed, received: a.received, subPaid: a.subPaid, outStart: a.outStart, outEnd: a.outEnd }; });
   const keep = {};
-  ['orig','pct','coApproved','coProposed','contract','earned','progBilled','progDraft','chgBilled','chgDraft','billed','received','outstanding','toBillProgress','toBillChange','toBill','committed','subPaid','subRequested','subOwed','laborCost','totalCost','margin','marginPct','cash','hasMoney'].forEach(k => { keep[k] = s[k]; });
+  ['orig','pct','coApproved','coProposed','contract','earned','progBilled','progDraft','chgBilled','chgDraft','billed','received','outstanding','toBillProgress','toBillChange','toBill','committed','subPaid','subRequested','subOwed','laborCost','totalCost','margin','contractNet','taxIn','marginPct','cash','hasMoney'].forEach(k => { keep[k] = s[k]; });
   return { summary: keep, years };
 }
 // Everything dated in one month, for the Pay Apps calendar: { days: { iso: [event] }, windows: { iso: [label] }, reminders: { iso: [label] } }
@@ -5706,8 +5724,9 @@ function bidMarginIf(p, price, phaseId){
   const ph = phaseId || '';
   let others = ph ? moneySum(bidAwardedDeals(p).filter(d => (d.phaseId || '') !== ph), d => d.price) : 0;
   if(ph) Object.keys(s.laborByPhase || {}).forEach(k => { if(k !== ph) others = moneyRound(others + s.laborByPhase[k]); });
-  const margin = moneyRound(s.contract - others - moneyNum(price));
-  return { contract: s.contract, margin, pct: s.contract > 0 ? moneyRound(margin / s.contract * 100) : null };
+  const net = s.contractNet != null ? s.contractNet : s.contract;
+  const margin = moneyRound(net - others - moneyNum(price));
+  return { contract: net, margin, pct: net > 0 ? moneyRound(margin / net * 100) : null };
 }
 // Per sub: 'proposal' (they sent one), 'declined', 'invited' (e-mailed, waiting), 'listed' (picked, not e-mailed yet).
 function bidInviteState(p, inv){
@@ -5764,7 +5783,7 @@ function bidLowMargin(p, minPct){
   if(!p || p.status === 'Completed' || p.status === 'Bidding') return null;
   const s = moneySummary(p);
   if(!(s.contract > 0) || !(s.committed > 0) || s.marginPct == null) return null;
-  return s.marginPct < minPct ? { pct: s.marginPct, margin: s.margin, contract: s.contract, committed: s.committed, min: minPct } : null;
+  return s.marginPct < minPct ? { pct: s.marginPct, margin: s.margin, contract: s.contractNet != null ? s.contractNet : s.contract, committed: s.committed, min: minPct } : null;
 }
 // Projects with a working primary sub but no backup (deal or proposal) on file - a task, not a toast.
 function backupReminders(data){
@@ -5936,7 +5955,7 @@ function moneyBoxText(v, kind){
   return kind === 'pct' ? (Math.round(n * 100) / 100) + '%' : (n < 0 ? '-$' : '$') + Math.abs(n).toLocaleString('en-US', { maximumFractionDigits: 2 });
 }
 function mNumIn(id, v, ph){ const kind = /pct/.test(id) ? 'pct' : 'usd'; return `<input id="${id}" type="text" inputmode="decimal" data-fmt="${kind}" value="${esc(moneyBoxText(v, kind))}" placeholder="${ph || (kind === 'pct' ? '0%' : '$0')}" autocomplete="off">`; }
-document.addEventListener('focusout', ev => { const e = ev.target; if(e && e.dataset && e.dataset.fmt && e.tagName === 'INPUT') e.value = moneyBoxText(e.value, e.dataset.fmt); });
+document.addEventListener('focusout', ev => { const e = ev.target; if(e && e.dataset && e.dataset.fmt && e.tagName === 'INPUT') e.value = (e.dataset.keep0 && String(e.value).trim() !== '' && moneyNum(e.value) === 0) ? '0%' : moneyBoxText(e.value, e.dataset.fmt); });
 function mTag(text, color){ return `<span class="tag" style="background:${color}22; color:${color}; margin-right:4px;">${esc(text)}</span>`; }
 const MNY_OK = () => cssVar('--ok'), MNY_WARN = () => cssVar('--status-in-progress'), MNY_BAD = () => cssVar('--status-delayed'), MNY_DIM = () => cssVar('--bidding');
 function mPayAppTag(a){
@@ -6221,6 +6240,24 @@ function openMoneyModal(pid, opts){
 }
 function moneyInlineEl(){ return (VIEW === 'money' && MNY.from !== 'project') ? document.getElementById('mnyInline') : null; }
 function moneyCommit(){ saveData(); paintMoney(); }
+// The Estimator owns the GC contract and its details (received date, retention...). Here the PM is offered those details; nothing changes until "Use these".
+const CONTRACT_INFO = {};
+async function paintContractOffer(){
+  const box = document.getElementById('mnyContract'); if(!box) return;
+  const pid = box.dataset.pid; if(!pid) return;
+  if(!(pid in CONTRACT_INFO)){
+    CONTRACT_INFO[pid] = null;
+    try{ const r = await fetch(GO_CONFIG.API + '/api/media/contract-info?projectId=' + encodeURIComponent(pid), { headers: { Authorization: 'Bearer ' + AUTH_TOKEN } }); if(r.ok) CONTRACT_INFO[pid] = (await r.json()).contract || null; }catch(e){}
+  }
+  const c = CONTRACT_INFO[pid], b2 = document.getElementById('mnyContract'); if(!c || !b2) return;
+  const m = ensureMoney(moneyProj(pid)), ret = m.retention || {};
+  const pctDiff = c.retentionPct !== '' && String(ret.pct == null ? '' : ret.pct) !== String(c.retentionPct), recvDiff = !!c.receivedOn && (ret.contractReceived || '') !== c.receivedOn;
+  const bits = [c.receivedOn ? 'received ' + c.receivedOn : '', c.retentionPct !== '' ? 'retention ' + c.retentionPct + '%' : '', c.contractNumber ? 'contract # ' + esc(c.contractNumber) : ''].filter(Boolean).join(' · ');
+  b2.innerHTML = `<div class="hint" style="margin:2px 0 10px;padding:8px 10px;border:1px solid var(--line);border-radius:8px;">The Estimator added the GC contract (${esc(c.name)}), ${esc(bits) || 'no details entered yet'}. ${(pctDiff || recvDiff) ? '<button class="btn small" id="useContract" type="button" style="margin-left:6px;">Use these</button>' : '<span style="color:var(--ok);">Matches what is entered here.</span>'}</div>`;
+  const ub = document.getElementById('useContract');
+  if(ub) ub.onclick = () => { const mm = ensureMoney(moneyProj(pid)); mm.retention = Object.assign({}, mm.retention, c.retentionPct !== '' ? { pct: c.retentionPct } : {}, c.receivedOn ? { contractReceived: c.receivedOn } : {}); moneyCommit(); };
+}
+
 // ---------------- Close Out (v20.1.0) ----------------
 const CLOSEOUT_UI = { busy: false, packets: null };
 async function archiveApi(path, method, body){
@@ -6380,6 +6417,32 @@ function closeoutReminders(data){
   });
   return out;
 }
+function coLineSel(m, c){
+  const K = m.contract && m.contract.locked ? m.contract : null; if(!K || !(K.lines || []).length) return '';
+  return `<div class="field"><label>Relates to which original contract line? (optional)</label><select id="co_line"><option value="">None: new scope</option>${K.lines.map(l => `<option value="${esc(l.id)}" ${c.contractLineId === l.id ? 'selected' : ''}>${esc(l.no + '. ' + (l.payAppTitle || l.title).slice(0, 80))}</option>`).join('')}</select></div>`;
+}
+function coLineName(m, c){ const K = m.contract; const l = K && c.contractLineId ? (K.lines || []).find(x => x.id === c.contractLineId) : null; return l ? 'line ' + l.no : ''; }
+// Catalog picker for change orders: appends to the description and adds qty x price to the amount (the PM can still adjust both).
+async function coCatalogPicker(){
+  let C; try{ const r = await authFetch(((window.GO_CONFIG && GO_CONFIG.API) || '') + '/api/estimator/catalog'); if(!r.ok) throw new Error('no access'); C = await r.json(); }catch(e){ await customAlert('The catalog is not available to you.'); return; }
+  const back = document.createElement('div'); back.style.cssText = 'position:fixed;inset:0;background:rgba(0,0,0,.45);z-index:2000;display:flex;align-items:flex-start;justify-content:center;padding:6vh 12px';
+  let q = ''; const close = () => back.remove();
+  const draw = () => {
+    const items = (C.items || []).filter(i => i.active && (!q || (i.name + ' ' + i.stockNo + ' ' + i.description).toLowerCase().includes(q)));
+    back.innerHTML = `<div style="background:var(--surface,#fff);color:var(--text);border-radius:14px;width:min(620px,100%);max-height:84vh;display:flex;flex-direction:column;overflow:hidden"><div style="padding:14px 16px;border-bottom:1px solid var(--line);display:flex;gap:10px;align-items:center"><b>Catalog</b><input id="ccQ" type="search" placeholder="Search…" value="${esc(q)}" style="flex:1"><button class="btn small ghost" id="ccX" type="button">Close</button></div>
+      <div style="overflow:auto;padding:8px 12px">${items.map(i => `<div style="display:flex;gap:10px;align-items:center;padding:8px 6px;border-bottom:1px solid var(--line);font-size:13px"><div style="flex:1"><b>${esc(i.name)}</b><div style="color:var(--text-dim);font-size:11.5px">${i.stockNo ? 'Stock# ' + esc(i.stockNo) + ' · ' : ''}${i.unitPrice == null ? 'price not set' : '$' + Number(i.unitPrice).toFixed(2) + ' per ' + esc(i.unit)}</div></div><input type="number" min="1" value="1" data-q="${i.id}" style="width:64px" aria-label="Quantity"><button class="btn small" data-add="${i.id}" type="button">Add</button></div>`).join('') || '<div class="hint" style="padding:20px">Nothing matches.</div>'}</div></div>`;
+    back.querySelector('#ccX').onclick = close; back.onclick = e => { if(e.target === back) close(); };
+    const fq = back.querySelector('#ccQ'); fq.oninput = () => { q = fq.value.toLowerCase(); const pos = fq.selectionStart; draw(); const n = back.querySelector('#ccQ'); n.focus(); n.setSelectionRange(pos, pos); };
+    back.querySelectorAll('[data-add]').forEach(b => b.onclick = () => {
+      const i = C.items.find(x => x.id === Number(b.dataset.add)), qty = Math.max(1, Math.round(Number(back.querySelector('[data-q="' + i.id + '"]').value) || 1));
+      const d = document.getElementById('co_desc'), a = document.getElementById('co_amount');
+      if(d) d.value = (d.value ? d.value + '; ' : '') + (i.stockNo ? i.stockNo + ' ' : '') + i.name + ' x' + qty;
+      if(a && i.unitPrice != null){ a.value = moneyBoxText(moneyNum(a.value) + qty * i.unitPrice, 'usd'); }
+      b.textContent = 'Added';
+    });
+  };
+  document.body.appendChild(back); draw();
+}
 function paintMoney(){
   const p = moneyProj(MNY.pid); if(!p) return;
   if(p.closed){
@@ -6401,20 +6464,49 @@ function paintMoney(){
   }
   const line = (k, v, strong) => `<div style="display:flex; justify-content:space-between; padding:3px 0; ${strong ? 'font-weight:700; border-top:1px solid var(--line); margin-top:3px; padding-top:6px;' : ''}"><span style="color:var(--text-dim);">${k}</span><span class="mono">${v}</span></div>`;
 
+  // --- the original contract handed over from the Estimator (locked: the PM works beside it with change orders, never on it)
+  const K = m.contract && m.contract.locked ? m.contract : null, lockedForMe = !!K && ROLE === 'pm';
+  const contractPanel = K ? (() => {
+    const src = K.source || {};
+    const editing = MNY.edit && MNY.edit.pl;
+    const lineRow = l => {
+      const parts = payLinesFor(m, l), split = parts.length > 1, custom = !parts[0].plain, shown = parts[0].title;
+      if(editing === l.id){
+        const draft = MNY.plDraft || (MNY.plDraft = parts.map(x => ({ title: x.title, amount: x.amount }))), tot = draft.reduce((a, x) => a + plCents(x.amount), 0), diff = plCents(l.amount) - tot, multi = draft.length > 1, sug = plSuggest(l);
+        return `<div class="mny-form" style="margin:6px 0;"><div style="font-weight:700;margin-bottom:2px;">${esc(l.no + '. ' + l.title)} <span class="mono" style="font-weight:400;">${mUsd(l.amount, true)}</span></div>
+          <div class="hint" style="margin:0 0 8px;">How this line is worded on the pay app. Keep one name for a simple rename, or split it into several lines that add up to the full amount.</div>
+          ${draft.map((x, i) => `<div class="row2" style="align-items:end;"><div class="field"><label>${multi ? 'Pay-app line ' + (i + 1) : 'Pay-app wording'}</label><input data-plt="${i}" value="${mInp(x.title)}" placeholder="Short description"></div>${multi ? `<div class="field"><label>Amount ($)</label><div style="display:flex;gap:6px;"><input data-pla="${i}" type="text" inputmode="decimal" value="${mInp(x.amount ? x.amount : '')}" placeholder="$0" autocomplete="off"><button class="btn ghost small" data-m="pl-del" data-id="${i}" type="button" title="Remove this part">Remove</button></div></div>` : ''}</div>`).join('')}
+          <div style="display:flex;gap:8px;flex-wrap:wrap;align-items:center;margin:4px 0 8px;"><button class="btn ghost small" data-m="pl-add" type="button">+ Split into another line</button>${sug && draft.length < sug.titles.length ? `<button class="btn ghost small" data-m="pl-heads" type="button">Use ${esc(sug.src)}</button>` : ''}${multi ? `<span id="plStatus" data-total="${plCents(l.amount)}" style="font-size:12.5px;color:${diff === 0 ? 'var(--ok)' : 'var(--bad,#b3261e)'};">${diff === 0 ? 'Adds up to the line amount.' : (diff > 0 ? mUsd(diff / 100, true) + ' still to place' : mUsd(-diff / 100, true) + ' too much')}</span>` : ''}</div>
+          <div style="display:flex;gap:8px;"><button class="btn primary small" data-m="pl-save" data-id="${esc(l.id)}" type="button">Save wording</button><button class="btn ghost small" data-m="edit-cancel" type="button">Cancel</button>${custom ? `<button class="btn ghost small" data-m="pl-reset" data-id="${esc(l.id)}" type="button" style="margin-left:auto;">Back to estimate wording</button>` : ''}</div></div>`;
+      }
+      const btn = `<div class="mny-btns"><button class="btn ghost small" data-m="pl-edit" data-id="${esc(l.id)}" type="button">Pay-app wording</button></div>`;
+      if(split) return `<div style="margin:4px 0;"><div class="mny-entry" style="align-items:flex-start;"><div style="flex:1;min-width:180px;"><strong>${esc(l.no + '. ' + l.title)}</strong><div class="hint" style="margin:0;">Split into ${parts.length} pay-app lines</div></div><div class="mono">${mUsd(l.amount, true)}</div>${btn}</div>${parts.map(x => `<div class="mny-entry" style="padding-left:16px;"><div style="flex:1;">${esc(x.title)}</div><div class="mono">${mUsd(x.amount, true)}</div></div>`).join('')}</div>`;
+      return `<div class="mny-entry" style="align-items:flex-start;"><div style="flex:1;min-width:180px;"><strong>${esc(l.no + '. ' + shown)}</strong>${shown !== l.title ? `<div class="hint" style="margin:0;">Estimate wording: ${esc(l.title)}</div>` : ''}</div><div class="mono">${mUsd(l.amount, true)}</div>${btn}</div>`;
+    };
+    const lines = (K.scopes && K.scopes.length > 1)
+      ? K.scopes.map(sc => `<div style="margin:10px 0 2px;font-weight:700;">${esc(sc.scope)}</div>${(K.lines || []).filter(l => l.scope === sc.scope).map(lineRow).join('')}<div class="mny-entry"><div style="flex:1;color:var(--text-dim);">${esc(sc.scope)}: subtotal ${mUsd(sc.subtotal)} · tax ${mUsd(sc.tax)}</div><div class="mono"><strong>${mUsd(sc.total, true)}</strong></div></div>`).join('')
+      : (K.lines || []).map(lineRow).join('');
+    return `<div class="panel mny-sec"><div class="panel-head"><h3>Original Contract ${mTag('Locked', MNY_DIM())}</h3><span class="hint" style="margin:0;">From Estimate #${esc(src.estimateNumber || '')}${src.estimateDate ? ' · ' + esc(fmtDate(src.estimateDate)) : ''}${src.handedOffBy ? ' · handed off by ' + esc(src.handedOffBy) : ''}</span></div><div class="panel-body">
+      <div class="hint" style="margin:0 0 8px;">These lines are what was sold. ${lockedForMe ? 'They are read-only here. ' : ''}Extra work, addendums and additions go in <b>Change Orders</b> below, so the original is never overwritten.</div>
+      ${lines}<div class="mny-entry"><div style="flex:1;color:var(--text-dim);">Subtotal ${mUsd(K.subtotal)} · tax ${mUsd(K.tax)}</div><div class="mono"><strong>${mUsd(K.total, true)}</strong></div></div>
+      </div></div>`;
+  })() : '';
+
   // --- change orders
   const coRows = (m.changeOrders || []).map(c => `
     <div class="mny-entry ${c.void ? 'mny-void' : ''}">
       <div style="flex:1; min-width:180px;"><strong>${esc(c.desc || 'Change order')}</strong> ${c.void ? mTag('VOID', MNY_DIM()) : mTag(({ proposed: 'Proposed', approved: 'Approved', rejected: 'Rejected' })[c.status] || 'Proposed', c.status === 'approved' ? MNY_OK() : c.status === 'rejected' ? MNY_BAD() : MNY_WARN())}
-        <div class="hint" style="margin:0;">${c.date ? fmtDate(c.date) : ''}</div></div>
+        <div class="hint" style="margin:0;">${c.date ? fmtDate(c.date) : ''}${c.estimateNo ? ' · Estimate #' + esc(c.estimateNo) : ''}${coLineName(m, c) ? ' · relates to ' + esc(coLineName(m, c)) : ''}${c.approvedBy ? ' · approved by ' + esc(c.approvedBy) : ''}</div></div>
       <div class="mono">${mUsd(c.amount, true)}</div>
       <div class="mny-btns">${mEntryBtns('co', c.id, c.void)}</div>
     </div>`).join('');
   const coEdit = ed.co ? (() => {
     const c = ed.co === 'new' ? { status: 'proposed', date: moneyToday() } : (m.changeOrders.find(x => x.id === ed.co) || {});
-    return `<div class="mny-form"><div class="row2"><div class="field"><label>What is the extra work?</label><input id="co_desc" value="${mInp(c.desc)}" placeholder="e.g. Added bollards at the dock"></div>
+    return `<div class="mny-form"><div class="row2"><div class="field"><label>What is the extra work? <button class="btn ghost small" data-m="co-cat" type="button" style="margin-left:6px;">+ From catalog</button></label><input id="co_desc" value="${mInp(c.desc)}" placeholder="e.g. Added bollards at the dock"></div>
       <div class="field"><label>Amount ($)</label>${mNumIn('co_amount', c.amount)}</div></div>
-      <div class="row2"><div class="field"><label>Status</label><select id="co_status"><option value="proposed" ${c.status === 'proposed' ? 'selected' : ''}>Proposed (not approved yet)</option><option value="approved" ${c.status === 'approved' ? 'selected' : ''}>Approved by the GC</option><option value="rejected" ${c.status === 'rejected' ? 'selected' : ''}>Rejected</option></select></div>
+      <div class="row2"><div class="field"><label>Status</label><select id="co_status"><option value="proposed" ${c.status === 'proposed' ? 'selected' : ''}>Proposed (not approved yet)</option><option value="approved" ${c.status === 'approved' ? 'selected' : ''}>Approved (billable on the next pay app)</option><option value="rejected" ${c.status === 'rejected' ? 'selected' : ''}>Rejected</option></select></div>
       <div class="field"><label>Date</label><input type="date" id="co_date" value="${mInp(c.date)}"></div></div>
+      ${coLineSel(m, c)}<div class="row2"><div class="field"><label>Tax included in the amount ($, optional)</label>${mNumIn('co_tax', c.tax)}</div><div class="field"><label>From estimate # (optional)</label><input id="co_est" value="${mInp(c.estimateNo)}" placeholder="e.g. 2126"></div></div>
       <div style="display:flex; gap:8px;"><button class="btn primary small" data-m="co-save" type="button">Save change order</button><button class="btn ghost small" data-m="edit-cancel" type="button">Cancel</button></div></div>`;
   })() : '';
 
@@ -6500,15 +6592,20 @@ function paintMoney(){
         return `<div style="display:flex; justify-content:space-between; font-size:12.5px; margin-bottom:4px;"><strong>${Math.round(pc * 10) / 10}% complete</strong><span style="color:var(--text-faint);">Billed ${Math.round(bl)}% of contract</span></div>
         <div role="progressbar" aria-valuemin="0" aria-valuemax="100" aria-valuenow="${pc}" style="position:relative; height:16px; border-radius:8px; background:var(--line); overflow:hidden;"><div style="width:${pc}%; height:100%; background:${col}; border-radius:8px; transition:width .3s;"></div><div title="Billed so far" style="position:absolute; top:0; bottom:0; left:calc(${bl}% - 1px); width:2px; background:var(--text); opacity:${bl > 0 ? .55 : 0};"></div></div>`;
       })()}</div>
-      <div class="row2"><div class="field"><label>Contract Value ($)</label>${mNumIn('m_orig', m.contractOriginal)}</div>
+      <div class="row2"><div class="field"><label>Contract Value ($)${lockedForMe ? ' <span class="hint" style="margin:0;">locked</span>' : ''}</label>${lockedForMe ? `<input id="m_orig" type="text" value="${esc(mUsd(m.contractOriginal, true))}" disabled>` : mNumIn('m_orig', m.contractOriginal)}</div>
       <div class="field"><label>% Complete</label>${mNumIn('m_pct', m.percentComplete)}</div></div>
+      <div class="row2"><div class="field"><label>Retention (%) <span class="hint" style="margin:0;">${m.retention && m.retention.pct !== '' && m.retention.pct != null ? '' : 'not set yet, comes from the GC contract'}</span></label><input id="m_retpct" type="text" inputmode="decimal" data-fmt="pct" data-keep0="1" value="${(m.retention && m.retention.pct !== '' && m.retention.pct != null) ? (moneyNum(m.retention.pct) === 0 ? '0%' : esc(moneyBoxText(m.retention.pct, 'pct'))) : ''}" placeholder="not set" autocomplete="off"></div>
+      <div class="field"><label>GC contract received</label><input id="m_crecv" type="date" value="${mInp(m.retention && m.retention.contractReceived)}"></div></div>
+      <div id="mnyContract" data-pid="${esc(MNY.pid)}"></div>
       ${line('Approved change orders', mUsd(s.coApproved))}${line('Current contract value', mUsd(s.contract), true)}
       ${line('Earned to date (original × % complete)', mUsd(s.earned))}${line('Billed to the GC', mUsd(s.billed))}${line('Received from the GC', mUsd(s.received))}${line('Still owed to us', mUsd(s.outstanding), true)}
-      ${line('Sub cost committed', mUsd(s.committed))}${(s.laborCost > 0 || s.laborUnknown.length) ? line('In-house labor (W-2 + temps, estimated)', s.laborCost > 0 ? mUsd(s.laborCost) : 'not estimated') : ''}${s.laborUnknown.length ? `<div class="hint" style="margin:2px 0 6px;">${s.laborUnknown.map(u => esc(u.label || 'This job') + ': ' + (u.reason === 'mandays' ? 'add man-days to estimate the in-house crew cost' : 'no wage on file for ' + esc((u.names || []).join(', ')))).join(' · ')}</div>` : ''}${line('Margin (contract − costs)', mUsd(s.margin) + (s.marginPct == null ? '' : ' (' + s.marginPct.toFixed(1) + '%)'))}${line('Cash so far (received − paid to subs)', mUsd(s.cash))}
+      ${line('Sub cost committed', mUsd(s.committed))}${(s.laborCost > 0 || s.laborUnknown.length) ? line('In-house labor (W-2 + temps, estimated)', s.laborCost > 0 ? mUsd(s.laborCost) : 'not estimated') : ''}${s.laborUnknown.length ? `<div class="hint" style="margin:2px 0 6px;">${s.laborUnknown.map(u => esc(u.label || 'This job') + ': ' + (u.reason === 'mandays' ? 'add man-days to estimate the in-house crew cost' : 'no wage on file for ' + esc((u.names || []).join(', ')))).join(' · ')}</div>` : ''}${line('Margin (contract excl. tax − costs)', mUsd(s.margin) + (s.marginPct == null ? '' : ' (' + s.marginPct.toFixed(1) + '%)'))}${line('Cash so far (received − paid to subs)', mUsd(s.cash))}
       <div style="margin-top:10px; display:flex; gap:8px; align-items:center; flex-wrap:wrap;">
         ${s.toBill > 0.5 ? `<span>Ready to bill now: <strong class="mono">${mUsd(s.toBill)}</strong>${s.toBillChange > 0.5 ? ` (progress ${mUsd(s.toBillProgress)} + change orders ${mUsd(s.toBillChange)})` : ''}</span><button class="btn small primary" data-m="pa-suggest" type="button">Create request</button>` : '<span class="hint" style="margin:0;">Nothing new to bill at this % complete.</span>'}
       </div>${windowLine}
     </div><div class="mny-half mny-half-r">${closeOutPanelHTML(p)}</div></div></div>
+
+    ${contractPanel}
 
     <div class="panel mny-sec"><div class="panel-head"><h3>Change Orders</h3><button class="btn small" data-m="co-new" type="button">+ Add</button></div><div class="panel-body">
       ${coRows || '<div class="hint">No change orders. Add one when the GC asks for work outside the original scope.</div>'}${coEdit}
@@ -6552,12 +6649,16 @@ function paintMoney(){
   if(back) back.scrollTop = keep;
   body.onclick = inl ? (ev => { ev.stopPropagation(); return moneyModalClick(ev); }) : moneyModalClick;
   body.onmousedown = ev => { if(ev.target.closest('button[data-m]')) ev.preventDefault(); };
+  body.oninput = ev => { if(ev.target.dataset && ev.target.dataset.pla !== undefined) plLive(); };
   body.onchange = ev => {
     const id = ev.target.id;
     const mm = ensureMoney(moneyProj(MNY.pid));
     if(id === 'm_orig'){ mm.contractOriginal = moneyNum(ev.target.value); moneyCommit(); }
     else if(id === 'm_pct'){ mm.percentComplete = moneyClamp(moneyNum(ev.target.value), 0, 100); moneyCommit(); }
+    else if(id === 'm_retpct'){ const v = ev.target.value.trim(); mm.retention = Object.assign({}, mm.retention, { pct: v === '' ? '' : moneyClamp(moneyNum(v), 0, 100) }); moneyCommit(); }
+    else if(id === 'm_crecv'){ mm.retention = Object.assign({}, mm.retention, { contractReceived: ev.target.value }); moneyCommit(); }
   };
+  paintContractOffer();
 }
 function moneyById(arr, id){ return (arr || []).find(x => x.id === id); }
 function moneyVal(id){ const e = document.getElementById(id); return e ? e.value : ''; }
@@ -6568,9 +6669,20 @@ function moneyFlushFields(){
   const p = moneyProj(MNY.pid); if(!p || p.closed) return;
   const mm = ensureMoney(p), vo = document.getElementById('m_orig'), vp = document.getElementById('m_pct');
   let changed = false;
-  if(vo && moneyNum(vo.value) !== mm.contractOriginal){ mm.contractOriginal = moneyNum(vo.value); changed = true; }
+  if(vo && !vo.disabled && moneyNum(vo.value) !== mm.contractOriginal){ mm.contractOriginal = moneyNum(vo.value); changed = true; }
   if(vp && moneyClamp(moneyNum(vp.value), 0, 100) !== mm.percentComplete){ mm.percentComplete = moneyClamp(moneyNum(vp.value), 0, 100); changed = true; }
   if(changed) saveData();
+}
+function plLive(){
+  const el = document.getElementById('plStatus'); if(!el) return; plFlush();
+  const tot = (MNY.plDraft || []).reduce((a, x) => a + plCents(x.amount), 0), diff = Number(el.dataset.total) - tot;
+  el.textContent = diff === 0 ? 'Adds up to the line amount.' : (diff > 0 ? mUsd(diff / 100, true) + ' still to place' : mUsd(-diff / 100, true) + ' too much');
+  el.style.color = diff === 0 ? 'var(--ok)' : 'var(--bad,#b3261e)';
+}
+function plFlush(){
+  const d = MNY.plDraft; if(!d) return;
+  document.querySelectorAll('[data-plt]').forEach(i => { const k = Number(i.dataset.plt); if(d[k]) d[k].title = i.value; });
+  document.querySelectorAll('[data-pla]').forEach(i => { const k = Number(i.dataset.pla); if(d[k]) d[k].amount = moneyNum(i.value) || ''; });
 }
 async function moneyModalClick(ev){
   const b = ev.target.closest('[data-m]'); if(!b) return;
@@ -6611,6 +6723,24 @@ async function moneyModalClick(ev){
   if(act === 'rules'){ openBillingRulesModal(p.id); return; }
   if(act === 'edit-cancel'){ MNY.edit = {}; paintMoney(); return; }
   if(act === 'archive-proj'){ openMoneyArchiveModal(p.id); return; }
+  if(act === 'pl-edit'){ MNY.edit = { pl: id }; MNY.plDraft = null; paintMoney(); return; }
+  if(act === 'pl-add' || act === 'pl-del' || act === 'pl-heads'){
+    plFlush(); const d = MNY.plDraft || (MNY.plDraft = []);
+    if(act === 'pl-add'){ if(d.length === 1 && !moneyNum(d[0].amount)){ const ln = (m.contract.lines || []).find(x => x.id === MNY.edit.pl); if(ln) d[0].amount = ''; } d.push({ title: '', amount: '' }); }
+    if(act === 'pl-del'){ d.splice(Number(id), 1); if(!d.length) d.push({ title: '', amount: '' }); }
+    if(act === 'pl-heads'){ const ln = (m.contract.lines || []).find(x => x.id === MNY.edit.pl), sg = ln && plSuggest(ln); if(sg){ const keep = d.filter(x => String(x.title).trim() && x.title !== (ln.payAppTitle || ln.title)); sg.titles.forEach(t => { if(!keep.some(x => x.title === t)) keep.push({ title: t, amount: '' }); }); MNY.plDraft = keep; } }
+    paintMoney(); return;
+  }
+  if(act === 'pl-reset'){ if(m.payLines) delete m.payLines[id]; MNY.edit = {}; MNY.plDraft = null; moneyCommit(); return; }
+  if(act === 'pl-save'){
+    plFlush(); const ln = (m.contract.lines || []).find(x => x.id === id), d = MNY.plDraft || []; if(!ln) return;
+    if(d.some(x => !String(x.title).trim())){ await customAlert('Every pay-app line needs a short description.'); return; }
+    if(d.length > 1){ const tot = d.reduce((a, x) => a + plCents(x.amount), 0); if(tot !== plCents(ln.amount)){ await customAlert('The parts must add up to ' + mUsd(ln.amount, true) + ' (right now ' + mUsd(tot / 100, true) + ').'); return; } }
+    m.payLines = (m.payLines && typeof m.payLines === 'object' && !Array.isArray(m.payLines)) ? m.payLines : {};
+    const o = {}; d.forEach((x, i) => { o['p' + (i + 1)] = { n: i + 1, title: String(x.title).trim().slice(0, 200), amount: d.length > 1 ? Math.round(moneyNum(x.amount) * 100) / 100 : moneyNum(ln.amount) }; });
+    if(d.length === 1 && o.p1.title === (ln.payAppTitle || ln.title)) delete m.payLines[id]; else m.payLines[id] = o;
+    MNY.edit = {}; MNY.plDraft = null; moneyCommit(); return;
+  }
   // change orders
   if(act === 'note-add'){
     const ta = document.getElementById('m_newnote'), txt = ta ? ta.value.trim() : '';
@@ -6621,6 +6751,7 @@ async function moneyModalClick(ev){
   }
   if(act === 'note-del'){ if(moneyStaff() && await customConfirm('Delete this note? (The deletion is written to the change archive.)')){ m.noteLog = m.noteLog.filter(n => n.id !== id); moneyCommit(); } return; }
   if(act === 'note-del-old'){ if(moneyStaff() && await customConfirm('Delete this earlier note?')){ m.notes = ''; moneyCommit(); } return; }
+  if(act === 'co-cat'){ coCatalogPicker(); return; }
   if(act === 'co-new'){ MNY.edit = { co: 'new' }; paintMoney(); return; }
   if(act === 'co-edit'){ MNY.edit = { co: id }; paintMoney(); return; }
   if(act === 'co-void'){ toggleVoid(moneyById(m.changeOrders, id)); return; }
@@ -6630,7 +6761,8 @@ async function moneyModalClick(ev){
     if(!moneyVal('co_desc').trim() || !amount){ await customAlert('A change order needs a short description and an amount.'); return; }
     const rec = ed.co === 'new' ? { id: uid('co') } : moneyById(m.changeOrders, ed.co);
     if(!rec) return;
-    Object.assign(rec, { desc: moneyVal('co_desc').trim(), amount, status: moneyVal('co_status'), date: moneyVal('co_date') });
+    Object.assign(rec, { desc: moneyVal('co_desc').trim(), amount, status: moneyVal('co_status'), date: moneyVal('co_date'), tax: moneyVal('co_tax') === '' ? '' : moneyNum(moneyVal('co_tax')), estimateNo: moneyVal('co_est').trim(), contractLineId: moneyVal('co_line') || '' });
+    if(rec.status === 'approved' && !rec.approvedBy){ rec.approvedBy = (window.GO_USER && GO_USER.name) || (ROLE || ''); rec.approvedDate = moneyToday(); }
     if(ed.co === 'new') m.changeOrders.push(rec);
     MNY.edit = {}; moneyCommit(); return;
   }
@@ -6647,6 +6779,9 @@ async function moneyModalClick(ev){
   if(act === 'pa-save'){
     const amount = moneyNum(moneyVal('pa_amount'));
     if(!amount){ await customAlert('Enter the amount being requested.'); return; }
+    if(moneyVal('pa_kind') !== 'change' && m.contract && m.contract.locked && !(m.retention && m.retention.pct !== '' && m.retention.pct != null) && !(typeof ed.pa === 'string' && ed.pa !== 'new')){
+      if(!await customConfirm('Retention is not set for this project yet. It comes from the formal contract the GC sent. Create this request without it?')) return;
+    }
     const submitted = moneyVal('pa_submitted');
     const rule = moneyRuleFor(p.customer, DATA.moneySettings.billingRules);
     if(submitted && rule && !moneyInWindow(rule, submitted)){
@@ -7146,7 +7281,8 @@ function renderBidsProject(pid){
   const b = p.bids || newBids(), st = bidStatusOf(p, Date.now()), s = moneySummary(p), tm = bidsTargetMargin();
   const options = DATA.projects.filter(x => x.status !== 'Completed').sort(dispatchProjectSort);
   const due = bidsDueParts(b.dueAt);
-  const maxPrice = s.contract > 0 ? s.contract * (1 - tm / 100) : 0;
+  const netC = s.contractNet != null ? s.contractNet : s.contract;
+  const maxPrice = netC > 0 ? netC * (1 - tm / 100) : 0;
   const target = getDispatchTarget(p.id);
   const invites = moneyLive(b.invites);
   const listedN = invites.filter(i => bidInviteState(p, i) === 'listed').length;
@@ -7219,11 +7355,12 @@ function renderBidsProject(pid){
     </div></div>
     <div class="panel"><div class="panel-head"><h3>Contract &amp; Margin</h3></div><div class="panel-body">
       ${s.contract > 0 ? `<div class="mny-row"><div style="flex:1;">Current contract value</div><strong class="mono">${mUsd(s.contract)}</strong></div>
+      ${s.taxIn > 0 ? `<div class="mny-row"><div style="flex:1;">Contract excluding tax <span class="hint" style="margin:0;">(margins use this)</span></div><strong class="mono">${mUsd(s.contractNet)}</strong></div>` : ''}
       <div class="mny-row"><div style="flex:1;">Minimum margin I want <span class="hint" style="margin:0;">(shared setting)</span></div><span style="display:flex; align-items:center; gap:4px;"><input id="bd_target" type="text" inputmode="decimal" value="${tm}" style="width:60px; text-align:right;">%</span></div>
       <div class="mny-row"><div style="flex:1;">Highest sub price that still hits it</div><strong class="mono">${mUsd(maxPrice)}</strong></div>
       <div class="mny-row"><div style="flex:1;">Cost already committed (subs + in-house labor)</div><span class="mono">${mUsd(s.totalCost)}</span></div>`
       : `<div class="mny-warn">No contract value is entered yet, so margins can't be shown. <button class="btn small" data-b="open-money" type="button">Enter It in Pay Apps</button></div>`}
-      <div class="hint" style="margin-top:8px;">Margin = contract value − the sub's price. Subs never see the contract value; it is not in the invitation e-mail.</div>
+      <div class="hint" style="margin-top:8px;">Margin = contract value (excluding tax) − the sub's price. Subs never see the contract value; it is not in the invitation e-mail.</div>
     </div></div>
   </div>
 

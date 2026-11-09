@@ -131,10 +131,31 @@ const DDL = [
     hidden_reason VARCHAR(300) NULL,
     KEY idx_entity (entity_type, entity_id)
   ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4`,
+  `CREATE TABLE IF NOT EXISTS media_uploads (
+    id CHAR(24) NOT NULL PRIMARY KEY,
+    user_id BIGINT NOT NULL,
+    entity_type VARCHAR(16) NOT NULL,
+    entity_id VARCHAR(64) NOT NULL,
+    name VARCHAR(200) NOT NULL,
+    kind VARCHAR(24) NULL,
+    caption VARCHAR(500) NULL,
+    size BIGINT NOT NULL,
+    created_at BIGINT NOT NULL
+  ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4`,
+  `CREATE TABLE IF NOT EXISTS est_estimates (
+    bid_id BIGINT UNSIGNED NOT NULL PRIMARY KEY,
+    doc LONGTEXT NOT NULL,
+    updated_at BIGINT NOT NULL,
+    updated_by VARCHAR(120) NULL
+  ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4`,
   `CREATE TABLE IF NOT EXISTS user_roles (
     user_id BIGINT NOT NULL,
     role_key VARCHAR(32) NOT NULL,
     PRIMARY KEY (user_id, role_key)
+  ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4`,
+  `CREATE TABLE IF NOT EXISTS id_counters (
+    name VARCHAR(40) NOT NULL PRIMARY KEY,
+    value BIGINT NOT NULL DEFAULT 0
   ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4`,
   `CREATE TABLE IF NOT EXISTS est_bids (
     id BIGINT UNSIGNED NOT NULL AUTO_INCREMENT PRIMARY KEY,
@@ -171,6 +192,102 @@ const DDL = [
     user_username VARCHAR(40) NULL,
     action VARCHAR(24) NOT NULL,
     changes TEXT NULL
+  ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4`,
+  // The product catalog: the ~50 things Lucas buys, makes and installs, each with a standard description and a unit price.
+  // Owner/Estimator edit it (pane estimator.pricebook). Nothing is deleted: an item is retired (active = 0) and stays in old estimates.
+  `CREATE TABLE IF NOT EXISTS est_catalog (
+    id BIGINT UNSIGNED NOT NULL AUTO_INCREMENT PRIMARY KEY,
+    category VARCHAR(40) NOT NULL DEFAULT 'Materials',
+    name VARCHAR(200) NOT NULL,
+    stock_no VARCHAR(80) NULL,
+    description TEXT NULL,
+    unit VARCHAR(24) NOT NULL DEFAULT 'ea',
+    unit_price DECIMAL(14,2) NULL,
+    taxable INT NOT NULL DEFAULT 1,
+    notes TEXT NULL,
+    source VARCHAR(120) NULL,
+    active INT NOT NULL DEFAULT 1,
+    created_at BIGINT NOT NULL,
+    updated_at BIGINT NOT NULL,
+    updated_by VARCHAR(120) NULL
+  ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4`,
+  `CREATE TABLE IF NOT EXISTS est_contracts (
+    project_id VARCHAR(64) NOT NULL PRIMARY KEY,
+    bid_id BIGINT UNSIGNED NOT NULL,
+    file_id BIGINT UNSIGNED NOT NULL,
+    received_on VARCHAR(10) NULL,
+    contract_date VARCHAR(10) NULL,
+    retention_pct DECIMAL(5,2) NULL,
+    contract_number VARCHAR(120) NULL,
+    contract_amount DECIMAL(14,2) NULL,
+    payment_terms VARCHAR(300) NULL,
+    ai_fields VARCHAR(300) NULL,
+    created_by BIGINT NULL, created_by_name VARCHAR(160) NULL, created_at BIGINT NOT NULL,
+    updated_by BIGINT NULL, updated_by_name VARCHAR(160) NULL, updated_at BIGINT NOT NULL
+  ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4`,
+  `CREATE TABLE IF NOT EXISTS est_contract_history (
+    id BIGINT UNSIGNED NOT NULL AUTO_INCREMENT PRIMARY KEY,
+    project_id VARCHAR(64) NOT NULL,
+    at BIGINT NOT NULL,
+    user_id BIGINT NULL, user_name VARCHAR(160) NULL,
+    action VARCHAR(20) NOT NULL,
+    changes MEDIUMTEXT NULL,
+    INDEX (project_id, at)
+  ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4`,
+  `CREATE TABLE IF NOT EXISTS est_tasks (
+    id BIGINT UNSIGNED NOT NULL AUTO_INCREMENT PRIMARY KEY,
+    user_id BIGINT NOT NULL,
+    bid_id BIGINT UNSIGNED NULL,
+    text VARCHAR(300) NOT NULL,
+    due VARCHAR(10) NULL,
+    done TINYINT NOT NULL DEFAULT 0,
+    done_at BIGINT NULL,
+    created_at BIGINT NOT NULL,
+    KEY idx_user (user_id, done)
+  ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4`,
+  `CREATE TABLE IF NOT EXISTS est_catalog_images (
+    item_id BIGINT UNSIGNED NOT NULL PRIMARY KEY,
+    mime VARCHAR(40) NOT NULL,
+    size INT NOT NULL,
+    data MEDIUMBLOB NOT NULL,
+    updated_at BIGINT NOT NULL,
+    updated_by VARCHAR(120) NULL
+  ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4`,
+  `CREATE TABLE IF NOT EXISTS est_catalog_cats (
+    name VARCHAR(40) NOT NULL PRIMARY KEY,
+    sort_no INT NOT NULL DEFAULT 0,
+    created_at BIGINT NOT NULL,
+    created_by VARCHAR(120) NULL
+  ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4`,
+  // Share links: a project file sent to someone outside the company. Only a hash of the secret is stored; every open is logged.
+  `CREATE TABLE IF NOT EXISTS media_shares (
+    id BIGINT UNSIGNED NOT NULL AUTO_INCREMENT PRIMARY KEY,
+    token_hash CHAR(64) NOT NULL,
+    project_id VARCHAR(64) NOT NULL,
+    file_ids TEXT NOT NULL,
+    recipient VARCHAR(120) NULL,
+    note VARCHAR(1000) NULL,
+    allow_download TINYINT NOT NULL DEFAULT 1,
+    passcode_hash VARCHAR(255) NULL,
+    created_at BIGINT NOT NULL,
+    expires_at BIGINT NOT NULL,
+    revoked_at BIGINT NULL,
+    revoked_by VARCHAR(120) NULL,
+    created_by BIGINT NULL,
+    created_by_name VARCHAR(120) NULL,
+    created_by_username VARCHAR(40) NULL,
+    UNIQUE KEY uq_token (token_hash),
+    KEY idx_project (project_id)
+  ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4`,
+  `CREATE TABLE IF NOT EXISTS media_share_log (
+    id BIGINT UNSIGNED NOT NULL AUTO_INCREMENT PRIMARY KEY,
+    share_id BIGINT UNSIGNED NOT NULL,
+    at BIGINT NOT NULL,
+    action VARCHAR(16) NOT NULL,
+    ip VARCHAR(64) NULL,
+    ua VARCHAR(200) NULL,
+    file_name VARCHAR(200) NULL,
+    KEY idx_share (share_id)
   ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4`,
   `CREATE TABLE IF NOT EXISTS est_quotas (
     user_id BIGINT NOT NULL PRIMARY KEY,
@@ -216,6 +333,17 @@ async function upgradeTemplatesV5(){
   await set('estimator', 'pm.people', 'read'); await set('estimator', 'pm.calendar', 'read');
   await setSetting('tpl_v5_estimator', '1');
 }
+// v10: the PM can view the product catalog (to price change orders / addendums); only Owner and Estimator edit it. Adds the new pane to roles seeded earlier.
+async function upgradeTemplatesV10(){
+  if(await getSetting('tpl_v10_catalog', '') === '1') return;
+  const [roles] = await pool.query('SELECT role_key FROM roles');
+  for(const r of roles){
+    const level = r.role_key === 'builder' || r.role_key === 'owner' ? 'write' : (r.role_key === 'pm' || r.role_key === 'estimator') ? 'read' : 'none';
+    const [x] = await pool.query("SELECT 1 FROM role_permissions WHERE role_key = ? AND perm_key = 'pm.catalog'", [r.role_key]);
+    if(!x.length) await pool.query("INSERT INTO role_permissions (role_key, perm_key, level) VALUES (?, 'pm.catalog', ?)", [r.role_key, level]);
+  }
+  await setSetting('tpl_v10_catalog', '1');
+}
 async function bootstrapBuilder(){
   const [n] = await pool.query('SELECT COUNT(*) AS c FROM users');
   if(Number(n[0].c) > 0) return;
@@ -258,8 +386,15 @@ async function ensureSchema(){
   for(const sql of DDL) await pool.query(sql);
   try{ await pool.query('ALTER TABLE sessions ADD COLUMN remember INT NOT NULL DEFAULT 0'); }catch(e){ /* already there */ }
   try{ await pool.query('ALTER TABLE est_bids ADD COLUMN project_id VARCHAR(64) NULL'); }catch(e){ /* already there */ }
+  try{ await pool.query('ALTER TABLE est_bids ADD COLUMN project_code VARCHAR(16) NULL'); }catch(e){ /* already there */ }
+  try{ await pool.query('ALTER TABLE est_bids ADD UNIQUE INDEX uq_bid_code (project_code)'); }catch(e){ /* already there */ }
+  try{ await pool.query('ALTER TABLE est_bids ADD COLUMN cloned_from BIGINT UNSIGNED NULL'); }catch(e){ /* already there */ }
+  try{ await pool.query('ALTER TABLE est_bids ADD COLUMN cloned_parent BIGINT UNSIGNED NULL'); }catch(e){ /* already there */ }
+  try{ await pool.query('ALTER TABLE est_catalog ADD COLUMN icon VARCHAR(24) NULL'); }catch(e){ /* already there */ }
+  try{ await pool.query('ALTER TABLE media_files ADD COLUMN share_ok TINYINT NULL'); }catch(e){ /* already there */ }
   try{ await pool.query('ALTER TABLE audit_log ADD COLUMN user_username VARCHAR(40) NULL'); }catch(e){ /* already there */ }
+  try{ await require('./codes').backfillBidCodes(); }catch(e){ console.error('bid code backfill failed', e); }
   await migrateUsernames();
-  await seedRoles(); await upgradeRoleTemplates(); await upgradeTemplatesV5(); await bootstrapBuilder();
+  await seedRoles(); await upgradeRoleTemplates(); await upgradeTemplatesV5(); await upgradeTemplatesV10(); await bootstrapBuilder();
 }
 module.exports = { ensureSchema, getSetting, setSetting, USERNAME_RE, usernameFromEmail, freeUsername };

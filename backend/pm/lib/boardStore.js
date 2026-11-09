@@ -18,7 +18,7 @@ const crypto = require('crypto');
 const zlib = require('zlib');
 const util = require('util');
 const pool = require('../config/db');
-const { protectOpsEmail } = require('./money');
+const { protectOpsEmail, protectContract } = require('./money');
 
 const gzip = util.promisify(zlib.gzip);
 
@@ -116,6 +116,7 @@ function applyWritePolicy(incoming, cur, role) {
   }
   next.settings = cleanManagerSettings(incoming.settings, cur.settings);
   protectOpsEmail(next, cur, role);
+  protectContract(next, cur, role);
   const ignoredKeys = Object.keys(incoming).filter(k => !MANAGER_KEYS.includes(k) && !BUILDER_ONLY_WRITE.includes(k));
   return { next, ignoredKeys };
 }

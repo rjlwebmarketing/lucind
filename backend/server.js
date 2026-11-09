@@ -21,6 +21,9 @@ app.use('/api/auth', require('./routes/auth'));
 app.use('/api/admin', require('./routes/admin'));
 app.use('/api/estimator', require('./routes/estimator'));
 app.use('/api/media', require('./routes/media'));
+const shares = require('./routes/shares');
+app.use('/api/shares', shares.api);
+app.use('/s', shares.pub);   // public: what an outside person opens from a share link
 app.use('/api/notifications', require('./routes/notifications'));
 app.use('/pm', pm.router);
 // Future modules mount here, each behind requireAuth + requirePerm on its own panes:

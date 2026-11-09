@@ -158,6 +158,25 @@ function protectOpsEmail(next, cur, role) {
   }
 }
 
+
+// The ORIGINAL CONTRACT (money.contract + money.contractOriginal) is handed over from the Estimator and locked.
+// A PM save keeps the stored values; only the Owner/Builder can change them (archived like any money change, since it lives in money).
+// The PM's own tools stay open: change orders, addendums, additions, pay apps and % complete are separate lists on the same block.
+function protectContract(next, cur, role) {
+  if (role === 'builder' || role === 'owner') return;
+  const curById = new Map(((cur && cur.projects) || []).filter(x => x && x.id !== undefined).map(x => [String(x.id), x]));
+  if (!Array.isArray(next.projects)) return;
+  next.projects = next.projects.map(p => {
+    if (!isPlain(p)) return p;
+    const old = curById.get(String(p.id));
+    const oldMoney = old && isPlain(old.money) ? old.money : null;
+    const locked = !!(oldMoney && oldMoney.contract && oldMoney.contract.locked);
+    if (!locked) { if (isPlain(p.money) && p.money.contract !== undefined && !(oldMoney && oldMoney.contract)) { const m = Object.assign({}, p.money); delete m.contract; return Object.assign({}, p, { money: m }); } return p; }
+    const m = Object.assign({}, isPlain(p.money) ? p.money : {}, { contract: oldMoney.contract, contractOriginal: oldMoney.contractOriginal });
+    return Object.assign({}, p, { money: m });
+  });
+}
+
 async function writeArchive(pool, role, changes) {
   if (!changes.length) return 0;
   const now = Date.now();
@@ -173,4 +192,4 @@ async function writeArchive(pool, role, changes) {
   return rows.length;
 }
 
-module.exports = { diffMoney, moneyProblem, protectOpsEmail, writeArchive, flatten };
+module.exports = { diffMoney, moneyProblem, protectOpsEmail, protectContract, writeArchive, flatten };

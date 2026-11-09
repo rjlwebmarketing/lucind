@@ -6,6 +6,7 @@ const projects = require('../lib/projects');
 const archive = require('../lib/archive');
 const store = require('../lib/boardStore');
 const money = require('../lib/money');
+const codes = require('../../lib/codes');
 
 const MAX_REVISION_JUMP = 100; // a page can be a little ahead after failed saves, never wildly
 const SAVES_PER_MINUTE = 60;   // per role; generous for real editing, a ceiling for abuse
@@ -68,7 +69,7 @@ router.post('/', requireAuth(), express.json({ limit: '5mb' }), wrap(async (req,
     if (!rows.length) { // first-ever save
       const { next: first } = store.applyWritePolicy(structuredClone(parsed), {}, role);
       first.revision = 1;
-      const st0 = projects.stampBoard({}, first, Date.now());
+      const st0 = projects.stampBoard({}, first, Date.now(), { codeQueue: await codes.forNewProjects({}, first) });
       try {
         await pool.query('INSERT INTO board_data (id, data_json, revision) VALUES (1, ?, 1)', [JSON.stringify(first)]);
         try { await projects.writeEvents(pool, role, st0.events, Date.now()); } catch (e) { console.error('project log failed', e); }
@@ -94,7 +95,7 @@ router.post('/', requireAuth(), express.json({ limit: '5mb' }), wrap(async (req,
 
     const { next, ignoredKeys } = store.applyWritePolicy(structuredClone(parsed), cur, role);
     next.revision = curRev + 1; // the server owns the number; the page adopts the one we return
-    const stamped = projects.stampBoard(cur, next, Date.now()); // project IDs, change log rows, work history (server-owned)
+    const stamped = projects.stampBoard(cur, next, Date.now(), { codeQueue: await codes.forNewProjects(cur, next) }); // project IDs, change log rows, work history (server-owned)
     const m = store.measureRemovals(cur, next);
     const removed = store.totalRemoved(m);
 

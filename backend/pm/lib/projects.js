@@ -22,17 +22,26 @@ const clip = (v, n) => str(v).slice(0, n);
 const asList = v => Array.isArray(v) ? v : [];
 
 // Assigns codes, keeps existing ones fixed, cleans Store #. Mutates `next`. Returns { codes } for the page.
-function stampCodes(cur, next) {
+function stampCodes(cur, next, opts) {
   const curProjects = asList(cur && cur.projects);
   const curById = new Map(curProjects.map(p => [p && p.id, p]));
   let max = Number.isInteger(cur && cur.projectCounter) ? cur.projectCounter : 0;
   for (const p of curProjects) { const m = CODE_RE.exec((p && p.code) || ''); if (m) max = Math.max(max, parseInt(m[1], 10)); }
   const codes = {};
+  // Only the server passes these: a number set aside for a new project (presetCodes: a handed-off bid keeps its own; codeQueue: fresh ones
+  // from the shared counter). A page can never choose its own code.
+  const preset = (opts && opts.presetCodes) || {}, queue = (opts && Array.isArray(opts.codeQueue)) ? opts.codeQueue.slice() : [];
+  const used = new Set(curProjects.map(p => p && p.code).filter(Boolean));
   for (const p of asList(next.projects)) {
     if (!p || typeof p !== 'object') continue;
     const was = curById.get(p.id);
     if (was && CODE_RE.test(was.code || '')) p.code = was.code;
-    else { max += 1; p.code = codeFor(max); }
+    else {
+      let c = preset[p.id];
+      if (!(c && CODE_RE.test(c) && !used.has(c))) { c = queue.shift(); if (!(c && CODE_RE.test(c) && !used.has(c))) { max += 1; c = codeFor(max); } }
+      p.code = c; max = Math.max(max, parseInt(CODE_RE.exec(c)[1], 10));
+    }
+    used.add(p.code);
     if (was && was.closed) {   // a closed-out project is frozen: whatever a page sends for it is ignored (reopening comes later)
       Object.keys(p).forEach(k => { delete p[k]; });
       Object.assign(p, structuredClone(was));
@@ -128,8 +137,8 @@ async function writeEvents(pool, role, rows, atMs) {
 }
 
 // One call from the save route. Mutates `next`; returns what to log and what to tell the page.
-function stampBoard(cur, next, nowMs) {
-  const codes = stampCodes(cur || {}, next);
+function stampBoard(cur, next, nowMs, opts) {
+  const codes = stampCodes(cur || {}, next, opts);
   const events = diffProjects(cur || {}, next);
   const histories = stampHistory(cur || {}, next, new Date(nowMs).toISOString());
   return { events, stamps: { codes, histories } };

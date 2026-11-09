@@ -257,6 +257,23 @@
   .stat.clickable:hover{border-color:var(--accent);}
   .stat.stat-active{border-color:var(--accent); box-shadow:inset 0 0 0 1px var(--accent);}
 
+  .tk-bid{padding:9px 0;border-bottom:1px solid var(--line-soft)}.tk-bid:last-child{border-bottom:0}
+  .tk-bid .hd{display:flex;gap:8px;align-items:baseline;flex-wrap:wrap}.tk-bid .hd .project-title-link{font-weight:700;font-size:13.5px}
+  .tk-chip{font-size:11px;font-weight:700;padding:1px 8px;border-radius:9px;background:var(--panel-2);color:var(--text-dim);border:1px solid var(--line)}
+  .tk-chip.overdue{background:#fde8e6;color:#b3261e;border-color:#f3b8b3}.tk-chip.today{background:#fff1d6;color:#8a5a00;border-color:#f0d08a}.tk-chip.soon{background:#fff8dc;color:#7a5d00;border-color:#efe0a0}
+  .tk-step{display:flex;gap:8px;align-items:flex-start;padding:4px 0 0 2px;font-size:13px;color:var(--text);cursor:pointer;background:none;border:0;text-align:left;width:100%;font:inherit}
+  .tk-step:hover span{text-decoration:underline}.tk-step i{font-style:normal;color:var(--accent);font-weight:700}
+  .tk-todo{display:flex;gap:8px;align-items:center;padding:6px 0;border-bottom:1px solid var(--line-soft);font-size:13px}.tk-todo.done span.t{text-decoration:line-through;color:var(--text-faint)}
+  .tk-todo .t{flex:1;min-width:0;overflow-wrap:anywhere}.tk-add{display:grid;grid-template-columns:1fr 130px 128px auto;gap:6px;margin-bottom:8px}.tk-add input,.tk-add select{padding:6px 8px;border:1px solid var(--line);border-radius:8px;font:inherit;font-size:12.5px;background:var(--bg);min-width:0}
+  @media(max-width:700px){.tk-add{grid-template-columns:1fr 1fr}}
+  .an-tiles{display:grid;grid-template-columns:repeat(auto-fit,minmax(150px,1fr));gap:10px;margin-bottom:16px}.an-tile{border:1px solid var(--line);border-radius:10px;padding:10px 12px;background:var(--bg)}
+  .an-tile b{display:block;font-size:20px}.an-tile span{font-size:11.5px;color:var(--text-dim)}
+  .an-charts{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:16px}@media(max-width:1100px){.an-charts{grid-template-columns:1fr}}
+  .an-ch h4{font-size:12.5px;margin:0 0 4px;color:var(--text)}.an-ch svg{width:100%;height:auto;display:block;overflow:visible}.an-ch .ax{font-size:10px;fill:var(--text-dim)}
+  .an-ch .hit{fill:transparent;cursor:default}.an-ch .hit:hover,.an-ch .hit:focus{fill:rgba(1,60,174,.07);outline:none}
+  #anTip{position:fixed;z-index:99999;pointer-events:none;background:#1f2933;color:#fff;font-size:12px;padding:6px 9px;border-radius:7px;box-shadow:0 4px 14px rgba(0,0,0,.3);display:none;white-space:nowrap}
+  .an-ctl{display:flex;gap:8px;align-items:center;flex-wrap:wrap}.an-ctl select{padding:4px 8px;border:1px solid var(--line);border-radius:8px;font:inherit;font-size:12.5px;background:var(--bg)}
+  .an-tbl{width:100%;border-collapse:collapse;font-size:12.5px;margin-top:10px}.an-tbl th,.an-tbl td{padding:5px 8px;border-bottom:1px solid var(--line-soft);text-align:right}.an-tbl th:first-child,.an-tbl td:first-child{text-align:left}
   .dash-two-col{display:grid; grid-template-columns:1fr 1fr; gap:20px; margin-bottom:20px;}
   .dash-two-col.dispatch-third{grid-template-columns:1fr 2fr;}
   .dash-tasks-row{display:grid; grid-template-columns:1.3fr 1fr; gap:20px; margin-bottom:20px; align-items:start;}
@@ -829,6 +846,96 @@
 #voiceOverlay.listening .v-dot{ background:#4cd964; animation:vpulse 1s infinite; }
 @keyframes vpulse{ 50%{ transform:scale(1.6); opacity:.5; } }
 .dispatch-eq > .panel{ margin-bottom:0; height:100%; box-sizing:border-box; }
+
+  /* bid page */
+  .bp-top{display:flex;align-items:center;gap:14px;margin-bottom:14px;flex-wrap:wrap}
+  .bp-title{display:flex;align-items:center;gap:12px;flex-wrap:wrap}.bp-title h2{margin:0;font-size:22px}
+  .bp-amt{font-weight:800;font-size:18px;color:var(--brand-blue,#013CAE)}.bp-sub{font-size:12px;color:var(--text-dim,#777);font-weight:500}
+  .bp-bar{position:sticky;top:0;z-index:20;display:flex;align-items:center;gap:12px;background:var(--brand-light-black,#2D2D2D);color:#fff;padding:9px 14px;border-radius:10px;margin-bottom:14px;font-size:13px}
+  .bp-grid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:16px;align-items:start}
+  .bp-card{background:var(--panel,#fff);border:1px solid var(--line,#dde);border-radius:12px;min-width:0}
+  .bp-card.bp-media{border:2px solid var(--brand-blue,#013CAE)}
+  .bp-card.bp-history{grid-column:1 / -1}
+  .bp-sec{font-size:11px;letter-spacing:.08em;text-transform:uppercase;color:var(--text-faint,#888);font-weight:700;margin:16px 0 8px;padding-bottom:4px;border-bottom:1px solid var(--line,#eee)}.bp-sec:first-child{margin-top:0}
+  .bp-head{display:flex;align-items:center;gap:10px;padding:11px 14px;border-bottom:1px solid var(--line,#eee)}.bp-head h3{margin:0;font-size:15px}
+  .bp-media .bp-head h3{font-size:17px}.bp-body{padding:14px}.bp-media .bp-body{padding:4px 10px 10px}.bp-media .mp{border:0;margin:0}
+  .bp-grip{cursor:grab;color:var(--text-faint,#999);font-size:18px;line-height:1;user-select:none;padding:0 2px}.bp-grip:active{cursor:grabbing}
+  .bp-card.dragging{opacity:.45}.bp-card.over{outline:3px dashed var(--brand-blue,#013CAE);outline-offset:2px}
+  .field .static{padding:9px 0;font-size:14px}
+  @media(max-width:900px){.bp-grid{grid-template-columns:minmax(0,1fr)}}
+
+  .bp-tabs{display:flex;gap:6px;margin:0 0 14px;border-bottom:1px solid var(--line,#dde)}.bp-tabs button{border:0;background:none;padding:9px 16px;font-weight:700;font-size:14px;color:var(--text-dim,#777);cursor:pointer;border-bottom:3px solid transparent;margin-bottom:-1px}.bp-tabs button.on{color:var(--brand-blue,#013CAE);border-bottom-color:var(--brand-blue,#013CAE)}
+  .es-wrap{display:grid;grid-template-columns:minmax(0,1fr) 280px;gap:18px;align-items:start}.es-sheet{background:#fff;border:1px solid var(--line,#dde);border-radius:12px;padding:26px 30px;box-shadow:0 1px 4px rgba(0,0,0,.05)}
+  .es-doc-h{display:flex;justify-content:space-between;align-items:center;margin-bottom:14px}.es-brand{display:flex;align-items:center;gap:10px;letter-spacing:.14em;font-size:15px}.es-brand img{height:40px}.es-word{color:#aaa;font-size:20px;letter-spacing:.06em}
+  .es-two{display:flex;justify-content:space-between;gap:20px;font-size:13px;line-height:1.55}.es-in{display:block;width:340px;max-width:100%;margin:2px 0 0 auto;text-align:right;border:1px solid transparent;border-radius:6px;padding:3px 6px;font:inherit;background:transparent;resize:none}.es-in:hover,.es-in:focus{border-color:var(--line,#ccc);background:#fff}
+  .es-kv{display:grid;grid-template-columns:auto 130px;gap:4px 12px;align-items:center;font-size:13px}.es-kv input,.es-kv2 input{border:1px solid transparent;border-radius:6px;padding:3px 6px;font:inherit;text-align:right;background:transparent}.es-kv input:hover,.es-kv input:focus{border-color:var(--line,#ccc);background:#fff}
+  .es-desc{margin:18px 0 0;padding:8px 6px;border-bottom:2px solid #222;font-weight:700;font-size:13px}
+  .es-line{margin:14px 0;border:1px solid var(--line,#e3e3e3);border-radius:8px;background:#fff}.es-line.needs{border-left:4px solid #FFDC4B}.es-line.over{outline:3px dashed var(--brand-blue,#013CAE);outline-offset:2px}.es-line.over-row{outline:2px dashed var(--brand-turquoise,#55ABAB);outline-offset:1px}.es-line.dragging,.es-row.dragging{opacity:.4}
+  .es-lh{display:flex;align-items:flex-start;gap:8px;background:#EDEDED;border-radius:8px 8px 0 0;padding:10px 12px}.es-title{flex:1;border:1px solid transparent;background:transparent;font-weight:700;font-size:14px;line-height:1.35;font-family:inherit;resize:none;border-radius:6px;padding:2px 6px;text-transform:none}.es-title:hover,.es-title:focus{border-color:var(--line,#ccc);background:#fff}
+  .es-price{display:inline-flex;align-items:center;gap:2px;font-weight:700}.es-price input{width:120px;text-align:right;border:1px solid transparent;border-radius:6px;padding:3px 6px;font-weight:700;font-size:14px;font-family:inherit;background:transparent}.es-price input:hover,.es-price input:focus{border-color:var(--line,#ccc);background:#fff}
+  .es-meta{display:flex;gap:6px;flex-wrap:wrap;align-items:center;padding:6px 12px 0;font-size:11px}.es-chip{padding:1px 8px;border-radius:9px;font-weight:700;font-size:10.5px}.es-chip.ai{background:#FFDC4B66;color:#5c4700}.es-chip.alt{background:#013CAE;color:#fff}.es-chip.flag{background:#fbe3e0;color:#b3261e}
+  .es-rev{margin-left:auto;display:flex;gap:5px;align-items:center;font-weight:600;font-size:12px;cursor:pointer}.es-x{border:0;background:none;color:var(--text-faint,#999);cursor:pointer;font-size:16px;line-height:1;padding:2px 6px}.es-x.txt{font-size:11.5px;margin-left:4px;text-decoration:underline}.es-x:hover{color:#b3261e}
+  .es-rows{padding:6px 12px 4px}.es-row{display:flex;align-items:flex-start;gap:6px;padding:2px 0}.es-row textarea{flex:1;border:1px solid transparent;background:transparent;font-size:13px;line-height:1.45;font-family:inherit;resize:none;border-radius:6px;padding:2px 6px;color:#222}.es-row.head textarea{font-size:15px;font-weight:500}.es-row textarea:hover,.es-row textarea:focus{border-color:var(--line,#ccc);background:#fff}
+  .es-grip{cursor:grab;color:#aaa;font-size:16px;line-height:1.6;user-select:none}.es-grip:active{cursor:grabbing}.es-add{padding:0 12px 10px;display:flex;gap:10px}.es-add button{border:0;background:none;color:var(--brand-blue,#013CAE);font-size:12px;font-weight:600;cursor:pointer;padding:2px 0}
+  .nb-opts{display:grid;grid-template-columns:1fr 1fr;gap:12px;padding:16px}.nb-opt{border:2px solid var(--line);border-radius:12px;padding:18px 14px;text-align:center;cursor:pointer;background:var(--surface,#fff);color:var(--text);font:inherit}
+  .nb-opt:hover,.nb-opt:focus-visible{border-color:var(--accent,#013CAE)}.nb-opt b{display:block;font-size:15px;margin:6px 0 4px}.nb-opt span{font-size:12.5px;color:var(--text-dim)}.nb-opt .ic{font-size:26px}
+  .nb-dz{border-style:dashed;border-width:2px}.nb-dz.over{border-color:var(--accent,#013CAE);background:#013CAE12}.nb-sub{margin-top:10px;font-size:12px}.nb-msg{margin-top:8px;min-height:15px;font-size:12px}
+  .nb-drop{margin:0 16px 16px;padding:26px 14px;border:2px dashed var(--line);border-radius:12px;text-align:center;font-size:13px;color:var(--text-dim)}.nb-drop.over{border-color:var(--accent,#013CAE);background:#013CAE10}
+  @media(max-width:560px){.nb-opts{grid-template-columns:1fr}}
+  .ho-card{background:var(--surface,#fff);border:1px solid var(--line);border-left:4px solid var(--accent);border-radius:12px;padding:14px 16px;margin-bottom:14px;display:flex;gap:18px;align-items:center;flex-wrap:wrap}
+  .ho-card.done{border-left-color:#1E8449}.ho-card h4{font-size:14px;margin:0 0 4px}.ho-card .ho-txt{flex:1;min-width:240px;font-size:13px;color:var(--text-dim)}
+  .ho-nums{display:flex;gap:18px;flex-wrap:wrap;font-size:12px;color:var(--text-dim)}.ho-nums b{display:block;font-size:15px;color:var(--text)}
+  .ho-warn{color:#8A5A00;font-size:12.5px;margin-top:6px}
+  .cat-top{display:flex;gap:10px;align-items:center;flex-wrap:wrap;margin-bottom:14px}.cat-top input[type=search]{flex:1;min-width:180px}
+  .cat-grp{font-size:11px;letter-spacing:.08em;text-transform:uppercase;color:var(--text-dim);margin:18px 0 6px}
+  .cat-row{display:grid;grid-template-columns:minmax(160px,2fr) 110px 70px 90px 70px auto;gap:10px;align-items:center;padding:9px 12px;border:1px solid var(--line);border-radius:10px;margin-bottom:6px;background:var(--surface,#fff);font-size:13px}
+  .cat-row.off{opacity:.55}.cat-row small{display:block;color:var(--text-dim);font-size:11.5px}.cat-row .act{display:flex;gap:6px;justify-content:flex-end}
+  .cat-form{background:transparent;border:1px solid var(--line);border-radius:12px;padding:16px;margin-bottom:16px}
+  .cat-form .grid3{display:grid;grid-template-columns:repeat(3,1fr);gap:10px}
+  .cat-grid{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:12px}
+  .cat-card{display:flex;flex-direction:column;gap:6px;padding:14px;border:1px solid var(--line);border-radius:12px;background:var(--surface,#fff);font-size:13px;min-width:0}
+  .cat-card{padding:0;overflow:hidden}.cat-card>*:not(.cc-img){margin-left:14px;margin-right:14px}.cat-card>.cc-top{margin-top:2px}.cat-card>.act{margin-bottom:12px}.cat-card>.cc-m{margin-bottom:2px}
+  .cc-img{position:relative;aspect-ratio:4/3;background:linear-gradient(135deg,#f3f6f6,#e2eaea);display:flex;align-items:center;justify-content:center;color:#8aa0a1;overflow:hidden;margin:0}
+  .cc-img svg{width:44%;height:auto;max-height:70%}.cc-img img{position:absolute;inset:0;width:100%;height:100%;object-fit:cover}
+  .cat-card.off .cc-img{filter:grayscale(1)}
+  .cat-pic{border:2px dashed var(--line);border-radius:12px;background:var(--bg);margin-bottom:14px;overflow:hidden}.cat-pic.over{border-color:var(--accent);background:#e8eefc}
+  .cat-pic .big{position:relative;height:260px;display:flex;align-items:center;justify-content:center;color:#8aa0a1;background:linear-gradient(135deg,#f3f6f6,#e2eaea)}
+  .cat-pic .big img{position:absolute;inset:0;width:100%;height:100%;object-fit:contain}.cat-pic .big svg{width:120px;height:120px}
+  .cat-pic .bar{display:flex;gap:8px;align-items:center;flex-wrap:wrap;padding:10px 12px;background:var(--panel-2);border-top:1px solid var(--line);font-size:12.5px;color:var(--text-dim)}
+  .cat-icons{display:flex;gap:6px;flex-wrap:wrap;margin-left:auto}.cat-icons button{width:34px;height:34px;border:1px solid var(--line);border-radius:8px;background:var(--bg);color:#6b8384;display:flex;align-items:center;justify-content:center;padding:0;cursor:pointer}
+  .cat-icons button svg{width:20px;height:20px}.cat-icons button.on{border-color:var(--accent);color:var(--accent);background:#e8eefc}
+  #modalBody .cat-form{background:transparent}
+  .cat-card.click{cursor:pointer;transition:border-color .12s,box-shadow .12s}.cat-card.click:hover,.cat-card.click:focus-visible{border-color:var(--accent,#013CAE);box-shadow:0 2px 10px rgba(1,60,174,.12);outline:none}
+  .cat-crow{display:grid;grid-template-columns:1fr 70px auto auto;gap:8px;align-items:center;margin-bottom:6px}.cat-crow input{padding:6px 10px;border:1px solid var(--border,#d6d9de);border-radius:8px;font:inherit;font-size:13px;min-width:0}.cat-crow .cnt{font-size:12px;color:var(--text-dim)}
+  .cat-card.off{opacity:.55}.cat-card .cc-top{display:flex;justify-content:space-between;gap:8px;align-items:flex-start}
+  .cat-card .cc-cat{font-size:10.5px;letter-spacing:.06em;text-transform:uppercase;color:var(--text-dim)}
+  .cat-card b{font-size:14px;line-height:1.25;overflow-wrap:anywhere}.cat-card .cc-no{font-family:ui-monospace,Menlo,Consolas,monospace;font-size:11.5px;color:var(--text-faint,#8a93a6)}
+  .cat-card .cc-d{color:var(--text-dim);font-size:12px;line-height:1.35;display:-webkit-box;-webkit-line-clamp:3;-webkit-box-orient:vertical;overflow:hidden;min-height:48px}
+  .cat-card .cc-p{font-size:17px;font-weight:700;margin-top:auto;padding-top:4px}.cat-card .cc-p small{font-size:12px;font-weight:400;color:var(--text-dim)}
+  .cat-card .cc-m{display:flex;gap:6px;flex-wrap:wrap;font-size:11.5px;color:var(--text-dim)}
+  .cat-card .act{display:flex;gap:6px;border-top:1px solid var(--line);padding-top:8px;margin-top:4px}
+  @media(max-width:1250px){.cat-grid{grid-template-columns:repeat(3,minmax(0,1fr))}}@media(max-width:900px){.cat-grid{grid-template-columns:repeat(2,minmax(0,1fr))}}@media(max-width:560px){.cat-grid{grid-template-columns:1fr}}
+  @media(max-width:760px){.cat-row{grid-template-columns:1fr 1fr}.cat-form .grid3{grid-template-columns:1fr 1fr}}
+  .pk-back{position:fixed;inset:0;background:rgba(0,0,0,.45);z-index:200;display:flex;align-items:flex-start;justify-content:center;padding:6vh 12px}
+  .pk{background:var(--surface,#fff);color:var(--text);border-radius:14px;width:min(640px,100%);max-height:84vh;display:flex;flex-direction:column;overflow:hidden}
+  .pk-h{padding:14px 16px;border-bottom:1px solid var(--line);display:flex;gap:10px;align-items:center}.pk-h input{flex:1}
+  .pk-list{overflow:auto;padding:8px 12px;flex:1}.pk-it{display:flex;gap:10px;align-items:center;padding:8px 6px;border-bottom:1px solid var(--line);font-size:13px}
+  .pk-it .nm{flex:1}.pk-it small{display:block;color:var(--text-dim);font-size:11.5px}.pk-it input{width:64px}
+  .pk-f{padding:10px 16px;border-top:1px solid var(--line);display:flex;gap:10px;align-items:center;font-size:12.5px;color:var(--text-dim)}
+  .es-sc{font-size:11px;padding:2px 6px;border:1px solid var(--line);border-radius:8px;background:var(--surface,#fff);color:var(--text);font-family:inherit}.es-totals.es-multi .es-sc-h{font-weight:700;border-top:2px solid var(--line);margin-top:6px}.es-totals.es-multi .es-sc-h:first-child{border-top:0;margin-top:0}
+  .es-opt{display:flex;gap:10px;align-items:flex-start;padding:8px 10px;border:1px solid var(--line);border-radius:10px;margin-bottom:6px;cursor:pointer;font-size:13px}.es-opt small{display:block;color:var(--text-dim);font-size:12px}.es-pc{display:flex;gap:10px;align-items:center;flex-wrap:wrap;padding:10px 0;border-top:1px solid var(--line);font-size:13px}.es-pc small{display:block;color:var(--text-dim);font-size:12px;margin-top:2px}.es-sent{font-size:12.5px;padding:6px 0;border-top:1px solid var(--line)}.es-sent:first-of-type{border-top:0}
+  .es-bigbtn{width:100%;padding:14px 16px;font-size:15px;font-weight:700;border-radius:10px;cursor:pointer}.es-bluebtn{background:#013CAE;color:#fff;border:0}.es-bluebtn:hover{filter:brightness(1.12)}.es-submit{padding:0;border:0;background:none}.es-submit .es-sub-note{font-size:12px;color:var(--text-dim);margin-top:6px;display:block}.es-submit.done{background:#E8F3EC;border:1px solid #bfe0cb;border-radius:12px;padding:12px 14px}.es-sub-state{font-weight:700;color:#1E6B3A}
+  .bp-code{font-family:ui-monospace,Menlo,Consolas,monospace;font-size:11.5px;color:var(--text-faint,#8a93a6);font-weight:400;margin-left:6px;letter-spacing:.02em}
+  .es-addline{margin:6px 0 14px}.es-totals{margin:18px 0 0 auto;width:min(380px,100%);font-size:14px}.es-totals>div{display:flex;justify-content:space-between;align-items:center;padding:8px 0;border-bottom:1px solid #999}.es-totals .tot{border-bottom:0;font-size:15px}
+  .es-notes{margin-top:22px;border-top:1px solid #bbb;padding-top:12px;font-size:13px}.es-notes textarea{width:100%;margin-top:6px;border:1px solid transparent;font-size:13px;line-height:1.55;font-family:inherit;background:transparent;resize:none;border-radius:6px;padding:4px 6px}.es-notes textarea:hover,.es-notes textarea:focus{border-color:var(--line,#ccc);background:#fff}.es-terms{margin-top:18px;font-size:11.5px;color:#888}
+  .es-side{position:sticky;top:12px;display:flex;flex-direction:column;gap:14px}.es-card{background:#fff;border:1px solid var(--line,#dde);border-radius:12px;padding:14px}.es-card h4{margin:0 0 8px;font-size:13px}.es-big{display:flex;align-items:baseline;gap:8px;margin-bottom:6px}.es-big span{font-size:34px;font-weight:800;color:#8a6a00}.es-big small{font-size:12px;color:var(--text-dim,#777)}.es-hint{font-size:12px;color:var(--text-dim,#777);line-height:1.45;margin-bottom:10px}.es-kv2{display:grid;grid-template-columns:1fr auto;gap:4px 10px;font-size:13px;margin-bottom:10px}
+  @media(max-width:1000px){.es-wrap{grid-template-columns:minmax(0,1fr)}.es-side{position:static}}
+.nb-rec{padding:14px 16px 10px;text-align:center}.nb-rec-t{font-size:12px;font-weight:700;letter-spacing:.02em;color:var(--text);margin-bottom:8px}
+.nb-rec-r{display:flex;justify-content:space-between;gap:4px}.nb-rec-i{flex:1;min-width:0;display:flex;flex-direction:column;align-items:center;gap:4px}
+.nb-rec-c{width:42px;height:42px;border-radius:50%;display:flex;align-items:center;justify-content:center;background:var(--accent-bg,rgba(37,99,235,.1));color:var(--accent,#2563eb);border:1px solid var(--border,#d6d9de)}
+.nb-rec-i.main .nb-rec-c{border:2px solid var(--accent,#2563eb)}.nb-rec-i.main .nb-rec-n{font-weight:700;color:var(--text)}
+.nb-rec-n{font-size:10.5px;line-height:1.2;color:var(--text-dim)}.nb-st{margin-top:8px;font-size:12px;color:var(--text-dim)}
+@media(max-width:480px){.nb-rec-n{font-size:9.5px}.nb-rec-c{width:36px;height:36px}}
 </style>
 <style>
   .quota-bar{height:8px;border-radius:5px;background:var(--line);overflow:hidden;margin:8px 0 4px}.quota-bar>i{display:block;height:100%;background:var(--accent);border-radius:5px}
@@ -870,13 +977,14 @@
 <div class="modal-back" id="modalBack"><div class="modal" id="modalBody"></div></div>
 <script src="/config.js"></script>
 <script src="/app/media.js"></script>
+<script src="/app/estimate-print.js"></script>
 <script>
 const $ = s => document.querySelector(s);
 const esc = s => String(s == null ? '' : s).replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
 const V = (new URLSearchParams(location.search)).get('v') || '0';   // build number passed by the main page, so updated files are never served from cache
 const MAPS_KEY = 'AIzaSyDPrYv0sBUSzIj7QEehLw5rG2un1vJPUks';
 let TOKEN = null; try{ TOKEN = sessionStorage.getItem('go_token') || localStorage.getItem('go_token'); }catch(e){}
-let ME = null, PERMS = {}, BIDS = [], STATUSES = [], QUOTA = null, JOBS = null, CREW = null, VIEW = 'dashboard', FILTER = 'open', CAL = new Date(), MAPSHOW = { bids: true, won: true, lost: false, jobs: true };
+let ME = null, PERMS = {}, BIDS = [], STATUSES = [], QUOTA = null, JOBS = null, CREW = null, VIEW = 'dashboard', FILTER = 'open', SEARCH = '', CAL = new Date(), MAPSHOW = { bids: true, won: true, lost: false, jobs: true };
 const canWrite = () => PERMS['estimator.estimates'] === 'write';
 const has = k => PERMS[k] && PERMS[k] !== 'none';
 async function api(method, path, body){
@@ -911,9 +1019,11 @@ async function refresh(first){
     BIDS = b.bids; STATUSES = b.statuses; QUOTA = q;
   }catch(e){ $('#main').innerHTML = '<div class="empty">Could not load: ' + esc(e.message) + '</div>'; return; }
   render();
+  if(first) setTimeout(dueReminders, 700);
 }
-const NAV = () => [['dashboard', 'Dashboard'], ['bids', 'Bids'], has('pm.people') ? ['crew', 'Crew & Subs'] : null, ['map', 'Map'], ['calendar', 'Calendar']].filter(Boolean);
-const ICON = { dashboard: '<rect x="3" y="3" width="7" height="7"/><rect x="14" y="3" width="7" height="7"/><rect x="14" y="14" width="7" height="7"/><rect x="3" y="14" width="7" height="7"/>', bids: '<path d="M16 4h2a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2H6a2 2 0 0 1-2-2V6a2 2 0 0 1 2-2h2"/><rect x="8" y="2" width="8" height="4" rx="1"/><path d="M9 12h6M9 16h6"/>', crew: '<path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 0 0-3-3.87M16 3.13a4 4 0 0 1 0 7.75"/>', map: '<path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0 1 18 0z"/><circle cx="12" cy="10" r="3"/>', calendar: '<rect x="3" y="4" width="18" height="18" rx="2"/><path d="M16 2v4M8 2v4M3 10h18"/>' };
+setInterval(() => { if(!document.hidden) dueReminders(); }, 30 * 60 * 1000);
+const NAV = () => [['dashboard', 'Dashboard'], ['bids', 'Bids'], has('pm.people') ? ['crew', 'Crew & Subs'] : null, ['map', 'Map'], ['calendar', 'Calendar'], has('estimator.pricebook') ? ['catalog', 'Catalog'] : null].filter(Boolean);
+const ICON = { catalog: '<path d="M4 4h16v4H4z"/><path d="M4 12h16v4H4z"/><path d="M4 20h16"/>', dashboard: '<rect x="3" y="3" width="7" height="7"/><rect x="14" y="3" width="7" height="7"/><rect x="14" y="14" width="7" height="7"/><rect x="3" y="14" width="7" height="7"/>', bids: '<path d="M16 4h2a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2H6a2 2 0 0 1-2-2V6a2 2 0 0 1 2-2h2"/><rect x="8" y="2" width="8" height="4" rx="1"/><path d="M9 12h6M9 16h6"/>', crew: '<path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 0 0-3-3.87M16 3.13a4 4 0 0 1 0 7.75"/>', map: '<path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0 1 18 0z"/><circle cx="12" cy="10" r="3"/>', calendar: '<rect x="3" y="4" width="18" height="18" rx="2"/><path d="M16 2v4M8 2v4M3 10h18"/>' };
 function quotaWidget(){
   // Same box as Logistics Health in the PM: big figure, label under it, small grey line under that. Not clickable.
   const q = QUOTA, w = $('#quotaWidget'), mine = !!(ME && (ME.role === 'builder' || (ME.roles || [ME.role]).includes('estimator')));   // quotas are personal: only estimators carry one
@@ -923,14 +1033,121 @@ function quotaWidget(){
 }
 function render(){
   $('#navList').innerHTML = NAV().map(([id, l]) => `<button data-view="${id}" class="${VIEW === id ? 'active' : ''}"><svg class="icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">${ICON[id]}</svg><span class="lbl">${l}</span></button>`).join('');
-  $('#navList').querySelectorAll('button').forEach(b => b.onclick = () => { VIEW = b.dataset.view; closeNav(); render(); });
+  $('#navList').querySelectorAll('button').forEach(b => b.onclick = () => { VIEW = b.dataset.view; OPEN_BID = null; closeNav(); render(); });
   $('#mobileTopBarTitle').textContent = (NAV().find(n => n[0] === VIEW) || [0, ''])[1];
   quotaWidget();
   try{ const nm = (NAV().find(n => n[0] === VIEW) || [0, 'Estimator'])[1]; document.title = nm + ' | Lucas Industrial'; if(window.parent !== window) window.parent.postMessage({ type: 'title', page: 'Estimator · ' + nm }, location.origin); }catch(e){}
   const m = $('#main'); m.classList.toggle('flush', VIEW === 'map'); m.style.padding = '';
-  ({ dashboard, bids, crew, map, calendar })[VIEW](m);
+  if(OPEN_BID && VIEW === 'bids') return bidPage(m);
+  ({ dashboard, bids, crew, map, calendar, catalog })[VIEW](m);
 }
 
+// ---------- toasts: a reminder when a bid is due soon ----------
+function showToast(o){
+  let st = document.getElementById('toastStack'); if(!st){ st = document.createElement('div'); st.id = 'toastStack'; st.setAttribute('aria-live', 'polite'); document.body.appendChild(st); }
+  const el = document.createElement('div'); el.className = 'toast'; el.setAttribute('role', 'status'); el.title = 'Click to dismiss';
+  const kill = () => { el.classList.add('leaving'); setTimeout(() => el.remove(), 180); };
+  const msg = document.createElement('span'); msg.style.flex = '1'; msg.textContent = o.text; el.appendChild(msg);
+  if(o.onGo){ const go = document.createElement('button'); go.type = 'button'; go.className = 'toast-go'; go.textContent = (o.goLabel || 'Go') + ' →'; go.onclick = e => { e.stopPropagation(); kill(); o.onGo(); }; el.appendChild(go); }
+  el.onclick = kill; st.appendChild(el); while(st.children.length > 4) st.firstChild.remove();
+  if(!o.sticky) setTimeout(kill, 12000);
+}
+const dayDiff = (iso1, iso2) => Math.round((new Date(iso1 + 'T12:00:00') - new Date(iso2 + 'T12:00:00')) / 86400000);
+// Draft bids (not yet submitted) that are due within 3 days, due today, or past due. Each bid + stage + day is shown once per browser.
+function dueReminders(){
+  if(!ME || !BIDS.length) return;
+  const today = iso(new Date()); let seen = {}; try{ seen = JSON.parse(localStorage.getItem('esDueToasts') || '{}'); }catch(e){}
+  Object.keys(seen).forEach(k => { if(!k.endsWith(today)) delete seen[k]; });
+  const list = BIDS.filter(b => b.status === 'Draft' && b.bidDue && (b.ownerId == null || b.ownerId === ME.id)).map(b => ({ b, d: dayDiff(b.bidDue, today) })).filter(x => x.d <= 3).sort((a, c) => a.d - c.d);
+  const fresh = list.filter(x => !seen[x.b.id + ':' + (x.d < 0 ? 'over' : x.d) + ':' + today]);
+  fresh.slice(0, 3).forEach(x => {
+    const when = x.d < 0 ? 'was due ' + (-x.d) + ' day' + (x.d === -1 ? '' : 's') + ' ago and is still a Draft' : x.d === 0 ? 'is due TODAY' : x.d === 1 ? 'is due tomorrow' : 'is due in ' + x.d + ' days';
+    showToast({ text: x.b.name + ' ' + when + '.', goLabel: 'Open', sticky: x.d <= 1, onGo: () => { openBid(x.b.id); } });
+  });
+  if(fresh.length > 3) showToast({ text: (fresh.length - 3) + ' more bid' + (fresh.length - 3 === 1 ? ' is' : 's are') + ' due soon or late.', goLabel: 'Tasks', sticky: true, onGo: () => { VIEW = 'dashboard'; OPEN_BID = null; render(); } });
+  fresh.forEach(x => { seen[x.b.id + ':' + (x.d < 0 ? 'over' : x.d) + ':' + today] = 1; });
+  try{ localStorage.setItem('esDueToasts', JSON.stringify(seen)); }catch(e){}
+}
+// ---------- dashboard: tasks ----------
+let TASKS_ALL = false, TASKS_SHOW_ALL = false;
+const fdShort = v => { const m = /^(\d{4})-(\d\d)-(\d\d)/.exec(v || ''); return m ? new Date(+m[1], +m[2] - 1, +m[3]).toLocaleDateString('en-US', { month: 'short', day: 'numeric' }) : ''; };
+const dueChip = (due, urg) => { if(!due) return ''; const d = dayDiff(due, iso(new Date())); const t = d < 0 ? 'Due ' + fdShort(due) + ' · ' + (-d) + 'd late' : d === 0 ? 'Due today' : d === 1 ? 'Due tomorrow' : 'Due ' + fdShort(due); return `<span class="tk-chip ${urg || ''}">${esc(t)}</span>`; };
+const openBidAt = (id, tab) => { openBid(id); BID_TAB = tab || 'estimate'; render(); };
+async function tasksPanel(){
+  const box = $('#taskBox'); if(!box) return;
+  let r; try{ r = await api('GET', '/tasks' + (TASKS_ALL ? '?all=1' : '')); }catch(e){ box.innerHTML = '<div class="hint" style="color:var(--text-dim)">Could not load tasks (' + esc(e.message) + ').</div>'; return; }
+  if(!$('#taskBox')) return;
+  const groups = []; r.auto.forEach(t => { let g = groups.find(x => x.bidId === t.bidId); if(!g){ g = { bidId: t.bidId, name: t.bidName, code: t.code, due: t.due, urgency: t.urgency, tasks: [] }; groups.push(g); } g.tasks.push(t); });
+  const shown = TASKS_SHOW_ALL ? groups : groups.slice(0, 5), openBids = BIDS.filter(b => b.status === 'Draft' || b.status === 'Bidding' || b.status === 'Won');
+  box.innerHTML = `<div style="font-size:11px;letter-spacing:.08em;text-transform:uppercase;color:var(--text-dim);margin-bottom:4px">Pick up where you left off</div>
+    ${shown.length ? shown.map(g => `<div class="tk-bid"><div class="hd"><button class="project-title-link" data-tb="${g.bidId}" data-tab="${g.tasks[0].tab}" type="button">${esc(g.name)}</button>${g.code ? `<span class="bp-code" style="margin:0">${esc(g.code)}</span>` : ''}${g.tasks[0].due && g.tasks[0].key !== 'followup' && g.tasks[0].key !== 'startsoon' ? dueChip(g.due, g.urgency) : ''}</div>
+      ${g.tasks.map(t => `<button class="tk-step" type="button" data-tb="${t.bidId}" data-tab="${t.tab}"><i>→</i><span>${esc(t.text)}</span></button>`).join('')}</div>`).join('') : '<div class="hint" style="color:var(--text-dim);font-size:13px;padding:6px 0">Nothing is waiting on you right now.</div>'}
+    ${groups.length > 5 ? `<button class="btn small ghost" id="tkMore" type="button" style="margin-top:6px">${TASKS_SHOW_ALL ? 'Show fewer' : 'Show all ' + groups.length + ' bids'}</button>` : ''}
+    <div style="font-size:11px;letter-spacing:.08em;text-transform:uppercase;color:var(--text-dim);margin:16px 0 6px">My To-Dos</div>
+    ${canWrite() ? `<div class="tk-add"><input id="tkText" placeholder="Add a to-do (e.g. get the roof drawings from the GC)" maxlength="300" aria-label="New to-do"><select id="tkBid" aria-label="Related bid"><option value="">No bid</option>${openBids.map(b => `<option value="${b.id}">${esc(b.name.slice(0, 40))}</option>`).join('')}</select><input id="tkDue" type="date" aria-label="Due date"><button class="btn primary small" id="tkAdd" type="button">Add</button></div>` : ''}
+    ${r.mine.length ? r.mine.map(t => `<div class="tk-todo ${t.done ? 'done' : ''}">${canWrite() ? `<input type="checkbox" data-td="${t.id}" ${t.done ? 'checked' : ''} aria-label="Done">` : ''}<span class="t">${esc(t.text)}${t.bidId ? ` <button class="project-title-link" data-tb="${t.bidId}" data-tab="estimate" type="button" style="font-size:12px">${esc(t.code || t.bidName)}</button>` : ''}</span>${t.due ? dueChip(t.due, t.done ? '' : (dayDiff(t.due, iso(new Date())) < 0 ? 'overdue' : dayDiff(t.due, iso(new Date())) === 0 ? 'today' : '')) : ''}${canWrite() ? `<button class="es-x" data-tr="${t.id}" type="button" title="Remove this to-do" style="background:none;border:0;cursor:pointer;color:var(--text-faint);font-size:16px">×</button>` : ''}</div>`).join('') : '<div class="hint" style="color:var(--text-dim);font-size:13px">No to-dos yet. Add one while you wait on a document or an answer.</div>'}`;
+  const hd = $('#taskHead'); if(hd) hd.innerHTML = r.canAll ? `<div class="an-ctl"><select id="tkScope" aria-label="Whose tasks"><option value="0" ${r.all ? '' : 'selected'}>My bids</option><option value="1" ${r.all ? 'selected' : ''}>Everyone's bids</option></select></div>` : '';
+  const sc = $('#tkScope'); if(sc) sc.onchange = () => { TASKS_ALL = sc.value === '1'; tasksPanel(); };
+  box.querySelectorAll('[data-tb]').forEach(b => b.onclick = () => openBidAt(Number(b.dataset.tb), b.dataset.tab));
+  const mo = $('#tkMore'); if(mo) mo.onclick = () => { TASKS_SHOW_ALL = !TASKS_SHOW_ALL; tasksPanel(); };
+  const add = async () => { const t = $('#tkText').value.trim(); if(!t) return; try{ await api('POST', '/tasks', { text: t, bidId: $('#tkBid').value || null, due: $('#tkDue').value || '' }); tasksPanel(); }catch(e){ alert('Could not add it (' + e.message + ').'); } };
+  const ab = $('#tkAdd'); if(ab){ ab.onclick = add; $('#tkText').onkeydown = e => { if(e.key === 'Enter') add(); }; }
+  box.querySelectorAll('[data-td]').forEach(c => c.onchange = async () => { try{ await api('PATCH', '/tasks/' + c.dataset.td, { done: c.checked }); tasksPanel(); }catch(e){ alert(e.message); } });
+  box.querySelectorAll('[data-tr]').forEach(b => b.onclick = async () => { try{ await api('DELETE', '/tasks/' + b.dataset.tr); tasksPanel(); }catch(e){ alert(e.message); } });
+}
+// ---------- dashboard: analytics (bid totals, conversion, awards by month) ----------
+let AN_MONTHS = 12, AN_ALL = false, AN_TABLE = false;
+const AN_C = { bids: '#2a78d6', awards: '#1baf7a', conv: '#6250d6' };
+const anLabel = k => new Date(k + '-15').toLocaleDateString('en-US', { month: 'short' }) + (k.endsWith('-01') ? " '" + k.slice(2, 4) : '');
+const anMonthLong = k => new Date(k + '-15').toLocaleDateString('en-US', { month: 'long', year: 'numeric' });
+const anNice = v => { if(v <= 0) return 1; const p = Math.pow(10, Math.floor(Math.log10(v))), f = v / p; return (f <= 1 ? 1 : f <= 2 ? 2 : f <= 5 ? 5 : 10) * p; };
+function anColumns(title, months, vals, fmt, tipFn, color){
+  const W = 400, H = 190, L = 44, R = 8, T = 14, B = 26, pw = W - L - R, ph = H - T - B, n = months.length, band = pw / n, bw = Math.min(24, band * 0.6);
+  const top = anNice(Math.max(0, ...vals)), y = v => T + ph - (v / top) * ph, mx = vals.indexOf(Math.max(...vals));
+  const every = n > 14 ? 3 : n > 8 ? 2 : 1;
+  let g = '';
+  [0, 0.5, 1].forEach(f => { const v = top * f; g += `<line x1="${L}" x2="${W - R}" y1="${y(v)}" y2="${y(v)}" stroke="${f === 0 ? '#9fb0b1' : '#e3eaea'}" stroke-width="1"/><text class="ax" x="${L - 6}" y="${y(v) + 3}" text-anchor="end">${fmt(v)}</text>`; });
+  months.forEach((m, i) => { const cx = L + band * i + band / 2, v = vals[i], h = Math.max(0, (v / top) * ph), x0 = cx - bw / 2, rr = Math.min(4, bw / 2, h);
+    if(v > 0) g += `<path d="M${x0},${T + ph} V${T + ph - h + rr} Q${x0},${T + ph - h} ${x0 + rr},${T + ph - h} H${x0 + bw - rr} Q${x0 + bw},${T + ph - h} ${x0 + bw},${T + ph - h + rr} V${T + ph} Z" fill="${color}"/>`;
+    if(i === mx && v > 0) g += `<text class="ax" x="${cx}" y="${T + ph - h - 4}" text-anchor="middle" style="fill:var(--text);font-weight:700">${fmt(v)}</text>`;
+    if(i % every === 0 || i === n - 1) g += `<text class="ax" x="${cx}" y="${H - 8}" text-anchor="middle">${esc(anLabel(m.month))}</text>`;
+    g += `<rect class="hit" x="${L + band * i}" y="${T}" width="${band}" height="${ph + B - 6}" tabindex="0" data-tip="${esc(tipFn(m))}" aria-label="${esc(tipFn(m))}"/>`; });
+  return `<div class="an-ch"><h4>${esc(title)}</h4><svg viewBox="0 0 ${W} ${H}" role="img" aria-label="${esc(title)}">${g}</svg></div>`;
+}
+function anConversion(title, months, goal){
+  const W = 400, H = 190, L = 44, R = 8, T = 14, B = 26, pw = W - L - R, ph = H - T - B, n = months.length, band = pw / n, y = v => T + ph - (v / 100) * ph, every = n > 14 ? 3 : n > 8 ? 2 : 1;
+  let g = ''; [0, 50, 100].forEach(v => { g += `<line x1="${L}" x2="${W - R}" y1="${y(v)}" y2="${y(v)}" stroke="${v === 0 ? '#9fb0b1' : '#e3eaea'}"/><text class="ax" x="${L - 6}" y="${y(v) + 3}" text-anchor="end">${v}%</text>`; });
+  if(goal) g += `<line x1="${L}" x2="${W - R}" y1="${y(goal)}" y2="${y(goal)}" stroke="#8B9D9D" stroke-dasharray="4 4"/><text class="ax" x="${W - R}" y="${y(goal) - 3}" text-anchor="end">goal ${goal}%</text>`;
+  let seg = []; const flush = () => { if(seg.length > 1) g += `<polyline fill="none" stroke="${AN_C.conv}" stroke-width="2" stroke-linejoin="round" points="${seg.join(' ')}"/>`; seg = []; };
+  months.forEach((m, i) => { const cx = L + band * i + band / 2; if(m.conversion == null){ flush(); } else seg.push(cx + ',' + y(m.conversion)); });
+  flush();
+  months.forEach((m, i) => { const cx = L + band * i + band / 2; if(m.conversion != null) g += `<circle cx="${cx}" cy="${y(m.conversion)}" r="4" fill="${AN_C.conv}" stroke="#fff" stroke-width="2"/>`;
+    if(i % every === 0 || i === n - 1) g += `<text class="ax" x="${cx}" y="${H - 8}" text-anchor="middle">${esc(anLabel(m.month))}</text>`;
+    const tip = anMonthLong(m.month) + ': ' + (m.conversion == null ? 'no bids decided' : m.conversion + '% (' + m.won + ' won, ' + m.lost + ' lost)');
+    g += `<rect class="hit" x="${L + band * i}" y="${T}" width="${band}" height="${ph + B - 6}" tabindex="0" data-tip="${esc(tip)}" aria-label="${esc(tip)}"/>`; });
+  return `<div class="an-ch"><h4>${esc(title)}</h4><svg viewBox="0 0 ${W} ${H}" role="img" aria-label="${esc(title)}">${g}</svg></div>`;
+}
+async function analyticsPanel(){
+  const box = $('#anBox'); if(!box) return;
+  let r; try{ r = await api('GET', '/analytics?months=' + AN_MONTHS + (AN_ALL ? '&all=1' : '')); }catch(e){ box.innerHTML = '<div class="hint" style="color:var(--text-dim)">Could not load analytics (' + esc(e.message) + ').</div>'; return; }
+  if(!$('#anBox')) return;
+  const t = r.totals, ms = r.months, d0 = ms.length ? anMonthLong(ms[0].month) : '', d1 = ms.length ? anMonthLong(ms[ms.length - 1].month) : '';
+  const tile = (big, lbl) => `<div class="an-tile"><b>${big}</b><span>${lbl}</span></div>`;
+  box.innerHTML = `<div class="an-tiles">${tile(moneyShort(t.bidAmt), 'Bid total · ' + t.bids + ' bid' + (t.bids === 1 ? '' : 's'))}${tile(moneyShort(t.wonAmt), 'Awarded · ' + t.won + ' award' + (t.won === 1 ? '' : 's'))}${tile(t.conversion == null ? '—' : t.conversion + '%', 'Conversion (dollars)' + (t.conversionByCount == null ? '' : ' · ' + t.conversionByCount + '% by count'))}${tile(t.avgBid == null ? '—' : moneyShort(t.avgBid), 'Average bid')}</div>
+    ${AN_TABLE ? `<table class="an-tbl"><thead><tr><th>Month</th><th>Bids</th><th>Bid total</th><th>Awards</th><th>Awarded $</th><th>Lost</th><th>Conversion</th></tr></thead><tbody>${ms.map(m => `<tr><td>${esc(anMonthLong(m.month))}</td><td>${m.bids}</td><td>${money(m.bidAmt)}</td><td>${m.won}</td><td>${money(m.wonAmt)}</td><td>${m.lost}</td><td>${m.conversion == null ? '—' : m.conversion + '%'}</td></tr>`).join('')}</tbody></table>`
+    : `<div class="an-charts">${anColumns('Bids submitted per month ($)', ms, ms.map(m => m.bidAmt), moneyShort, m => anMonthLong(m.month) + ': ' + money(m.bidAmt) + ' across ' + m.bids + ' bid' + (m.bids === 1 ? '' : 's'), AN_C.bids)}
+      ${anColumns('Awards per month ($)', ms, ms.map(m => m.wonAmt), moneyShort, m => anMonthLong(m.month) + ': ' + m.won + ' award' + (m.won === 1 ? '' : 's') + ', ' + money(m.wonAmt), AN_C.awards)}
+      ${anConversion('Conversion by month (dollars won ÷ decided)', ms, QUOTA && QUOTA.convTarget)}</div>`}
+    <div class="hint" style="font-size:11.5px;color:var(--text-dim);margin-top:8px">${esc(d0)} to ${esc(d1)}. Bids count in the month they were submitted; awards and conversion in the month they were decided. Archived bids are included.</div>`;
+  const hd = $('#anHead'); hd.innerHTML = `<div class="an-ctl">${r.canAll ? `<select id="anScope" aria-label="Whose numbers"><option value="0" ${r.all ? '' : 'selected'}>My bids</option><option value="1" ${r.all ? 'selected' : ''}>Everyone's bids</option></select>` : ''}<select id="anRange" aria-label="Time range">${[6, 12, 24].map(n => `<option value="${n}" ${n === AN_MONTHS ? 'selected' : ''}>Last ${n} months</option>`).join('')}</select><button class="btn small ghost" id="anTbl" type="button">${AN_TABLE ? 'Show charts' : 'Show table'}</button></div>`;
+  const sc = $('#anScope'); if(sc) sc.onchange = () => { AN_ALL = sc.value === '1'; analyticsPanel(); };
+  $('#anRange').onchange = e => { AN_MONTHS = Number(e.target.value); analyticsPanel(); };
+  $('#anTbl').onclick = () => { AN_TABLE = !AN_TABLE; analyticsPanel(); };
+  let tip = $('#anTip'); if(!tip){ tip = document.createElement('div'); tip.id = 'anTip'; document.body.appendChild(tip); }
+  const place = (e, el) => { const rc = el.getBoundingClientRect(); tip.style.left = Math.min(window.innerWidth - tip.offsetWidth - 8, Math.max(8, rc.left + rc.width / 2 - tip.offsetWidth / 2)) + 'px'; tip.style.top = Math.max(8, rc.top - tip.offsetHeight - 6 + 40) + 'px'; };
+  box.querySelectorAll('.hit').forEach(h => { const on = e => { tip.textContent = h.dataset.tip; tip.style.display = 'block'; place(e, h); }, off = () => { tip.style.display = 'none'; };
+    h.addEventListener('mouseenter', on); h.addEventListener('focus', on); h.addEventListener('mouseleave', off); h.addEventListener('blur', off); });
+}
 // ---------- dashboard ----------
 function dashboard(el){
   const q = QUOTA, open = BIDS.filter(b => b.status === 'Draft' || b.status === 'Bidding');
@@ -950,13 +1167,18 @@ function dashboard(el){
     <div class="quota-bar ${q.bidThisMonth >= q.bidTarget ? 'ok' : ''}" style="height:12px"><i style="width:${Math.min(100, q.pctOfQuota)}%"></i></div>
     <div style="font-size:13px;margin-top:10px">Conversion: <b class="${conv == null ? '' : conv >= q.convTarget ? 'grade-text-ok' : 'grade-text-bad'}">${conv == null ? 'no decided bids yet' : conv.toFixed(1) + '%'}</b> (goal ${q.convTarget}%)
       <span style="color:var(--text-faint)"> — ${money(q.wonAmount)} won / ${money(q.wonAmount + q.lostAmount)} decided, last 12 months${q.conversionByCount == null ? '' : '; ' + q.won + ' of ' + (q.won + q.lost) + ' bids by count'}</span></div></div></div>
-  <div class="dash-two-col" style="display:grid;grid-template-columns:1fr 1fr;gap:20px">
+  <div class="dash-two-col" style="display:grid;grid-template-columns:3fr 2fr;gap:20px">
+    <div class="panel"><div class="panel-head"><h3>Tasks</h3><span id="taskHead"></span></div><div class="panel-body" id="taskBox"><div class="hint" style="color:var(--text-dim)">Loading…</div></div></div>
     <div class="panel"><div class="panel-head"><h3>Bids due</h3></div><div class="panel-body">${due.length ? due.map(b => `<div class="mini-row"><button class="project-title-link" data-edit="${b.id}" type="button">${esc(b.name)}</button><div class="mini-row-meta" style="display:flex;gap:10px;font-size:12px;color:var(--text-dim)"><span>${fmtDate(b.bidDue)}${b.bidDue < todayS ? ' <b style="color:var(--status-delayed)">overdue</b>' : ''}</span><span>${money(b.amount)}</span></div></div>`).join('') : '<div class="empty">No bids waiting on a due date.</div>'}</div></div>
+  </div>
+  <div class="panel" style="margin-bottom:20px"><div class="panel-head"><h3>Analytics</h3><span id="anHead"></span></div><div class="panel-body" id="anBox"><div class="hint" style="color:var(--text-dim)">Loading…</div></div></div>
+  <div class="dash-two-col" style="display:grid;grid-template-columns:1fr 1fr;gap:20px">
     <div class="panel"><div class="panel-head"><h3>Recently decided</h3></div><div class="panel-body">${recent.length ? recent.map(b => `<div class="mini-row"><button class="project-title-link" data-edit="${b.id}" type="button">${esc(b.name)}</button><div class="mini-row-meta" style="display:flex;gap:10px;font-size:12px;color:var(--text-dim)"><span>${tag(b.status)}</span><span>${money(b.amount)}</span><span>${fmtDate(b.decidedOn)}</span></div></div>`).join('') : '<div class="empty">Nothing decided yet.</div>'}</div></div>
   </div><div id="team"></div>`;
-  const nb = $('#newBid'); if(nb) nb.onclick = () => bidModal();
+  const nb = $('#newBid'); if(nb) nb.onclick = newBidDialog;
   $('#goOpen').onclick = () => { VIEW = 'bids'; FILTER = 'open'; render(); };
-  el.querySelectorAll('[data-edit]').forEach(b => b.onclick = () => bidModal(Number(b.dataset.edit)));
+  el.querySelectorAll('[data-edit]').forEach(b => b.onclick = () => openBid(Number(b.dataset.edit)));
+  tasksPanel(); analyticsPanel();
   if(has('admin.users')) teamQuota();
 }
 async function teamQuota(){
@@ -974,64 +1196,144 @@ async function teamQuota(){
 }
 
 // ---------- bids ----------
+const bidHay = b => [b.name, b.storeNumber, b.code, b.customer, b.address, b.city, b.state, b.ownerName, b.status, b.notes].join(' ').toLowerCase();
+const bidMatch = (b, q) => q.split(/\s+/).every(w => bidHay(b).includes(w));
+const reEsc = x => String(x || '').replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+// the title does not repeat the location (it has its own column), like the PM branch
+const dispName = b => { let n = b.name || ''; if(b.city){ const t = n.replace(new RegExp('\\s*[-–—,]?\\s*' + reEsc(b.city) + '\\s*,?\\s*' + (b.state ? reEsc(b.state) : '') + '\\s*$', 'i'), '').trim(); if(t) n = t; } return n; };
+// Lost (and timed-out) bids live under Archived, never in All / Open / Won
+const isShelved = b => !!b.archived || b.status === 'Lost';
 function bids(el){
-  const filters = [['open', 'Open'], ['Won', 'Won'], ['Lost', 'Lost'], ['No Bid', 'No bid'], ['all', 'All']];
-  const list = BIDS.filter(b => FILTER === 'all' || (FILTER === 'open' ? (b.status === 'Draft' || b.status === 'Bidding') : b.status === FILTER)).sort((a, b) => (a.bidDue || '9999').localeCompare(b.bidDue || '9999'));
+  const nAw = BIDS.filter(b => b.awaitingContract && !b.archived).length;
+  const filters = [['all', 'All'], ['open', 'Open'], ['Won', 'Won'], ['awaiting', 'Awaiting Contract' + (nAw ? ' (' + nAw + ')' : '')]];
+  const q = SEARCH.trim().toLowerCase();
+  // typing in the search box looks through every bid, including archived and lost ones
+  if(q && !ARCH_LOADED && FILTER !== 'archived'){ loadArch().then(() => { if(!SEARCH.trim()) return; const pos = (document.activeElement && document.activeElement.id === 'bidSearch') ? document.activeElement.selectionStart : null; bids(el); if(pos !== null){ const n = $('#bidSearch'); n.focus(); try{ n.setSelectionRange(pos, pos); }catch(e){} } }); }
+  const pool = q ? BIDS.concat(BIDS_ARCH.filter(a => !BIDS.some(b => b.id === a.id))) : BIDS.filter(b => !isShelved(b));
+  const list = pool.filter(b => q ? bidMatch(b, q) : (FILTER === 'all' || (FILTER === 'open' ? (b.status === 'Draft' || b.status === 'Bidding') : FILTER === 'awaiting' ? !!b.awaitingContract : b.status === FILTER))).sort((a, b) => (a.bidDue || '9999').localeCompare(b.bidDue || '9999'));
   el.innerHTML = `<div class="page-head"><div><h2>Bids</h2></div>${canWrite() ? '<button class="btn primary" id="newBid">+ New bid</button>' : ''}</div>
   ${canWrite() ? '' : '<div class="ro-note">You can look at bids but not change them.</div>'}
-  <div style="display:flex;gap:8px;margin-bottom:16px;flex-wrap:wrap">${filters.map(([k, l]) => `<button class="btn small ${FILTER === k ? 'primary' : ''}" data-f="${k}">${l}</button>`).join('')}<button class="btn small ${FILTER === 'archived' ? 'primary' : ''}" data-f="archived">Archived</button></div>
+  <div style="display:flex;gap:8px;margin-bottom:16px;flex-wrap:wrap">${filters.map(([k, l]) => `<button class="btn small ${FILTER === k ? 'primary' : ''}" data-f="${k}">${l}</button>`).join('')}<button class="btn small ${FILTER === 'archived' ? 'primary' : ''}" data-f="archived">Archived</button>
+    <input id="bidSearch" type="search" placeholder="Search bids (name, store #, project #, customer, city…)" value="${esc(SEARCH)}" aria-label="Search bids" style="flex:1;min-width:220px;max-width:420px;margin-left:auto;padding:6px 10px;border:1px solid var(--border,#d6d9de);border-radius:8px;font:inherit;font-size:13px"></div>
+  ${q && FILTER !== 'archived' ? `<div class="hint" style="margin:-8px 0 12px;font-size:12px;color:var(--text-dim)">Searching every bid, including lost and archived · ${list.length} found · <a href="#" id="bidSearchClr">clear search</a></div>` : ''}
   <div class="panel"><div class="panel-body" style="padding:0"><div id="bidTable"></div></div></div>`;
-  const nb = $('#newBid'); if(nb) nb.onclick = () => bidModal();
-  el.querySelectorAll('[data-f]').forEach(b => b.onclick = async () => { FILTER = b.dataset.f; if(FILTER === 'archived'){ await showArchived(el); } else bids(el); });
+  const si = $('#bidSearch');
+  si.oninput = () => { SEARCH = si.value; const pos = si.selectionStart; bids(el); const n = $('#bidSearch'); n.focus(); try{ n.setSelectionRange(pos, pos); }catch(e){} };
+  const sc = $('#bidSearchClr'); if(sc) sc.onclick = e => { e.preventDefault(); SEARCH = ''; bids(el); };
+  const nb = $('#newBid'); if(nb) nb.onclick = newBidDialog;
+  el.querySelectorAll('[data-f]').forEach(b => b.onclick = () => { FILTER = b.dataset.f; SEARCH = ''; bids(el); });
   if(FILTER === 'archived') return showArchived(el);
   $('#bidTable').innerHTML = tableHtml(list);
   wireTable(el);
 }
+const dateIn = 'border:1px solid var(--line);border-radius:6px;padding:4px 6px;font-size:12px;font-family:inherit;';
+// Project > Location > Status > Due > Job Start > Estimator (same order as the PM branch)
 function tableHtml(list){
-  return list.length ? `<table class="responsive-table"><thead><tr><th>Bid</th><th>Location</th><th>Customer</th><th>Amount</th><th>Status</th><th>Due</th><th>Estimator</th><th></th></tr></thead><tbody>
-  ${list.map(b => `<tr><td><button class="project-title-link" data-edit="${b.id}" type="button">${esc(b.name)}</button>${b.storeNumber ? '<br><span style="color:var(--text-faint);font-size:11.5px">Store ' + esc(b.storeNumber) + '</span>' : ''}</td>
-    <td data-label="Location">${esc([b.city, b.state].filter(Boolean).join(', ')) || '—'}</td><td data-label="Customer">${esc(b.customer) || '—'}</td><td data-label="Amount">${money(b.amount)}</td>
-    <td data-label="Status">${canWrite() && !b.archived ? `<select class="status-select" data-status="${b.id}" style="background:${STATUS_COL[b.status]}22;color:${STATUS_COL[b.status]};border:1px solid ${STATUS_COL[b.status]}55;border-radius:8px;padding:4px 8px;font-weight:700">${STATUSES.map(s => `<option ${s === b.status ? 'selected' : ''}>${s}</option>`).join('')}</select>` : tag(b.status)}</td>
-    <td data-label="Due">${fmtDate(b.bidDue)}</td><td data-label="Estimator">${esc(b.ownerName)}</td>
-    <td><button class="btn small ghost" data-edit="${b.id}">${canWrite() ? 'Edit' : 'View'}</button>${canWrite() ? (b.archived ? ` <button class="btn small ghost" data-unarch="${b.id}">Restore</button>` : ` <button class="btn small ghost" data-arch="${b.id}">Archive</button>`) : ''}</td></tr>`).join('')}</tbody></table>` : '<div class="empty">No bids here.</div>';
+  const rw = canWrite();
+  return list.length ? `<table class="responsive-table"><thead><tr><th>Project</th><th>Location</th><th>Status</th><th>Due</th><th>Job Start</th><th>Estimator</th><th></th></tr></thead><tbody>
+  ${list.map(b => { const live = rw && !b.archived && b.status !== 'Lost';
+  return `<tr><td><button class="project-title-link" data-edit="${b.id}" type="button">${esc(dispName(b))}</button><br><span style="color:var(--text-faint);font-size:11.5px">${b.code ? '<span class="mono bp-code" style="margin-left:0">' + esc(b.code) + '</span>' : ''}${b.code && b.customer ? ' · ' : ''}${esc(b.customer || '')}</span></td>
+    <td data-label="Location">${esc([b.city, b.state].filter(Boolean).join(', ')) || '—'}</td>
+    <td data-label="Status">${rw && !b.archived ? `<select class="status-select" data-status="${b.id}" style="background:${STATUS_COL[b.status]}22;color:${STATUS_COL[b.status]};border:1px solid ${STATUS_COL[b.status]}55;border-radius:8px;padding:4px 8px;font-weight:700">${STATUSES.map(s => `<option ${s === b.status ? 'selected' : ''}>${s}</option>`).join('')}</select>` : tag(b.status)}</td>
+    <td data-label="Due">${live ? `<input type="date" value="${esc(b.bidDue || '')}" data-date="bidDue" data-id="${b.id}" style="${dateIn}">` : fmtDate(b.bidDue)}</td>
+    <td data-label="Job Start">${live ? `<input type="date" value="${esc(b.startDate || '')}" data-date="startDate" data-id="${b.id}" style="${dateIn}">` : (b.startDate ? fmtDate(b.startDate) : '—')}</td>
+    <td data-label="Estimator">${esc(b.ownerName)}</td>
+    <td>${rw && b.awaitingContract && !b.archived ? `<button class="btn primary small" data-addcontract="${b.id}" title="Upload the GC contract the customer sent. It goes into the project's files; the PM is not notified.">Add Contract</button> ` : ''}${rw && b.status !== 'Draft' && !b.archived ? `<button class="btn small ghost" data-clone="${b.id}" title="Make a new draft copy to revise; the original stays as submitted">Clone</button> ` : ''}${rw ? (b.archived ? `<button class="btn small ghost" data-unarch="${b.id}">Restore</button>` : (b.status === 'Lost' ? '' : `<button class="btn small ghost" data-arch="${b.id}">Archive</button>`)) : ''}</td></tr>`; }).join('')}</tbody></table>` : '<div class="empty">No bids here.</div>';
+}
+// Clone: a new Draft copy (own project number, "– Rev N" name) so the submitted bid is never changed. For when a GC comes back later.
+async function cloneBid(id){
+  const b = BIDS.find(x => x.id === id) || (EST && EST.bid && EST.bid.id === id ? EST.bid : null);
+  if(!confirm('Clone "' + (b ? b.name : 'this bid') + '"?\n\nA new draft bid is made from it with its own project number, so the original stays exactly as it was submitted. Every line is marked "Check price" so you can update for today\'s material costs.')) return;
+  let r; try{ r = await api('POST', '/bids/' + id + '/clone'); }catch(e){ alert('Could not clone the bid (' + e.message + ').'); return; }
+  FILTER = 'open'; SEARCH = ''; await refresh(); openBid(r.bid.id);
 }
 function wireTable(el){
-  el.querySelectorAll('[data-edit]').forEach(b => b.onclick = () => bidModal(Number(b.dataset.edit)));
-  el.querySelectorAll('[data-status]').forEach(s => s.onchange = async () => { try{ await api('PATCH', '/bids/' + s.dataset.status, { status: s.value }); await refresh(); }catch(e){ alert('Could not change status (' + e.message + ').'); } });
-  el.querySelectorAll('[data-arch]').forEach(b => b.onclick = async () => { if(!confirm('Archive this bid? It leaves the lists and your numbers but is kept on record.')) return; await api('POST', '/bids/' + b.dataset.arch + '/archive'); await refresh(); });
-  el.querySelectorAll('[data-unarch]').forEach(b => b.onclick = async () => { await api('POST', '/bids/' + b.dataset.unarch + '/unarchive'); FILTER = 'open'; await refresh(); });
+  el.querySelectorAll('[data-addcontract]').forEach(btn => btn.onclick = () => {
+    const fi = document.createElement('input'); fi.type = 'file'; fi.accept = '.pdf,.doc,.docx,.jpg,.jpeg,.png,.heic';
+    fi.onchange = async () => {
+      const f = fi.files[0]; if(!f) return;
+      if(f.size > 25 * 1048576){ alert('That file is over 25 MB.'); return; }
+      btn.disabled = true; btn.textContent = 'Adding…';
+      try{
+        const r = await fetch(GO_CONFIG.API + '/api/media/contract?bidId=' + btn.dataset.addcontract + '&name=' + encodeURIComponent(f.name), { method: 'POST', headers: Object.assign({ 'Content-Type': 'application/octet-stream' }, TOKEN ? { Authorization: 'Bearer ' + TOKEN } : {}), body: f });
+        const j = await r.json().catch(() => ({})); if(!r.ok) throw new Error(j.error || 'failed');
+        ARCH_LOADED = false; await refresh(); openBid(Number(btn.dataset.addcontract));   // open the bid so the details (received date, retention...) can be filled in
+      }catch(e){ btn.disabled = false; btn.textContent = 'Add Contract'; alert(e.message === 'file_does_not_match_its_type' ? 'That file does not look like its file type.' : 'Could not add the contract (' + e.message + ').'); }
+    };
+    fi.click();
+  });
+  el.querySelectorAll('[data-date]').forEach(i => i.onchange = async () => { try{ await api('PATCH', '/bids/' + i.dataset.id, { [i.dataset.date]: i.value || null }); ARCH_LOADED = false; await refresh(); }catch(e){ alert('Could not change the date (' + e.message + ').'); } });
+  el.querySelectorAll('[data-clone]').forEach(b => b.onclick = () => cloneBid(Number(b.dataset.clone)));
+  el.querySelectorAll('[data-edit]').forEach(b => b.onclick = () => openBid(Number(b.dataset.edit)));
+  el.querySelectorAll('[data-status]').forEach(s => s.onchange = async () => { try{ await api('PATCH', '/bids/' + s.dataset.status, { status: s.value }); ARCH_LOADED = false; await refresh(); }catch(e){ alert('Could not change status (' + e.message + ').'); } });
+  el.querySelectorAll('[data-arch]').forEach(b => b.onclick = async () => { if(!confirm('Archive this bid? It leaves the lists and your numbers but is kept on record.')) return; await api('POST', '/bids/' + b.dataset.arch + '/archive'); ARCH_LOADED = false; await refresh(); });
+  el.querySelectorAll('[data-unarch]').forEach(b => b.onclick = async () => { await api('POST', '/bids/' + b.dataset.unarch + '/unarchive'); ARCH_LOADED = false; FILTER = 'open'; await refresh(); });
 }
+async function loadArch(){ const r = await api('GET', '/bids?archived=1'); BIDS_ARCH = r.bids.filter(isShelved); ARCH_LOADED = true; return BIDS_ARCH; }
 async function showArchived(el){
-  const r = await api('GET', '/bids?archived=1'); BIDS_ARCH = r.bids.filter(b => b.archived);
-  $('#bidTable').innerHTML = tableHtml(BIDS_ARCH); wireTable(el);
-  el.querySelectorAll('[data-edit]').forEach(b => b.onclick = () => bidModal(Number(b.dataset.edit), BIDS_ARCH));
+  await loadArch();
+  const q = SEARCH.trim().toLowerCase(), shown = (q ? BIDS_ARCH.filter(b => bidMatch(b, q)) : BIDS_ARCH).slice().sort((a, b) => (b.decidedOn || b.bidDue || '').localeCompare(a.decidedOn || a.bidDue || ''));
+  $('#bidTable').innerHTML = shown.length ? tableHtml(shown) : '<div class="empty" style="padding:30px">' + (BIDS_ARCH.length ? 'No archived bids match that search.' : 'Nothing here yet. Lost and timed-out bids land here automatically, and you can archive any bid from its row. Nothing is ever deleted.') + '</div>'; wireTable(el);
+  el.querySelectorAll('[data-edit]').forEach(b => b.onclick = () => openBid(Number(b.dataset.edit), BIDS_ARCH));
 }
-let BIDS_ARCH = [];
+let BIDS_ARCH = [], ARCH_LOADED = false;
 
 // ---------- add / edit ----------
 function modal(html){ $('#modalBody').innerHTML = html; $('#modalBack').classList.add('open'); }
 function closeModal(){ $('#modalBack').classList.remove('open'); }
-function bidModal(id, pool){
-  const b = id ? (pool || BIDS).find(x => x.id === id) : null, ro = !canWrite() || (b && b.archived);
+// ---------- bid page: the whole bid on its own screen (no popup). Cards can be dragged into any order; media is front and centre ----------
+let OPEN_BID = null, BID_TAB = 'estimate';
+let STAGED = [];
+function openBid(id, pool){ BID_TAB = id ? 'estimate' : 'overview'; if(!id) STAGED = []; OPEN_BID = { id: id || null, pool: pool || null, isNew: !id }; VIEW = 'bids'; render(); window.scrollTo(0, 0); const m = $('#main'); if(m) m.scrollTop = 0; }
+function closeBid(){ OPEN_BID = null; render(); }
+const LAYOUT_KEY = 'estBidLayout2', DEFAULT_ORDER = ['details', 'media', 'history'];
+let _layout = null;
+const getOrder = () => { if(_layout) return _layout.slice(); try{ const o = JSON.parse(localStorage.getItem(LAYOUT_KEY) || 'null'); if(Array.isArray(o) && DEFAULT_ORDER.every(k => o.includes(k))) return o.filter(k => DEFAULT_ORDER.includes(k)); }catch(e){} return DEFAULT_ORDER.slice(); };
+const setOrder = o => { _layout = o.slice(); try{ localStorage.setItem(LAYOUT_KEY, JSON.stringify(o)); }catch(e){} };
+function bidPage(el){
+  const id = OPEN_BID.id, b = id ? (OPEN_BID.pool || BIDS).find(x => x.id === id) : null;
+  if(id && !b){ OPEN_BID = null; return bids(el); }
+  const ro = !canWrite() || (b && b.archived);
   const d = b || { name: '', storeNumber: '', customer: '', address: '', city: '', state: '', lat: null, lon: null, amount: 0, status: 'Draft', bidDue: '', bidSubmitted: '', decidedOn: '', startDate: '', endDate: '', notes: '' };
-  const f = (lbl, idn, val, extra) => `<div class="field"><label>${lbl}</label><input id="${idn}" value="${esc(val == null ? '' : val)}" ${ro ? 'disabled' : ''} ${extra || ''}></div>`;
-  modal(`<div style="display:flex;justify-content:space-between;align-items:center"><h3 style="margin:0">${b ? (ro ? 'Bid' : 'Edit bid') : 'New bid'}</h3><button class="btn small ghost" id="mx" type="button">✕</button></div><div style="height:12px"></div>
-  <div class="row2">${f('Project name', 'f_name', d.name, 'placeholder="e.g. Costco #418 — Freezer Deck Steel"')}${f('Store #', 'f_store', d.storeNumber)}</div>
-  <div class="field"><label>Site address</label><input id="f_address" value="${esc(d.address)}" ${ro ? 'disabled' : ''} placeholder="Start typing a street address…" autocomplete="off"><div class="hint" id="f_geo" style="font-size:11.5px;color:var(--text-faint)">${d.lat != null ? 'Pinned on the map.' : 'Pick a suggestion to pin it on the map.'}</div></div>
-  <div class="row2">${f('City', 'f_city', d.city)}${f('State', 'f_state', d.state)}</div>
-  <div class="row2">${f('Customer / GC', 'f_customer', d.customer)}${f('Bid amount ($)', 'f_amount', d.amount, 'type="number" min="0" step="100"')}</div>
-  <div class="row2"><div class="field"><label>Status</label><select id="f_status" ${ro ? 'disabled' : ''}>${STATUSES.map(s => `<option ${s === d.status ? 'selected' : ''}>${s}</option>`).join('')}</select></div>${f('Bid due', 'f_due', d.bidDue, 'type="date"')}</div>
-  <div class="row2">${f('Submitted on', 'f_sub', d.bidSubmitted, 'type="date"')}${f('Decided on', 'f_dec', d.decidedOn, 'type="date"')}</div>
-  <div class="row2">${f('Planned start', 'f_start', d.startDate, 'type="date"')}${f('Planned end', 'f_end', d.endDate, 'type="date"')}</div>
-  <div class="field"><label>Notes</label><textarea id="f_notes" ${ro ? 'disabled' : ''}>${esc(d.notes)}</textarea></div>
-  ${b ? '<div id="bidMedia"></div>' : '<div class="hint" style="font-size:11.5px;color:var(--text-faint);margin-bottom:10px">Save the bid first, then reopen it to attach foundation drawings and documents.</div>'}
-  <div id="fe" style="color:var(--status-delayed);margin-bottom:8px"></div>
-  ${b ? `<div style="font-size:12px;color:var(--text-dim);margin-bottom:10px">Estimator: <b>${esc(b.ownerName)}</b>${b.ownerUsername ? ' (' + esc(b.ownerUsername) + ')' : ''} · <button class="btn small ghost" id="hx" type="button">Change history</button></div><div id="hist"></div>` : ''}
-  <div style="display:flex;gap:8px;justify-content:flex-end"><button class="btn" id="mc" type="button">${ro ? 'Close' : 'Cancel'}</button>${ro ? '' : '<button class="btn primary" id="ms" type="button">Save</button>'}</div>`);
-  $('#mx').onclick = $('#mc').onclick = closeModal;
-  if(b && window.MediaPanel) MediaPanel.mount($('#bidMedia'), { type: 'bid', id: b.id, api: GO_CONFIG.API, token: () => TOKEN, me: () => ME && ME.id });
-  if(b) $('#hx').onclick = async () => { const r = await api('GET', '/bids/' + b.id + '/history'); $('#hist').innerHTML = '<div style="margin-bottom:10px">' + (r.history.map(h => `<div class="hist-row"><b>${esc(h.name || 'System')}</b>${h.username ? ' (' + esc(h.username) + ')' : ''} · ${esc(h.action)} · ${new Date(h.at).toLocaleString()}${h.changes ? '<br><span style="color:var(--text-dim)">' + esc(Object.entries(h.changes).map(([k, v]) => v && typeof v === 'object' && 'to' in v ? `${k}: ${v.from == null ? '—' : v.from} → ${v.to == null ? '—' : v.to}` : `${k}: ${v}`).join('; ')) + '</span>' : ''}</div>`).join('') || 'No history.') + '</div>'; };
+  const f = (lbl, idn, val, extra, cls) => `<div class="field ${cls || ''}"><label>${lbl}</label><input id="${idn}" value="${esc(val == null ? '' : val)}" ${ro ? 'disabled' : ''} ${extra || ''}></div>`;
+  const card = (key, title, inner, extra) => `<section class="bp-card bp-${key}" data-card="${key}" ${ro && key !== 'media' ? '' : ''}><div class="bp-head"><span class="bp-grip" draggable="true" title="Drag to move this section (swap sides)">⠿</span><h3>${title}</h3>${extra || ''}</div><div class="bp-body">${inner}</div></section>`;
+  const sec = t => `<div class="bp-sec">${t}</div>`;
+  const cards = {
+    details: card('details', 'Project Details', `${sec('Project')}<div class="row2">${f('Project name', 'f_name', d.name, 'placeholder="e.g. Costco #418: Freezer Deck Steel"')}${f('Store #', 'f_store', d.storeNumber)}</div>
+      <div class="row2">${f('Customer / GC', 'f_customer', d.customer)}${f('Bid amount ($)', 'f_amount', d.amount, 'type="number" min="0" step="100"')}</div>
+      <div class="row2"><div class="field"><label>Status</label><select id="f_status" ${ro ? 'disabled' : ''}>${STATUSES.map(s => `<option ${s === d.status ? 'selected' : ''}>${s}</option>`).join('')}</select></div><div class="field"><label>Estimator</label><div class="static">${b ? esc(b.ownerName) + (b.ownerUsername ? ' (' + esc(b.ownerUsername) + ')' : '') : esc(ME.name)}</div></div></div>
+      ${sec('Location')}<div class="field"><label>Site address</label><input id="f_address" value="${esc(d.address)}" ${ro ? 'disabled' : ''} placeholder="Start typing a street address…" autocomplete="off"><div class="hint" id="f_geo" style="font-size:11.5px;color:var(--text-faint)">${d.lat != null ? 'Pinned on the map.' : 'Pick a suggestion to pin it on the map.'}</div></div>
+      <div class="row2">${f('City', 'f_city', d.city)}${f('State', 'f_state', d.state)}</div>
+      ${sec('Schedule')}<div class="row2">${f('Bid due', 'f_due', d.bidDue, 'type="date"')}${f('Submitted on', 'f_sub', d.bidSubmitted, 'type="date"')}</div><div class="row2">${f('Decided on', 'f_dec', d.decidedOn, 'type="date"')}<span></span></div><div class="row2">${f('Planned start', 'f_start', d.startDate, 'type="date"')}${f('Planned end', 'f_end', d.endDate, 'type="date"')}</div>
+      ${sec('Notes')}<div class="field"><textarea id="f_notes" style="min-height:110px" ${ro ? 'disabled' : ''}>${esc(d.notes)}</textarea></div>`, '<span class="bp-sub">Carries forward with the job</span>'),
+    media: card('media', 'Media &amp; Documents', b ? '<div id="bidMedia"></div>' : `<div class="nb-drop" id="stDrop" tabindex="0" role="button" aria-label="Drop files here, or press Enter to choose files" style="margin:12px 0"><div style="font-size:15px;color:var(--text);margin-bottom:6px">Drop files here</div>Drag drawings, specs and emails (or whole folders) onto this box. They are filed on the bid when you save it, ready for the Estimator AI.<div class="nb-sub">or <a href="#" id="stPick">choose files</a> · <a href="#" id="stPickDir">choose a folder</a></div></div><div id="stList"></div><input type="file" id="stF" multiple hidden><input type="file" id="stD" webkitdirectory hidden>`, b ? '<span class="bp-sub">Every file for this job</span>' : ''),
+    history: card('history', 'Change History', b ? '<div id="hist" style="font-size:12.5px">Loading…</div>' : '<div class="hint" style="font-size:13px;color:var(--text-dim)">History starts when the bid is saved.</div>')
+  };
+  const order = getOrder();
+  el.innerHTML = `<div class="bp-top"><button class="btn small ghost" id="bpBack" type="button">← All bids</button>
+    <div class="bp-title"><h2 id="bpTitle">${esc(d.name || 'New bid')}</h2>${b ? tag(b.status) + `<span class="bp-amt">${money(b.amount)}</span>` + (b.code ? '<span class="bp-code" id="bpCode">' + esc(b.code) + '</span>' : '') : ''}${b && b.archived ? '<span class="bp-sub">Archived</span>' : ''}</div>
+    <span class="sp" style="flex:1"></span><button class="btn small ghost" id="bpReset" type="button" title="Put the sections back in the default order">Reset layout</button></div>
+    ${b ? `<div class="bp-tabs"><button type="button" data-tab="estimate" class="${BID_TAB === 'estimate' ? 'on' : ''}">Estimate</button><button type="button" data-tab="overview" class="${BID_TAB === 'overview' ? 'on' : ''}">Overview &amp; Files</button></div>` : ''}
+    <div class="bp-bar" id="bpBar" style="display:none"><span>You have unsaved changes</span><span id="fe" style="color:#FFB4A9"></span><span style="flex:1"></span><button class="btn small" id="bpDiscard" type="button">Discard</button><button class="btn small primary" id="bpSave" type="button">Save changes</button></div>
+    <div class="bp-grid" id="bpGrid">${order.map(k => cards[k]).join('')}</div>`;
+  $('#bpBack').onclick = closeBid;
+  el.querySelectorAll('.bp-tabs [data-tab]').forEach(t => t.onclick = () => { BID_TAB = t.dataset.tab; bidPage(el); });
+  if(b && BID_TAB === 'estimate'){ $('#bpReset').style.display = 'none'; $('#bpGrid').outerHTML = '<div id="esPane"></div>'; return estimatePane($('#esPane'), b, ro || !!b.projectId || b.status === 'Lost'); }
+  $('#bpReset').onclick = () => { setOrder(DEFAULT_ORDER); bidPage(el); };
+  if(b && window.MediaPanel) { const pend = PENDING_FILES; PENDING_FILES = null; MediaPanel.mount($('#bidMedia'), { type: 'bid', id: b.id, api: GO_CONFIG.API, token: () => TOKEN, me: () => ME && ME.id, pending: pend }); }
+  if(!b && $('#stDrop')) stagedFiles();
+  if(b) api('GET', '/bids/' + b.id + '/history').then(r => { const h = $('#hist'); if(!h) return; h.innerHTML = r.history.length ? r.history.map(x => `<div class="hist-row"><b>${esc(x.name || 'System')}</b>${x.username ? ' (' + esc(x.username) + ')' : ''} · ${esc(x.action)} · ${new Date(x.at).toLocaleString()}${x.changes ? '<br><span style="color:var(--text-dim)">' + esc(Object.entries(x.changes).map(([k, v]) => k + ': ' + (Array.isArray(v) ? v.join(' → ') : JSON.stringify(v))).join(' · ')) + '</span>' : ''}</div>`).join('') : 'No changes yet.'; }).catch(() => {});
+  // drag sections into any order
+  const grid = $('#bpGrid'); let dragKey = null;
+  grid.querySelectorAll('.bp-grip').forEach(g => { const c = g.closest('.bp-card'); g.ondragstart = e => { dragKey = c.dataset.card; e.dataTransfer.effectAllowed = 'move'; try{ e.dataTransfer.setData('text/plain', dragKey); e.dataTransfer.setDragImage(c, 20, 20); }catch(x){} setTimeout(() => c.classList.add('dragging'), 0); }; g.ondragend = () => { dragKey = null; grid.querySelectorAll('.bp-card').forEach(x => x.classList.remove('dragging', 'over')); }; });
+  grid.querySelectorAll('.bp-card').forEach(c => {
+    c.ondragover = e => { if(!dragKey || dragKey === c.dataset.card) return; e.preventDefault(); c.classList.add('over'); };
+    c.ondragleave = () => c.classList.remove('over');
+    c.ondrop = e => { if(!dragKey) return; e.preventDefault(); const from = grid.querySelector(`[data-card="${dragKey}"]`); if(from && from !== c){ const r = c.getBoundingClientRect(), after = (e.clientX - r.left) > r.width / 2; grid.insertBefore(from, after ? c.nextSibling : c); setOrder([...grid.querySelectorAll('.bp-card')].map(x => x.dataset.card)); } grid.querySelectorAll('.bp-card').forEach(x => x.classList.remove('dragging', 'over')); dragKey = null; };
+  });
   if(ro) return;
+  const bar = $('#bpBar'), dirty = () => { bar.style.display = 'flex'; }; el.querySelectorAll('input, select, textarea').forEach(i => { if(!i.closest('#bidMedia')) { i.addEventListener('input', dirty); i.addEventListener('change', dirty); } });
+  if(!b) dirty();
   let geo = { lat: d.lat, lon: d.lon };
   loadMaps(() => {
     const ac = new google.maps.places.Autocomplete($('#f_address'), { fields: ['formatted_address', 'geometry', 'address_components'], types: ['address'] });
@@ -1040,16 +1342,596 @@ function bidModal(id, pool){
       const comp = t => { const c = (p.address_components || []).find(x => x.types.includes(t)); return c ? c : null; };
       const city = comp('locality') || comp('sublocality') || comp('administrative_area_level_3'), st = comp('administrative_area_level_1');
       if(city) $('#f_city').value = city.long_name; if(st) $('#f_state').value = st.short_name;
-      $('#f_geo').textContent = 'Pinned on the map.'; });
+      $('#f_geo').textContent = 'Pinned on the map.'; dirty(); });
   });
-  $('#ms').onclick = async () => {
+  $('#bpDiscard').onclick = () => { if(!b) return closeBid(); bidPage(el); };
+  $('#bpSave').onclick = async () => {
     const body = { name: $('#f_name').value, storeNumber: $('#f_store').value, address: $('#f_address').value, city: $('#f_city').value, state: $('#f_state').value, customer: $('#f_customer').value,
       amount: $('#f_amount').value || 0, status: $('#f_status').value, bidDue: $('#f_due').value, bidSubmitted: $('#f_sub').value, decidedOn: $('#f_dec').value, startDate: $('#f_start').value, endDate: $('#f_end').value, notes: $('#f_notes').value };
     if(geo.lat != null){ body.lat = geo.lat; body.lon = geo.lon; }
-    try{ if(b) await api('PATCH', '/bids/' + b.id, body); else await api('POST', '/bids', body); closeModal(); await refresh(); }
+    try{ if(b){ await api('PATCH', '/bids/' + b.id, body); } else { const r = await api('POST', '/bids', body); PENDING_FILES = STAGED.length ? STAGED : null; STAGED = []; OPEN_BID = { id: r.bid.id, pool: null }; } await refresh(); }
     catch(e){ $('#fe').textContent = e.error === 'name_required' ? 'Give the bid a name.' : e.error === 'bad_date' ? 'One of the dates is not valid.' : 'Could not save (' + e.message + ').'; }
   };
 }
+// ---------- estimate: laid out like the estimate that goes to the customer; every line and row can be dragged ----------
+const uid_ = () => Math.random().toString(36).slice(2, 9);
+// New bid, built by hand: files dropped before the first save are held here and uploaded the moment the bid is saved.
+function stagedFiles(){
+  const z = $('#stDrop'), list = $('#stList'), fileIn = $('#stF'), dirIn = $('#stD');
+  const add = fs => { fs.forEach(f => { if(!STAGED.some(x => x.name === f.name && x.size === f.size && x.lastModified === f.lastModified)) STAGED.push(f); }); draw(); };
+  const fmt = n => n >= 1048576 ? (n / 1048576).toFixed(1) + ' MB' : Math.max(1, Math.round(n / 1024)) + ' KB';
+  const draw = () => { list.innerHTML = STAGED.length ? `<div style="font-size:12.5px;color:var(--text-dim);margin-bottom:4px">${STAGED.length} file${STAGED.length === 1 ? '' : 's'} ready: they upload when you save the bid.</div>` + STAGED.map((f, i) => `<div class="hist-row" style="display:flex;gap:8px;align-items:center"><span style="flex:1;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${esc(f.webkitRelativePath || f.name)}</span><span style="color:var(--text-dim);font-size:11.5px">${fmt(f.size)}</span><button class="btn small ghost" data-st="${i}" type="button" aria-label="Remove ${esc(f.name)}">✕</button></div>`).join('') : '';
+    list.querySelectorAll('[data-st]').forEach(b => b.onclick = () => { STAGED.splice(Number(b.dataset.st), 1); draw(); }); };
+  const files = e => e.dataTransfer && [...(e.dataTransfer.types || [])].includes('Files');
+  ['dragenter', 'dragover'].forEach(ev => z.addEventListener(ev, e => { if(!files(e)) return; e.preventDefault(); z.classList.add('over'); }));
+  z.addEventListener('dragleave', () => z.classList.remove('over'));
+  z.addEventListener('drop', e => { if(!files(e)) return; e.preventDefault(); z.classList.remove('over'); MediaPanel.collect(e.dataTransfer).then(add); });
+  z.onclick = e => { if(!e.target.closest('a')) fileIn.click(); }; z.onkeydown = e => { if(e.key === 'Enter' || e.key === ' '){ e.preventDefault(); fileIn.click(); } };
+  $('#stPick').onclick = e => { e.preventDefault(); e.stopPropagation(); fileIn.click(); }; $('#stPickDir').onclick = e => { e.preventDefault(); e.stopPropagation(); dirIn.click(); };
+  fileIn.onchange = e => { add([...e.target.files].filter(f => !MediaPanel.junk.test(f.name))); fileIn.value = ''; }; dirIn.onchange = e => { add([...e.target.files].filter(f => !MediaPanel.junk.test(f.name))); dirIn.value = ''; };
+  draw();
+}
+
+// ---------- New bid: build by hand, or drop the files you have gathered ----------
+let PENDING_FILES = null;
+const JUNK_FILE = { test: n => MediaPanel.junk.test(n) };
+function bidNameFromFiles(files){
+  const f = files.find(x => !x.__email) || files[0]; if(!f) return 'New bid'; if(f.__email) return 'New bid (from the GC email)';
+  const top = f.webkitRelativePath ? f.webkitRelativePath.split('/')[0] : '';
+  const raw = top || f.name.replace(/\.[a-z0-9]{2,5}$/i, '');
+  return raw.replace(/[_]+/g, ' ').replace(/\s+/g, ' ').trim().slice(0, 120) || 'New bid';
+}
+// What an Estimator usually has before bidding (Rob/Mike): ONE essential file, the original plan set (most of the bid's details come from it),
+// then whatever else exists. The GC's email is pasted in the left box; files go in the right box. Estimator AI starts only when BOTH are there.
+const BID_START_FILES = [
+  { name: 'Original Plan Set', icon: '<path d="M4 20V6l8-3 8 3v14M4 20h16M9 20v-6h6v6"/>', main: true },
+  { name: 'Addenda / CCDs', icon: '<path d="M7 3h8l4 4v14H7zM14 3v5h5M12 11v6M9 14h6"/>' },
+  { name: 'Specifications', icon: '<path d="M6 4h12v16H6zM9 8h6M9 12h6M9 16h4"/>' },
+  { name: 'RFIs', icon: '<path d="M4 5h16v11H9l-5 4zM12 8.5v3M12 13.5v.1"/>' },
+  { name: 'Submitted Estimates', icon: '<path d="M12 3v18M16 7.5c0-1.7-1.8-3-4-3s-4 1.1-4 2.8c0 4 8 2 8 6 0 1.7-1.8 2.7-4 2.7s-4-1.2-4-3"/>' }
+];
+// "Construction dates are 1/12/27-7/1/27" in a pasted email -> job start / end
+function datesFromEmail(t){
+  const D = x => { const m = /^(\d{1,2})\/(\d{1,2})\/(\d{2}|\d{4})$/.exec(x); if(!m) return ''; const y = m[3].length === 2 ? 2000 + +m[3] : +m[3]; return y + '-' + String(+m[1]).padStart(2, '0') + '-' + String(+m[2]).padStart(2, '0'); };
+  const m = /construction\s+dates?\s*(?:are|is|:)?\s*(\d{1,2}\/\d{1,2}\/\d{2,4})\s*(?:-|–|—|to|through)\s*(\d{1,2}\/\d{1,2}\/\d{2,4})/i.exec(t || '');
+  return m ? { startDate: D(m[1]), endDate: D(m[2]) } : {};
+}
+function newBidDialog(){
+  const back = document.createElement('div'); back.className = 'pk-back'; const close = () => back.remove();
+  let staged = [];
+  const q = sel => back.querySelector(sel);
+  const create = async () => {
+    const email = q('#nbEmail').value, m = q('#nbMsg'); let files = staged.slice();
+    if(email.trim()){ const ef = new File([email], 'GC email ' + iso(new Date()) + '.txt', { type: 'text/plain' }); ef.__email = true; files.push(ef); }   // filed last so the plan set names the bid
+    if(!files.length) return;
+    m.textContent = 'Creating the bid…'; q('#nbGo').disabled = true; q('#nbPartial').disabled = true;
+    try{ const r = await api('POST', '/bids', Object.assign({ name: bidNameFromFiles(files) }, datesFromEmail(email))); PENDING_FILES = files; close(); await refresh(); openBid(r.bid.id); BID_TAB = 'overview'; render(); }
+    catch(e){ m.textContent = 'Could not create the bid (' + e.message + ').'; draw(); }
+  };
+  back.innerHTML = `<div class="pk" role="dialog" aria-label="New bid" style="max-width:600px"><div class="pk-h"><b>New bid</b><span style="flex:1"></span><button class="btn small ghost" id="nbX" type="button">Close</button></div>
+    <div class="nb-opts">
+      <div class="nb-opt nb-em" style="cursor:default;text-align:left;padding:12px"><b style="margin:0 0 6px;font-size:14px;text-align:center">1 · Paste the GC's email</b>
+        <textarea id="nbEmail" placeholder="Copy the email from the customer and paste it here…" aria-label="The GC's email" style="width:100%;box-sizing:border-box;height:128px;padding:8px 10px;border:1px solid var(--line);border-radius:8px;font:inherit;font-size:12.5px;resize:none;background:var(--surface,#fff);color:var(--text)"></textarea>
+        <div id="nbEmSt" class="nb-st"></div></div>
+      <div class="nb-opt nb-dz" id="nbZone" tabindex="0" role="button" aria-label="Drop files here, or press Enter to choose files" style="padding:12px"><b style="font-size:14px">2 · Drop the files</b>
+        <div class="ic" style="font-size:24px">⇪</div><span>Plans, addenda, specs, RFIs. Files or whole folders.</span>
+        <div class="nb-sub">or <a href="#" id="nbPick">choose files</a> · <a href="#" id="nbPickDir">choose a folder</a></div><div id="nbFlSt" class="nb-st"></div></div></div>
+    <div style="padding:0 16px"><button class="btn primary" id="nbGo" type="button" style="width:100%" disabled>Create Bid And Start Estimator AI</button>
+      <div id="nbMsg" class="nb-msg" style="text-align:center"></div></div>
+    <div class="nb-rec"><div class="nb-rec-t">Recommended Files For Bid Creation</div><div class="nb-rec-r">${BID_START_FILES.map(f => `<div class="nb-rec-i${f.main ? ' main' : ''}"><span class="nb-rec-c"><svg viewBox="0 0 24 24" width="22" height="22" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">${f.icon}</svg></span><span class="nb-rec-n">${esc(f.name)}</span></div>`).join('')}</div></div>
+    <div style="padding:2px 16px 14px;text-align:center;font-size:12px;color:var(--text-faint,#8a8f98)"><button class="btn small ghost" id="nbManual" type="button">Build manually</button> <button class="btn small ghost" id="nbPartial" type="button" hidden>Create the bid without Estimator AI</button></div>
+    <input type="file" id="nbF" multiple hidden><input type="file" id="nbD" webkitdirectory hidden></div>`;
+  const draw = () => {
+    const hasE = !!q('#nbEmail').value.trim(), hasF = staged.length > 0;
+    q('#nbEmSt').innerHTML = hasE ? '<span style="color:var(--ok,#1E8449)">✓ Email pasted</span>' : '<span>Not pasted yet</span>';
+    q('#nbFlSt').innerHTML = hasF ? '<span style="color:var(--ok,#1E8449)">✓ ' + staged.length + ' file' + (staged.length === 1 ? '' : 's') + ' ready</span> <a href="#" id="nbClr">clear</a><div style="font-size:11px;color:var(--text-dim);margin-top:2px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">' + esc(staged.map(f => f.name).join(', ')) + '</div>' : '<span>No files yet</span>';
+    const c = q('#nbClr'); if(c) c.onclick = e => { e.preventDefault(); e.stopPropagation(); staged = []; draw(); };
+    q('#nbGo').disabled = !(hasE && hasF);
+    q('#nbPartial').hidden = !(hasE || hasF) || (hasE && hasF);
+    q('#nbMsg').textContent = hasE && hasF ? '' : (hasE || hasF ? 'Estimator AI starts once both the email and the files are in.' : '');
+  };
+  const add = fs => { fs.forEach(f => { if(!staged.some(x => x.name === f.name && x.size === f.size && x.webkitRelativePath === f.webkitRelativePath)) staged.push(f); }); draw(); };
+  q('#nbX').onclick = close; back.onclick = e => { if(e.target === back) close(); };
+  q('#nbManual').onclick = () => { close(); openBid(); };
+  q('#nbEmail').oninput = draw; q('#nbGo').onclick = create; q('#nbPartial').onclick = create;
+  const z = q('#nbZone'), dlg = q('.pk');
+  // the whole dialog accepts a drop (so a slightly-off drop is not lost); the box lights up while dragging over it
+  const hasFilesDt = e => e.dataTransfer && [...(e.dataTransfer.types || [])].includes('Files');
+  ['dragenter', 'dragover'].forEach(ev => dlg.addEventListener(ev, e => { if(!hasFilesDt(e)) return; e.preventDefault(); z.classList.add('over'); }));
+  dlg.addEventListener('dragleave', e => { if(!dlg.contains(e.relatedTarget)) z.classList.remove('over'); });
+  dlg.addEventListener('drop', e => { if(!hasFilesDt(e)) return; e.preventDefault(); z.classList.remove('over'); MediaPanel.collect(e.dataTransfer).then(fs => add(fs.filter(f => !JUNK_FILE.test(f.name)))); });
+  const fileIn = q('#nbF'), dirIn = q('#nbD');
+  z.onclick = e => { if(e.target.closest('a')) return; fileIn.click(); }; z.onkeydown = e => { if(e.key === 'Enter' || e.key === ' '){ e.preventDefault(); fileIn.click(); } };
+  q('#nbPick').onclick = e => { e.preventDefault(); e.stopPropagation(); fileIn.click(); };
+  q('#nbPickDir').onclick = e => { e.preventDefault(); e.stopPropagation(); dirIn.click(); };
+  fileIn.onchange = e => { add([...e.target.files].filter(f => !JUNK_FILE.test(f.name))); fileIn.value = ''; }; dirIn.onchange = e => { add([...e.target.files].filter(f => !JUNK_FILE.test(f.name))); dirIn.value = ''; };
+  document.body.appendChild(back); draw();
+}
+
+// ---------- hand-off: Won bid -> Project Manager ----------
+// Everything the bid and its estimate already say becomes the PM project (customer, store #, address, dates, files, contract lines).
+// The original contract is locked there; the PM adds change orders / addendums beside it.
+const HO_CACHE = {};
+async function handoffBox(b, el){
+  const box = $('#hoBox'); if(!box || !b) return;
+  const key = b.id + ':' + b.status + ':' + (b.projectId || '');
+  let h = HO_CACHE[key]; if(!h){ try{ h = await api('GET', '/bids/' + b.id + '/handoff'); }catch(e){ return; } HO_CACHE[key] = h; }
+  if(!$('#hoBox')) return;
+  const p = h.preview;
+  if(h.projectId){
+    box.innerHTML = `<div class="es-card" style="border-left:4px solid #1E8449"><h4>Handed Off to the Project Manager${b.code ? ` <span class="bp-code">${esc(b.code)}</span>` : ''}</h4><div class="es-hint">This estimate is now the locked original contract. Later changes are made by the PM as change orders.</div><a class="btn small" href="/pm">Open Project Manager</a></div><div id="gcBox"></div>`;
+    gcContractCard(b);
+    return;
+  }
+  if(b.status !== 'Won' || b.archived || !h.hasEstimate){ box.innerHTML = ''; return; }
+  const sc = h.scopes || [], multi = sc.length > 1, picked = new Set(sc.map(x => x.scope));
+  const draw = () => {
+    const ch = multi ? sc.filter(x => picked.has(x.scope)) : sc, sub = multi ? ch.reduce((a, x) => a + x.subtotal, 0) : p.subtotal, tax = multi ? ch.reduce((a, x) => a + x.tax, 0) : p.tax, tot = sub + tax;
+    const diff = Math.abs((Number(b.amount) || 0) - tot) > 0.5;
+    box.innerHTML = `<div class="es-card" style="border-left:4px solid var(--accent)"><h4>Hand Off to the Project Manager</h4>
+      ${multi ? `<div style="font-size:12.5px;font-weight:600;margin-bottom:2px">Which scopes did we win?</div>${sc.map(x => `<label class="es-opt" style="margin:4px 0"><input type="checkbox" data-hs="${esc(x.scope)}" ${picked.has(x.scope) ? 'checked' : ''} ${canWrite() ? '' : 'disabled'}> <span><b>${esc(x.scope)}</b><small>${x.lines} line${x.lines === 1 ? '' : 's'} · ${money(x.subtotal)} + tax ${money(x.tax)} = ${money(x.total)}</small></span></label>`).join('')}` : ''}
+      <div class="es-kv2" style="margin:8px 0"><span>Subtotal</span><b>${money(sub)}</b><span>Tax</span><b>${money(tax)}</b><span>Contract</span><b>${money(tot)}</b></div>
+      ${diff ? `<div class="ho-warn" style="margin:0 0 8px">Bid amount ${money(b.amount)} differs from ${multi && ch.length < sc.length ? 'the awarded total' : 'the estimate total'}. The contract uses the estimate.</div>` : ''}
+      ${canWrite() ? `<button class="btn primary es-bigbtn" id="hoGo" type="button" ${ch.length ? '' : 'disabled'}>Hand Off</button>` : ''}</div>`;
+    box.querySelectorAll('[data-hs]').forEach(c => c.onchange = () => { if(c.checked) picked.add(c.dataset.hs); else picked.delete(c.dataset.hs); draw(); });
+    const go = $('#hoGo'); if(go) go.onclick = async () => {
+      const part = multi && ch.length < sc.length;
+      if(!confirm('Hand off "' + (b.name || 'this bid') + '" to the Project Manager' + (part ? ' (' + ch.map(x => x.scope).join(', ') + ' only)' : '') + '? The estimate becomes the locked original contract.')) return;
+      go.disabled = true; go.textContent = 'Handing Off…';
+      try{ const r = await api('POST', '/bids/' + b.id + '/handoff', multi ? { scopes: ch.map(x => x.scope) } : {}); b.projectId = r.projectId; await refresh(); }
+      catch(e){ go.disabled = false; go.textContent = 'Hand Off'; alert(e.message === 'busy' || e.status === 503 ? 'The board was busy. Nothing was created; try again.' : (e.message || 'Could not hand off.')); }
+    };
+  };
+  draw();
+}
+
+// GC contract: the customer sends it to the Estimator (before or after hand-off); the Estimator uploads it onto the project and keeps its details
+// (received date, retention, ...). Estimator AI can suggest the details from the document; the person reviews and saves. Uploads and every edit are kept.
+// This is the Estimator's only door into the project's files. The PM is not notified; the PM's Money screen offers the details.
+async function gcContractCard(b){
+  const box = $('#gcBox'); if(!box) return;
+  const hdr = ct => Object.assign(ct ? { 'Content-Type': ct } : {}, TOKEN ? { Authorization: 'Bearer ' + TOKEN } : {});
+  const media = async (method, path, body, ct) => { const r = await fetch(GO_CONFIG.API + '/api/media' + path, { method, headers: hdr(ct), body }); const j = await r.json().catch(() => ({})); if(!r.ok) throw Object.assign(new Error(j.error || 'failed'), j); return j; };
+  const load = async () => { try{ return await media('GET', '/contract?bidId=' + b.id); }catch(e){ return null; } };
+  let st = await load(); if(!$('#gcBox') || !st || !st.handedOff) return;
+  const F = [['receivedOn', 'Received', 'date'], ['contractDate', 'Contract date', 'date'], ['retentionPct', 'Retention %', 'number'], ['contractNumber', 'Contract / PO #', 'text'], ['contractAmount', 'Contract amount', 'number'], ['paymentTerms', 'Payment terms', 'text']];
+  const AI = new Set(), SUG = {}; let showHist = false;
+  const dayOf = t => fmtDate(iso(new Date(t)));
+  const histLine = h => { const ch = Object.entries(h.changes || {}).filter(([k]) => k !== 'aiFilled' && k !== 'file' && k !== 'receivedOn' || h.action !== 'upload');
+    const what = h.action === 'upload' ? 'Added the contract (' + esc((h.changes || {}).file || '') + ')' : ch.map(([k, v]) => { const lab = (F.find(f => f[0] === k) || [k, k])[1]; return esc(lab) + ': ' + esc(v.from == null ? '—' : v.from) + ' → ' + esc(v.to == null ? '—' : v.to); }).join('; ');
+    return `<div style="padding:3px 0;border-top:1px solid var(--line)"><b>${esc(h.by)}</b> · ${dayOf(h.at)}${h.action === 'ai_fill' ? ' · Estimator AI suggested' : ''}<br>${what}</div>`; };
+  const draw = () => {
+    if(!st.onFile){
+      box.innerHTML = `<div class="es-card" style="margin-top:10px;border-left:4px solid var(--accent)"><h4>GC Contract</h4><div class="es-hint">When the customer sends their contract, add it here. It goes straight into the project's files and the PM is not notified.</div>
+        ${st.canUpload ? '<button class="btn primary es-bigbtn" id="gcGo" type="button">Upload Contract</button><input type="file" id="gcFile" accept=".pdf,.doc,.docx,.jpg,.jpeg,.png,.heic" style="display:none"><div id="gcMsg" class="es-hint" style="margin-top:6px"></div>' : '<div class="es-hint">You can look at bids but not add the contract.</div>'}</div>`;
+      const go = $('#gcGo'), fi = $('#gcFile'); if(!go) return;
+      go.onclick = () => fi.click();
+      fi.onchange = async () => {
+        const f = fi.files[0]; if(!f) return;
+        if(f.size > 25 * 1048576){ $('#gcMsg').textContent = 'That file is over 25 MB.'; return; }
+        go.disabled = true; go.textContent = 'Adding…';
+        try{ await media('POST', '/contract?bidId=' + b.id + '&name=' + encodeURIComponent(f.name), f, 'application/octet-stream'); st = await load(); draw(); }
+        catch(e){ go.disabled = false; go.textContent = 'Upload Contract'; $('#gcMsg').textContent = e.message === 'contract_on_file' ? 'A contract is already on file.' : e.message === 'file_does_not_match_its_type' ? 'That file does not look like its file type.' : 'Could not add it (' + e.message + ').'; }
+      };
+      return;
+    }
+    const o = st.onFile, ed = !!st.canEdit, ai = new Set([...(o.aiFields || []), ...AI]);
+    box.innerHTML = `<div class="es-card" style="margin-top:10px"><h4>GC Contract</h4>
+      <div class="es-hint" style="margin:0 0 6px"><b>${esc(o.name)}</b> · added by ${esc(o.addedBy || 'the Estimator')} on ${dayOf(o.addedAt)} <button class="btn small ghost" id="gcView" type="button">View</button></div>
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:6px 8px;font-size:12px">${F.map(([k, lab, ty]) => `<label style="${k === 'paymentTerms' ? 'grid-column:1/3;' : ''}display:flex;flex-direction:column;gap:2px">${lab}${ai.has(k) ? ' <span class="tag" title="Suggested by Estimator AI. Edit it if it is wrong." style="font-size:9px;padding:0 5px">AI</span>' : ''}<input data-gc="${k}" type="${ty}" ${ty === 'number' ? 'step="any" min="0"' : ''} value="${esc(o[k])}" ${ed ? '' : 'disabled'} style="${dateIn}width:100%;box-sizing:border-box"></label>`).join('')}</div>
+      ${ed ? '<div style="display:flex;gap:6px;margin-top:8px;flex-wrap:wrap"><button class="btn primary small" id="gcSave" type="button" disabled>Save</button><button class="btn small" id="gcAi" type="button" title="Estimator AI reads the contract and suggests the details. You look them over before saving.">Fill in with Estimator AI</button></div>' : ''}
+      <div id="gcMsg" class="es-hint" style="margin-top:6px"></div>
+      <a href="#" id="gcHist" style="font-size:11.5px">${showHist ? 'Hide' : 'Show'} record (${(st.history || []).length})</a>${showHist ? `<div style="font-size:11.5px;color:var(--text-dim);margin-top:4px">${(st.history || []).map(histLine).join('')}</div>` : ''}</div>`;
+    const val = k => { const i = box.querySelector('[data-gc="' + k + '"]'); return i ? i.value : ''; };
+    const dirty = () => F.some(([k]) => String(val(k)) !== String(o[k] == null ? '' : o[k]));
+    const sv = $('#gcSave'), msg = $('#gcMsg');
+    box.querySelectorAll('[data-gc]').forEach(i => i.oninput = () => { const k = i.dataset.gc; if(AI.has(k) && String(i.value) !== String(SUG[k])){ AI.delete(k); const t = i.parentNode.querySelector('.tag'); if(t) t.remove(); } if((o.aiFields || []).includes(k) && String(i.value) !== String(o[k])){ const t = i.parentNode.querySelector('.tag'); if(t) t.remove(); } if(sv) sv.disabled = !dirty(); });
+    $('#gcHist').onclick = e => { e.preventDefault(); showHist = !showHist; draw(); };
+    $('#gcView').onclick = async () => {
+      const w = window.open('', '_blank');
+      try{ const r = await fetch(GO_CONFIG.API + '/api/media/' + o.fileId + '/file', { headers: hdr() }); if(!r.ok) throw new Error(); const u = URL.createObjectURL(await r.blob()); if(w) w.location = u; else window.location = u; }
+      catch(e){ if(w) w.close(); msg.textContent = 'Could not open the contract.'; }
+    };
+    if(sv) sv.onclick = async () => {
+      const body = { bidId: b.id, ai: [...AI] }; F.forEach(([k]) => { body[k] = val(k); });
+      sv.disabled = true; sv.textContent = 'Saving…';
+      try{ await media('PUT', '/contract/details?bidId=' + b.id, JSON.stringify(body), 'application/json'); AI.clear(); st = await load(); draw(); const m2 = $('#gcMsg'); if(m2) m2.textContent = 'Saved. The change is recorded.'; }
+      catch(e){ sv.disabled = false; sv.textContent = 'Save'; msg.textContent = e.message === 'bad_date' ? 'Check the dates.' : e.message === 'bad_retention' ? 'Retention must be 0–100.' : 'Could not save (' + e.message + ').'; }
+    };
+    const aiBtn = $('#gcAi'); if(aiBtn) aiBtn.onclick = async () => {
+      aiBtn.disabled = true; aiBtn.textContent = 'Reading the contract…'; msg.textContent = '';
+      try{
+        const r = await media('POST', '/contract/autofill?bidId=' + b.id, '{}', 'application/json'); let n = 0;
+        Object.entries(r.suggestions || {}).forEach(([k, v]) => { const i = box.querySelector('[data-gc="' + k + '"]'); if(i && String(i.value) === ''){ i.value = v; AI.add(k); SUG[k] = v; n++; if(!i.parentNode.querySelector('.tag')) i.parentNode.insertAdjacentHTML('afterbegin', ' '); i.parentNode.insertBefore(Object.assign(document.createElement('span'), { className: 'tag', title: 'Suggested by Estimator AI. Edit it if it is wrong.', textContent: 'AI', style: 'font-size:9px;padding:0 5px;align-self:flex-start' }), i); } });
+        aiBtn.disabled = false; aiBtn.textContent = 'Fill in with Estimator AI';
+        if(n){ $('#gcSave').disabled = false; $('#gcMsg').textContent = 'Estimator AI filled ' + n + ' field' + (n === 1 ? '' : 's') + ' (marked AI). Look them over, change anything that is wrong, then Save.'; }
+        else msg.textContent = Object.keys(r.suggestions || {}).length ? 'Nothing to fill: those fields already have values.' : 'Estimator AI did not find those details in this document.';
+      }catch(e){ aiBtn.disabled = false; aiBtn.textContent = 'Fill in with Estimator AI'; msg.textContent = e.message === 'ai_not_configured' ? 'Estimator AI is not set up on the server yet.' : e.message === 'ai_needs_pdf_or_picture' ? 'Estimator AI can read PDFs and pictures. Type the details instead.' : 'Estimator AI could not read it (' + e.message + '). You can type the details.'; }
+    };
+  };
+  draw();
+}
+
+// ---------- Estimate notes, filled from the bid (and the drive from our shop) ----------
+// Same five lines the sent estimate carries: Destination, Address, Distance, Construction Start / End. Only those lines are managed;
+// anything else typed in Notes is left alone. Filled automatically for a new estimate; "Refresh from bid" redoes them after the bid changes.
+const HQ_ADDR = '1303 West College Street, Murfreesboro, TN 37129', NOTE_LABELS = ['Destination', 'Address', 'Distance', 'Construction Start', 'Construction End'], DIST_CACHE = {};
+const usDate = v => { const m = /^(\d{4})-(\d\d)-(\d\d)$/.exec(v || ''); return m ? (+m[2]) + '/' + (+m[3]) + '/' + m[1] : ''; };
+const isNoteLine = ln => NOTE_LABELS.some(l => ln.startsWith(l + ':'));
+function driveFromShop(b){   // "6 hr 42 min (399 miles)" via Google, or null when it cannot be worked out
+  const dest = b.lat != null && b.lon != null ? { lat: b.lat, lng: b.lon } : [b.address, b.city, b.state].filter(Boolean).join(', ');
+  if(!dest) return Promise.resolve(null);
+  const key = JSON.stringify(dest); if(DIST_CACHE[key]) return Promise.resolve(DIST_CACHE[key]);
+  return new Promise(res => {
+    const done = v => { clearTimeout(t); if(v) DIST_CACHE[key] = v; res(v); }, t = setTimeout(() => res(null), 9000);
+    try{ loadMaps(() => { try{
+      if(!(window.google && google.maps && google.maps.DistanceMatrixService)) return done(null);
+      new google.maps.DistanceMatrixService().getDistanceMatrix({ origins: [HQ_ADDR], destinations: [dest], travelMode: google.maps.TravelMode.DRIVING, unitSystem: google.maps.UnitSystem.IMPERIAL }, (r, st) => {
+        const el = st === 'OK' && r && r.rows && r.rows[0] && r.rows[0].elements[0]; if(!el || el.status !== 'OK') return done(null);
+        const mins = Math.round(el.duration.value / 60), h = Math.floor(mins / 60), m = mins % 60, mi = Math.round(el.distance.value / 1609.344);
+        done((h ? h + ' hr ' : '') + m + ' min (' + mi.toLocaleString('en-US') + ' miles)'); });
+    }catch(e){ done(null); } }); }catch(e){ done(null); }
+  });
+}
+function noteLinesFor(b, dist){
+  const addr = [b.address, [b.city, b.state].filter(Boolean).join(', ')].filter(Boolean).join(', '), NS = '(not set)';
+  return ['Destination: ' + (b.name || NS), 'Address: ' + (addr || NS), 'Distance: ' + (dist || NS), 'Construction Start: ' + (usDate(b.startDate) || NS), 'Construction End: ' + (usDate(b.endDate) || NS)];
+}
+async function esAutoNotes(el, force){
+  if(EST.ro) return;
+  const d = EST.doc, b = EST.bid, cur = d.notes || [];
+  if(!force && cur.some(isNoteLine)) return;               // already has them (typed, edited or sent): never overwritten by itself
+  const set = dist => { d.notes = noteLinesFor(b, dist).concat(cur.filter(l => l.trim() && !isNoteLine(l))); const ta = $('#esNotes'); if(ta){ ta.value = d.notes.join('\n'); ta.style.height = 'auto'; ta.style.height = ta.scrollHeight + 'px'; } esDirty(el); esNotesHint(); };
+  const hint = $('#esNotesHint'); if(hint) hint.textContent = 'Looking up the drive from our shop…';
+  set(DIST_CACHE[JSON.stringify(b.lat != null && b.lon != null ? { lat: b.lat, lng: b.lon } : [b.address, b.city, b.state].filter(Boolean).join(', '))] || null);
+  const dist = await driveFromShop(b);
+  if(!$('#esNotes') || EST.bid !== b) return;
+  if(dist){ const n = d.notes.map(l => l.startsWith('Distance:') ? 'Distance: ' + dist : l); d.notes = n; $('#esNotes').value = n.join('\n'); esDirty(el); }
+  esNotesHint();
+}
+function esNotesHint(){
+  const h = $('#esNotesHint'); if(!h) return; const miss = (EST.doc.notes || []).filter(l => isNoteLine(l) && /\(not set\)/.test(l)).map(l => l.split(':')[0]);
+  h.textContent = miss.length ? 'Still to fill in: ' + miss.join(', ') + '. Set them on the bid (Overview) and press Refresh, or type them here.' : 'Filled from the bid. Edit freely; Refresh redoes only these five lines.';
+}
+
+// ---------- Catalog (Owner / Estimator): the standard things we buy, make and install ----------
+// Pictograms for items without a photo (services like lodging / transport, or anything not photographed yet). Drawn here; only the key is stored.
+const CAT_ICON_PATHS = {
+  steel: '<path d="M3 5h18v3H14v8h7v3H3v-3h7V8H3z"/>', bolt: '<path d="M12 3l7 4v6l-7 4-7-4V7zM12 8v5"/><circle cx="12" cy="20" r="0.8"/>',
+  tool: '<path d="M14.5 4.5a4 4 0 00-5 5L3 16l2 2 1 1 2 2 6.5-6.5a4 4 0 005-5l-3 3-2-.5-.5-2z"/>', wrench: '<path d="M4 20l9-9M13 11l-1.5-4 3.5-3 2 2-1 2 2 2 2-1 2 2-3 3.5-4-1.5"/>',
+  truck: '<path d="M2 6h11v9H2zM13 9h5l3 3v3h-8zM6 18a2 2 0 100 .01M17 18a2 2 0 100 .01"/>', bed: '<path d="M3 18V6M3 14h18v4M21 14v-3a3 3 0 00-3-3h-7v6M7 11a2 2 0 100-.01"/>',
+  fuel: '<path d="M5 20V5a1 1 0 011-1h7a1 1 0 011 1v15M3 20h13M14 9h2.5a1.5 1.5 0 011.5 1.5V16a1.5 1.5 0 003 0V9l-3-3M7 8h5"/>', paint: '<path d="M5 4h12v6H5zM17 7h2v5h-7v3M11 15h2v6h-2z"/>',
+  forklift: '<path d="M3 17V8h6l2 4h2v5M3 17h10M17 5v14M17 19h4M20 8h-3M20 12h-3M6 20a2 2 0 100-.01M12 20a2 2 0 100-.01"/>', crane: '<path d="M6 21V8l12-5M6 8l7 2M18 3v7M18 10v3a2 2 0 11-2 2M3 21h8"/>',
+  doc: '<path d="M7 3h8l4 4v14H7zM14 3v5h5M10 13h6M10 17h6"/>', box: '<path d="M3 8l9-5 9 5v8l-9 5-9-5zM3 8l9 5 9-5M12 13v8"/>'
+};
+const CAT_ICON_NAMES = { steel: 'Steel', bolt: 'Hardware', tool: 'Fabrication', wrench: 'Install', truck: 'Transport', bed: 'Lodging', fuel: 'Fuel', paint: 'Coatings', forklift: 'Forklift / rental', crane: 'Crane', doc: 'Paperwork', box: 'Other' };
+const CAT_ICON_DEFAULT = { Materials: 'steel', Consumables: 'bolt', Fabrication: 'tool', Installation: 'wrench', Transport: 'truck', 'Lodging & Per Diem': 'bed', Coatings: 'paint', Other: 'doc' };
+const catIconKey = i => (i.icon && CAT_ICON_PATHS[i.icon]) ? i.icon : (CAT_ICON_DEFAULT[i.category] || 'box');
+const catIconSvg = key => `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">${CAT_ICON_PATHS[key] || CAT_ICON_PATHS.box}</svg>`;
+// Pictures need the sign-in header, so they are fetched and shown from a blob; the address changes whenever the picture does, so each is fetched once.
+const CAT_IMG = {};
+function catImgUrl(id, v){
+  const k = id + ':' + v; if(!CAT_IMG[k]) CAT_IMG[k] = fetch(GO_CONFIG.API + '/api/estimator/catalog/' + id + '/image?v=' + v, { headers: TOKEN ? { Authorization: 'Bearer ' + TOKEN } : {} }).then(r => r.ok ? r.blob() : Promise.reject(new Error('no image'))).then(b => URL.createObjectURL(b));
+  return CAT_IMG[k];
+}
+function catHydrate(root){
+  root.querySelectorAll('[data-img]').forEach(n => { const id = n.dataset.img, v = n.dataset.v; if(!v) return;
+    catImgUrl(id, v).then(u => { if(!n.isConnected) return; const im = document.createElement('img'); im.alt = ''; im.src = u; const sv = n.querySelector('svg'); if(sv) sv.remove(); n.appendChild(im); }).catch(() => {}); });
+}
+// Shrink a photo before upload (max 1600 px, JPEG, white behind transparent PNGs) so cards load fast and the server never receives a 20 MB phone picture.
+async function shrinkImage(file){
+  const bmp = await (window.createImageBitmap ? createImageBitmap(file) : new Promise((res, rej) => { const im = new Image(); im.onload = () => res(im); im.onerror = rej; im.src = URL.createObjectURL(file); }));
+  const w = bmp.width, h = bmp.height, sc = Math.min(1, 1600 / Math.max(w, h)), c = document.createElement('canvas'); c.width = Math.max(1, Math.round(w * sc)); c.height = Math.max(1, Math.round(h * sc));
+  const g = c.getContext('2d'); g.fillStyle = '#fff'; g.fillRect(0, 0, c.width, c.height); g.drawImage(bmp, 0, 0, c.width, c.height);
+  for(const q of [0.88, 0.8, 0.7]){ const b = await new Promise(r => c.toBlob(r, 'image/jpeg', q)); if(b && b.size < 3.5 * 1024 * 1024) return b; }
+  throw new Error('too_large');
+}
+let CATALOG = null;
+async function loadCatalog(force){ if(!CATALOG || force){ const r = await api('GET', '/catalog'); CATALOG = r; } return CATALOG; }
+async function catalog(el){
+  const ro = PERMS['estimator.pricebook'] !== 'write';
+  el.innerHTML = '<div class="empty">Loading…</div>';
+  let C; try{ C = await loadCatalog(true); }catch(e){ el.innerHTML = '<div class="empty">Could not load the catalog: ' + esc(e.message) + '</div>'; return; }
+  let q = '', showOff = false, catF = 'all';
+  const reload = async () => { C = await loadCatalog(true); draw(); };
+  // ---- add / edit an item in a pop-up ----
+  const openForm = id => {
+    const i = id === 'new' ? { category: catF !== 'all' && C.categories.includes(catF) ? catF : (C.categories[0] || 'Materials'), name: '', stockNo: '', description: '', unit: 'ea', unitPrice: '', taxable: true, notes: '', source: '' } : C.items.find(x => x.id === id);
+    if(!i) return;
+    const f = (k, lbl, type, extra) => `<div class="field"><label>${lbl}</label><input data-k="${k}" type="${type || 'text'}" value="${esc(i[k] == null ? '' : i[k])}" ${extra || ''}></div>`;
+    const pend = { blob: null, url: null, remove: false, icon: i.icon || '' };
+    modal(`<h3 style="margin:0 0 12px;font-size:16px">${id === 'new' ? 'New catalog item' : 'Edit catalog item'}</h3><div class="cat-form" style="border:0;padding:0;margin:0;max-height:calc(92vh - 90px);overflow:auto">
+      <div class="cat-pic" id="cPic"><div class="big" id="cPicBig" data-img="${id === 'new' ? '' : id}" data-v="${i.imageAt || ''}">${catIconSvg(pend.icon || catIconKey(i))}</div>
+        <div class="bar"><button class="btn small" id="cPicUp" type="button">${i.imageAt ? 'Change Picture' : 'Upload Picture'}</button><button class="btn small ghost" id="cPicRm" type="button" style="display:${i.imageAt ? '' : 'none'}">Remove Picture</button><span id="cPicMsg">or drop a photo here</span>
+          <div class="cat-icons" id="cIcons" title="Icon shown when there is no picture">${Object.keys(CAT_ICON_PATHS).map(k => `<button type="button" data-ic="${k}" title="${CAT_ICON_NAMES[k]}" class="${(pend.icon || catIconKey(i)) === k ? 'on' : ''}">${catIconSvg(k)}</button>`).join('')}</div></div><input type="file" id="cPicF" accept="image/*" hidden></div>
+      <div class="grid3">${f('name', 'Name')}${f('stockNo', 'Stock # / part #')}<div class="field"><label>Category</label><select data-k="category">${C.categories.map(c => `<option ${c === i.category ? 'selected' : ''}>${esc(c)}</option>`).join('')}</select></div>
+      <div class="field"><label>Unit</label><select data-k="unit">${C.units.map(c => `<option ${c === i.unit ? 'selected' : ''}>${c}</option>`).join('')}</select></div>${f('unitPrice', 'Unit price ($)', 'number', 'min="0" step="0.01" placeholder="Not set yet"')}
+      <div class="field"><label>Taxable</label><select data-k="taxable"><option value="1" ${i.taxable ? 'selected' : ''}>Yes</option><option value="0" ${i.taxable ? '' : 'selected'}>No</option></select></div></div>
+      <div class="field" style="margin-top:10px"><label>Description (as it should read on the estimate)</label><textarea data-k="description" rows="3">${esc(i.description)}</textarea></div>
+      <div class="grid3" style="margin-top:10px">${f('source', 'Where it came from', 'text', 'placeholder="e.g. Estimate #1961"')}<div class="field" style="grid-column:span 2"><label>Notes</label><input data-k="notes" value="${esc(i.notes)}"></div></div>
+      <div style="display:flex;gap:8px;margin-top:14px;justify-content:flex-end;align-items:center"><span id="cErr" style="color:#B3261E;font-size:12.5px;margin-right:auto"></span><button class="btn small ghost" id="cCancel" type="button">Cancel</button><button class="btn primary small" id="cSave" type="button">Save item</button></div></div>`);
+    $('#cCancel').onclick = closeModal;
+    catHydrate($('#cPicBig').parentNode);
+    const big = $('#cPicBig'), msg = $('#cPicMsg'), hasPic = () => pend.blob || (i.imageAt && !pend.remove);
+    const showIcon = () => { big.innerHTML = catIconSvg(pend.icon || catIconKey(Object.assign({}, i, { category: (document.querySelector('#modalBody [data-k="category"]') || {}).value || i.category }))); };
+    const take = async file => {
+      if(!file) return; msg.textContent = 'Preparing picture…';
+      try{ pend.blob = await shrinkImage(file); pend.remove = false; if(pend.url) URL.revokeObjectURL(pend.url); pend.url = URL.createObjectURL(pend.blob); big.innerHTML = '<img alt="" src="' + pend.url + '">'; msg.textContent = 'Picture ready; it is saved with the item.'; $('#cPicUp').textContent = 'Change Picture'; $('#cPicRm').style.display = ''; }
+      catch(e){ msg.textContent = e.message === 'too_large' ? 'That picture is too large even after shrinking.' : 'Could not read that file. Use a JPG, PNG or WebP picture.'; }
+    };
+    $('#cPicUp').onclick = () => $('#cPicF').click(); $('#cPicF').onchange = e => take(e.target.files[0]);
+    $('#cPicRm').onclick = () => { pend.blob = null; pend.remove = true; big.innerHTML = ''; showIcon(); $('#cPicRm').style.display = 'none'; $('#cPicUp').textContent = 'Upload Picture'; msg.textContent = 'Picture removed when you save.'; };
+    document.querySelectorAll('#cIcons [data-ic]').forEach(b => b.onclick = () => { pend.icon = b.dataset.ic; document.querySelectorAll('#cIcons [data-ic]').forEach(x => x.classList.toggle('on', x === b)); if(!hasPic()) showIcon(); });
+    const dz = $('#cPic'); ['dragenter', 'dragover'].forEach(ev => dz.addEventListener(ev, e => { if(e.dataTransfer && [...(e.dataTransfer.types || [])].includes('Files')){ e.preventDefault(); dz.classList.add('over'); } }));
+    dz.addEventListener('dragleave', e => { if(!dz.contains(e.relatedTarget)) dz.classList.remove('over'); }); dz.addEventListener('drop', e => { e.preventDefault(); dz.classList.remove('over'); take(e.dataTransfer.files[0]); });
+    $('#cSave').onclick = async () => {
+      const body = {}; document.querySelectorAll('#modalBody .cat-form [data-k]').forEach(x => { body[x.dataset.k] = x.dataset.k === 'taxable' ? x.value === '1' : x.value; });
+      body.icon = pend.icon || '';
+      if(!String(body.name || '').trim()){ $('#cErr').textContent = 'Give the item a name.'; return; }
+      try{
+        const saved = id === 'new' ? await api('POST', '/catalog', body) : await api('PATCH', '/catalog/' + id, body); const iid = id === 'new' ? saved.id : id;
+        if(pend.blob){ const r = await fetch(GO_CONFIG.API + '/api/estimator/catalog/' + iid + '/image', { method: 'PUT', headers: Object.assign({ 'Content-Type': 'image/jpeg' }, TOKEN ? { Authorization: 'Bearer ' + TOKEN } : {}), body: pend.blob }); if(!r.ok){ const j = await r.json().catch(() => ({})); throw Object.assign(new Error(j.error || 'picture not saved'), j); } }
+        else if(pend.remove && i.imageAt) await api('POST', '/catalog/' + iid + '/image/remove');
+        closeModal(); await reload();
+      }catch(e){ $('#cErr').textContent = 'Could not save (' + e.message + ').'; }
+    };
+    const cat = document.querySelector('#modalBody [data-k="category"]'); if(cat) cat.onchange = () => { if(!hasPic() && !pend.icon) showIcon(); };
+  };
+  // ---- manage categories (the filter bubbles): add, rename, delete when empty ----
+  const openCats = () => {
+    const paint = () => {
+      const n = c => C.items.filter(i => i.category === c).length;
+      modal(`<h3 style="margin:0 0 4px;font-size:16px">Categories</h3><div style="font-size:12.5px;color:var(--text-dim);margin-bottom:12px">These are the filter bubbles on the Catalog. A category can be deleted once no item (retired ones too) is filed under it.</div>
+        <div class="cat-cats">${C.categories.map((c, k) => `<div class="cat-crow"><input data-cn="${k}" value="${esc(c)}" maxlength="40" aria-label="Category name"><span class="cnt">${n(c)} item${n(c) === 1 ? '' : 's'}</span><button class="btn small ghost" data-cren="${k}" type="button">Rename</button><button class="btn small ghost" data-cdel="${k}" type="button" ${n(c) ? 'disabled title="Move or re-file its items first"' : ''}>Delete</button></div>`).join('')}</div>
+        <div class="cat-crow" style="margin-top:12px"><input id="cNewName" placeholder="New category name" maxlength="40" aria-label="New category name"><span class="cnt"></span><button class="btn primary small" id="cAdd" type="button" style="grid-column:span 2">Add Category</button></div>
+        <div style="display:flex;gap:8px;margin-top:14px;align-items:center"><span id="cErr" style="color:#B3261E;font-size:12.5px;margin-right:auto"></span><button class="btn small" id="cDone" type="button">Done</button></div>`);
+      const run = async fn => { try{ await fn(); C = await loadCatalog(true); paint(); }catch(e){ const x = $('#cErr'); if(x) x.textContent = e.error === 'already_exists' ? 'That category already exists.' : e.error === 'category_in_use' ? 'It still has items in it.' : 'Could not save (' + e.message + ').'; } };
+      $('#cDone').onclick = () => { closeModal(); draw(); };
+      $('#cAdd').onclick = () => { const v = $('#cNewName').value.trim(); if(v) run(() => api('POST', '/catalog-categories', { name: v })); };
+      $('#cNewName').onkeydown = e => { if(e.key === 'Enter') $('#cAdd').click(); };
+      document.querySelectorAll('[data-cren]').forEach(b => b.onclick = () => { const k = Number(b.dataset.cren), to = document.querySelector(`[data-cn="${k}"]`).value.trim(); if(to && to !== C.categories[k]) run(async () => { if(catF === C.categories[k]) catF = to; await api('PATCH', '/catalog-categories', { from: C.categories[k], to }); }); });
+      document.querySelectorAll('[data-cdel]').forEach(b => b.onclick = () => { const c = C.categories[Number(b.dataset.cdel)]; if(!confirm('Delete the category "' + c + '"?')) return; run(async () => { if(catF === c) catF = 'all'; await api('POST', '/catalog-categories/delete', { name: c }); }); });
+    };
+    paint();
+  };
+  const draw = () => {
+    const pool = C.items.filter(i => (showOff || i.active) && (!q || q.split(/\s+/).every(w => (i.name + ' ' + i.stockNo + ' ' + i.description + ' ' + i.category + ' ' + i.source).toLowerCase().includes(w))));
+    if(catF !== 'all' && !C.categories.includes(catF)) catF = 'all';
+    const bubbles = C.categories.filter(c => pool.some(i => i.category === c) || c === catF || !q);
+    const items = catF === 'all' ? pool : pool.filter(i => i.category === catF);
+    el.innerHTML = `<div class="page-head"><div><h2>Catalog</h2></div>${ro ? '' : '<div style="display:flex;gap:8px"><button class="btn primary" id="cNew" type="button">+ New Item</button><button class="btn" id="cCats" type="button">+ New Category</button></div>'}</div>
+      <div style="margin-bottom:12px"><input id="cQ" type="search" placeholder="Search name, stock #, description…" value="${esc(q)}" aria-label="Search the catalog" style="width:100%;max-width:420px;padding:6px 10px;border:1px solid var(--border,#d6d9de);border-radius:8px;font:inherit;font-size:13px"></div>
+      <div style="display:flex;gap:8px;margin-bottom:16px;flex-wrap:wrap;align-items:center"><button class="btn small ${catF === 'all' ? 'primary' : ''}" data-cf="all">All <span style="opacity:.7">${pool.length}</span></button>${bubbles.map(c => `<button class="btn small ${catF === c ? 'primary' : ''}" data-cf="${esc(c)}">${esc(c)} <span style="opacity:.7">${pool.filter(i => i.category === c).length}</span></button>`).join('')}
+        <label style="font-size:12.5px;display:flex;gap:6px;align-items:center;margin-left:6px"><input type="checkbox" id="cOff" ${showOff ? 'checked' : ''}> Show retired</label></div>
+      ${items.length ? `<div class="cat-grid">${items.map(i => `<div class="cat-card ${i.active ? '' : 'off'} ${ro ? '' : 'click'}" ${ro ? '' : `data-ed="${i.id}" tabindex="0" role="button" aria-label="Edit ${esc(i.name)}"`}><div class="cc-img" data-img="${i.id}" data-v="${i.imageAt || ''}">${catIconSvg(catIconKey(i))}</div><div class="cc-top" style="margin-top:10px"><span class="cc-cat">${esc(i.category)}</span>${i.active ? '' : '<span class="cc-cat">Retired</span>'}</div>
+        <b>${esc(i.name)}</b>${i.stockNo ? `<span class="cc-no">Stock# ${esc(i.stockNo)}</span>` : ''}<div class="cc-d">${esc(i.description || '')}</div>
+        <div class="cc-p">${i.unitPrice == null ? '<small>price not set</small>' : '$' + Number(i.unitPrice).toLocaleString('en-US', { minimumFractionDigits: 2 }) + ' <small>per ' + esc(i.unit) + '</small>'}</div>
+        <div class="cc-m"><span>${i.taxable ? 'Taxable' : 'No tax'}</span>${i.unitPrice == null ? `<span>· per ${esc(i.unit)}</span>` : ''}${i.source ? `<span>· ${esc(i.source)}</span>` : ''}</div>
+        ${ro ? '' : `<div class="act"><button class="btn small ghost" data-${i.active ? 'ret' : 'res'}="${i.id}" type="button">${i.active ? 'Retire' : 'Restore'}</button></div>`}</div>`).join('')}</div>` : '<div class="empty" style="padding:30px">No catalog items match.</div>'}`;
+    const fq = $('#cQ'); fq.oninput = () => { q = fq.value.toLowerCase(); const pos = fq.selectionStart; draw(); const n = $('#cQ'); n.focus(); n.setSelectionRange(pos, pos); };
+    el.querySelectorAll('[data-cf]').forEach(x => x.onclick = () => { catF = x.dataset.cf; draw(); });
+    $('#cOff').onchange = e => { showOff = e.target.checked; draw(); };
+    const nb = $('#cNew'); if(nb) nb.onclick = () => openForm('new');
+    const cb = $('#cCats'); if(cb) cb.onclick = openCats;
+    el.querySelectorAll('.cat-card[data-ed]').forEach(x => { x.onclick = () => openForm(Number(x.dataset.ed)); x.onkeydown = e => { if((e.key === 'Enter' || e.key === ' ') && e.target === x){ e.preventDefault(); openForm(Number(x.dataset.ed)); } }; });
+    const act = async (id, verb) => { try{ await api('POST', '/catalog/' + id + '/' + verb); await reload(); }catch(e){ alert(e.message); } };
+    catHydrate(el);
+    el.querySelectorAll('.cat-card .act').forEach(x => x.onclick = e => e.stopPropagation());   // the Retire row never opens the editor
+    el.querySelectorAll('[data-ret]').forEach(x => x.onclick = e => { e.stopPropagation(); act(x.dataset.ret, 'retire'); });
+    el.querySelectorAll('[data-res]').forEach(x => x.onclick = e => { e.stopPropagation(); act(x.dataset.res, 'restore'); });
+  };
+  draw();
+}
+// Pick catalog items while building an estimate: each pick becomes a row on the chosen line; if the item has a price, qty x price is added to that line.
+async function openCatalogPicker(d, el){
+  let C; try{ C = await loadCatalog(); }catch(e){ alert('The catalog is not available to you (' + e.message + ').'); return; }
+  if(!d.lines.length){ alert('Add a line first, then pick catalog items for it.'); return; }
+  const back = document.createElement('div'); back.className = 'pk-back'; let q = '', target = d.lines[0].id;
+  const close = () => back.remove();
+  const draw = () => {
+    const items = C.items.filter(i => i.active && (!q || (i.name + ' ' + i.stockNo + ' ' + i.description).toLowerCase().includes(q)));
+    back.innerHTML = `<div class="pk" role="dialog" aria-label="Add from catalog"><div class="pk-h"><b>Add from catalog</b><input type="search" id="pkQ" placeholder="Search…" value="${esc(q)}"><button class="btn small ghost" id="pkX" type="button">Close</button></div>
+      <div class="pk-list">${items.map(i => `<div class="pk-it"><div class="nm"><b>${esc(i.name)}</b><small>${i.stockNo ? 'Stock# ' + esc(i.stockNo) + ' · ' : ''}${i.unitPrice == null ? 'price not set' : '$' + Number(i.unitPrice).toFixed(2) + ' per ' + esc(i.unit)}</small></div><input type="number" min="1" step="1" value="1" data-q="${i.id}" aria-label="Quantity"><button class="btn small" data-add="${i.id}" type="button">Add</button></div>`).join('') || '<div class="empty" style="padding:24px">Nothing matches.</div>'}</div>
+      <div class="pk-f"><span>Add to line:</span><select id="pkLine" style="flex:1;min-width:0">${d.lines.map((l, n) => `<option value="${l.id}" ${l.id === target ? 'selected' : ''}>${n + 1}. ${esc((l.title || '').slice(0, 70))}</option>`).join('')}</select></div></div>`;
+    back.querySelector('#pkX').onclick = close;
+    back.onclick = e => { if(e.target === back) close(); };
+    const fq = back.querySelector('#pkQ'); fq.oninput = () => { q = fq.value.toLowerCase(); target = back.querySelector('#pkLine').value; const pos = fq.selectionStart; draw(); const n = back.querySelector('#pkQ'); n.focus(); n.setSelectionRange(pos, pos); };
+    back.querySelector('#pkLine').onchange = e => { target = e.target.value; };
+    back.querySelectorAll('[data-add]').forEach(btn => btn.onclick = () => {
+      const i = C.items.find(x => x.id === Number(btn.dataset.add)), qty = Math.max(1, Math.round(Number(back.querySelector(`[data-q="${i.id}"]`).value) || 1)), l = d.lines.find(x => x.id === back.querySelector('#pkLine').value);
+      (l.rows = l.rows || []).push({ id: uid_(), text: (i.stockNo ? 'Stock#: ' + i.stockNo + ' - ' : '') + (i.description || i.name) + ' - QTY ' + qty, head: false, catalogId: i.id });
+      if(i.unitPrice != null) l.amount = Math.round(((Number(l.amount) || 0) + qty * i.unitPrice) * 100) / 100;
+      EST.dirty = true; esDraw(el); esDirty(el); btn.textContent = 'Added'; setTimeout(close, 350);
+    });
+  };
+  document.body.appendChild(back); draw();
+}
+
+const esMoney = n => '$' + (Number(n) || 0).toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+let EST = null;
+async function estimatePane(el, b, ro){
+  el.innerHTML = '<div class="empty">Loading estimate…</div>';
+  let r; try{ r = await api('GET', '/bids/' + b.id + '/estimate'); }catch(e){ el.innerHTML = '<div class="empty">Could not load the estimate (' + esc(e.message) + ').</div>'; return; }
+  if(!el.isConnected) return;   // the person already moved on while the estimate was loading
+  EST = { bid: b, doc: r.estimate || { number: '', date: iso(new Date()), preparedFor: { name: b.customer || '', lines: [] }, tax: 0, notes: [], lines: [] }, updatedAt: r.updatedAt || null, dirty: false, ro };
+  esDraw(el); esNotesHint(); esAutoNotes(el, false);
+}
+// Scopes: one master estimate can hold several scopes of work (Structural Steel, Roofing, Forklift, Material Supply Only). Each line belongs to one.
+// With more than one scope in use, tax is entered per scope (as on the project sheets); with one scope it is a single figure.
+const ES_SCOPES = ['Structural Steel', 'Roofing', 'Forklift', 'Material Supply Only'], ES_DEF = 'Structural Steel';
+const lnScope = l => l.scope || ES_DEF;
+function esScopeList(d){ return [...new Set(d.lines.map(lnScope))].sort((a, b) => { const i = ES_SCOPES.indexOf(a), j = ES_SCOPES.indexOf(b); return ((i < 0 ? 99 : i) - (j < 0 ? 99 : j)) || a.localeCompare(b); }); }
+function esBreak(d){
+  const sc = esScopeList(d), multi = sc.length > 1;
+  return sc.map(s => { const ls = d.lines.filter(l => lnScope(l) === s), sub = ls.reduce((a, l) => a + (Number(l.amount) || 0), 0), tax = multi ? (Number((d.scopeTax || {})[s]) || 0) : (Number(d.tax) || 0); return { scope: s, lines: ls, sub, tax, total: sub + tax }; });
+}
+function esTotals(){ const d = EST.doc, b = esBreak(d), sub = b.reduce((a, x) => a + x.sub, 0), tax = b.length ? b.reduce((a, x) => a + x.tax, 0) : (Number(d.tax) || 0); return { sub, tax, total: sub + tax }; }
+// Called after a line changes scope: keeps the tax figure sensible when the estimate goes from one scope to several, or back.
+function esSyncTax(d, before){
+  const sc = esScopeList(d);
+  if(sc.length > 1 && before <= 1){
+    const subs = sc.map(s => d.lines.filter(l => lnScope(l) === s).reduce((a, l) => a + (Number(l.amount) || 0), 0)), all = subs.reduce((a, b) => a + b, 0), tot = Number(d.tax) || 0;
+    d.scopeTax = {}; let left = Math.round(tot * 100) / 100;
+    sc.forEach((s, i) => { const v = i === sc.length - 1 ? left : Math.round((all ? tot * subs[i] / all : 0) * 100) / 100; d.scopeTax[s] = v; left = Math.round((left - v) * 100) / 100; });
+  }else if(sc.length <= 1 && before > 1){ d.tax = Math.round(Object.values(d.scopeTax || {}).reduce((a, v) => a + (Number(v) || 0), 0) * 100) / 100; delete d.scopeTax; }
+  else if(sc.length > 1){ d.scopeTax = d.scopeTax || {}; sc.forEach(s => { if(d.scopeTax[s] == null) d.scopeTax[s] = 0; }); }
+}
+function esDirty(el){ EST.dirty = true; const bar = $('#esBar'); if(bar) bar.style.display = 'flex'; const t = esTotals(); $('#esSub').textContent = esMoney(t.sub); $('#esTotal').textContent = esMoney(t.total); const n = $('#esNeeds'); if(n) n.textContent = EST.doc.lines.filter(l => l.source === 'ai' && !l.reviewed).length;
+  esBreak(EST.doc).forEach(x => { document.querySelectorAll('[data-ssub="' + x.scope + '"]').forEach(e => { e.textContent = esMoney(x.sub); }); document.querySelectorAll('[data-stot="' + x.scope + '"]').forEach(e => { e.textContent = esMoney(x.total); }); }); }
+function totalsHtml(d, ro, t){
+  const br = esBreak(d);
+  if(br.length > 1) return `<div class="es-totals es-multi">${br.map(x => `<div class="es-sc-h"><span>${esc(x.scope)}</span><b data-ssub="${esc(x.scope)}">${esMoney(x.sub)}</b></div><div><span>State &amp; Local Tax, ${esc(x.scope)}</span><span class="es-price"><span>$</span><input data-st="${esc(x.scope)}" type="number" step="0.01" min="0" value="${Number(x.tax) || 0}" ${ro ? 'disabled' : ''}></span></div>`).join('')}
+    <div><span>Subtotal</span><b id="esSub">${esMoney(t.sub)}</b></div><div class="tot"><span>Total</span><b id="esTotal">${esMoney(t.total)}</b></div></div>`;
+  return `<div class="es-totals"><div><span>Subtotal</span><b id="esSub">${esMoney(t.sub)}</b></div><div><span>State &amp; Local Tax</span><span class="es-price"><span>$</span><input id="esTax" type="number" step="0.01" min="0" value="${Number(d.tax) || 0}" ${ro ? 'disabled' : ''}></span></div><div class="tot"><span>Total</span><b id="esTotal">${esMoney(t.total)}</b></div></div>`;
+}
+async function esSaveNow(el){
+  const d = EST.doc;
+  try{ const out = JSON.parse(JSON.stringify(d)); out.lines.forEach(l => { l.amount = Number(l.amount) || 0; }); out.tax = esTotals().tax; if(out.scopeTax){ Object.keys(out.scopeTax).forEach(k => { out.scopeTax[k] = Number(out.scopeTax[k]) || 0; }); }
+    const r = await api('PUT', '/bids/' + EST.bid.id + '/estimate', { estimate: out, updatedAt: EST.updatedAt }); EST.updatedAt = r.updatedAt; EST.dirty = false; Object.keys(HO_CACHE).forEach(k => delete HO_CACHE[k]); const bar = $('#esBar'); if(bar) bar.style.display = 'none'; return true; }
+  catch(e){ const er = $('#esErr'); if(er) er.textContent = e.error === 'lost_clone_instead' ? 'This bid is Lost, so it is kept as submitted. Clone it to make changes.' : e.error === 'changed_elsewhere' ? 'Someone else saved a newer version. Reload to see it.' : 'Could not save (' + e.message + ').'; return false; }
+}
+// ---------- sending: one master estimate, or split into one estimate per scope ----------
+function esPieces(d, mode, numbers){
+  const br = esBreak(d), mk = (groups, number, label) => { const sub = groups.reduce((a, g) => a + g.sub, 0), tax = groups.reduce((a, g) => a + g.tax, 0); return { number, label, date: d.date, preparedFor: d.preparedFor, notes: d.notes, groups: JSON.parse(JSON.stringify(groups)), sub, tax, total: sub + tax }; };
+  if(mode === 'split' && br.length > 1) return br.map((g, i) => mk([g], (numbers && numbers[i]) || d.number || '', g.scope));
+  return [mk(br.length ? br : [{ scope: ES_DEF, lines: [], sub: 0, tax: Number(d.tax) || 0, total: Number(d.tax) || 0 }], d.number || '', br.length > 1 ? 'Master (all scopes)' : '')];
+}
+function esSendDialog(el, first){
+  const d = EST.doc, multi = esScopeList(d).length > 1, canRec = !EST.ro; let mode = multi && first === 'split' ? 'split' : 'single', nums = [];
+  const back = document.createElement('div'); back.className = 'pk-back'; const close = () => back.remove();
+  const draw = () => {
+    const pcs = esPieces(d, mode, nums), money = esMoney, dirty = EST.dirty;
+    back.innerHTML = `<div class="pk" role="dialog" aria-label="Export or submit" style="max-width:600px"><div class="pk-h"><b>Export / submit this estimate</b><span style="flex:1"></span><button class="btn small ghost" id="sdX" type="button">Close</button></div>
+      <div style="padding:14px 16px;overflow:auto">
+      ${dirty ? '<div class="ho-warn" style="margin:0 0 10px">You have unsaved changes. “Record as submitted” saves them first, so the record matches what you print.</div>' : ''}
+      ${multi ? `<div style="font-size:13px;margin-bottom:8px"><b>This estimate has ${esScopeList(d).length} scopes.</b> Send it:</div>
+        <label class="es-opt"><input type="radio" name="sdm" value="single" ${mode === 'single' ? 'checked' : ''}> <span><b>As one master file</b><small>All scopes in a single estimate, each with its own subtotal and tax.</small></span></label>
+        <label class="es-opt"><input type="radio" name="sdm" value="split" ${mode === 'split' ? 'checked' : ''}> <span><b>Split into ${esScopeList(d).length} separate files</b><small>One estimate per scope, each with its own number, tax and total. The master stays here.</small></span></label>` : '<div style="font-size:13px;color:var(--text-dim);margin-bottom:8px">One scope of work, so this goes out as a single estimate.</div>'}
+      <div style="margin-top:12px">${pcs.map((pc, i) => `<div class="es-pc"><div style="flex:1;min-width:0"><b>${esc(pc.label || 'Estimate')}</b><small>${pc.groups.reduce((a, g) => a + g.lines.length, 0)} lines · subtotal ${money(pc.sub)} · tax ${mode === 'split' ? `<span class="es-price" style="display:inline-flex"><span>$</span><input data-sdt="${i}" type="number" step="0.01" min="0" value="${pc.tax}" style="width:90px"></span>` : money(pc.tax)} · <b>${money(pc.total)}</b></small></div>
+        <label style="font-size:12px">Estimate #<input data-sdn="${i}" value="${esc(pc.number)}" style="width:90px;display:block" ${mode === 'single' ? 'disabled' : ''}></label><button class="btn small" data-sdo="${i}" type="button">Open to print</button></div>`).join('')}</div>
+      <div style="font-size:12px;color:var(--text-dim);margin-top:8px">“Open to print” shows the estimate in a new window with the standard terms. Choose Save as PDF there to make the file.</div>
+      ${canRec ? `<label class="es-opt" style="margin-top:14px"><input type="checkbox" id="sdb" ${EST.bid.status === 'Draft' ? 'checked' : 'disabled'}> <span><b>Mark the bid as submitted</b><small>${EST.bid.status === 'Draft' ? 'Moves the bid from Draft to Bidding and records today as the submitted date.' : 'The bid is already ' + esc(EST.bid.status) + '.'}</small></span></label>
+      <div style="display:flex;gap:8px;margin-top:12px;align-items:center"><button class="btn primary small" id="sdr" type="button">Record as submitted</button><span id="sdm" style="font-size:12.5px;color:var(--text-dim)">Keeps an exact copy of what was sent, so you can open it again later.</span></div>` : ''}
+      </div></div>`;
+    back.querySelector('#sdX').onclick = close; back.onclick = e => { if(e.target === back) close(); };
+    back.querySelectorAll('input[name=sdm]').forEach(r => r.onchange = () => { mode = r.value; draw(); });
+    back.querySelectorAll('[data-sdn]').forEach(i => i.oninput = () => { nums[Number(i.dataset.sdn)] = i.value; });
+    back.querySelectorAll('[data-sdt]').forEach(i => i.onchange = () => { const g = esBreak(d)[Number(i.dataset.sdt)]; (d.scopeTax = d.scopeTax || {})[g.scope] = Number(i.value) || 0; EST.dirty = true; esDraw(el); esDirty(el); draw(); });
+    back.querySelectorAll('[data-sdo]').forEach(b => b.onclick = () => { if(!window.EstimatePrint.open(esPieces(d, mode, nums)[Number(b.dataset.sdo)])) alert('Your browser blocked the new window. Allow pop-ups for this site and try again.'); });
+    const rec = back.querySelector('#sdr'); if(rec) rec.onclick = async () => {
+      const pc = esPieces(d, mode, nums); if(pc.some(x => !String(x.number).trim())){ back.querySelector('#sdm').textContent = 'Give each estimate a number first.'; return; }
+      rec.disabled = true; back.querySelector('#sdm').textContent = 'Saving…';
+      (d.submissions = d.submissions || []).push({ id: uid_(), at: Date.now(), by: ME && ME.name || '', mode: mode === 'split' && multi ? 'split' : 'single', pieces: pc });
+      if(!(await esSaveNow(el))){ d.submissions.pop(); rec.disabled = false; back.querySelector('#sdm').textContent = 'Could not save. Try again.'; return; }
+      const mb = back.querySelector('#sdb');
+      try{ if(mb && mb.checked && !mb.disabled){ await api('PATCH', '/bids/' + EST.bid.id, { status: 'Bidding' }); EST.bid.status = 'Bidding'; const bb = BIDS.find(x => x.id === EST.bid.id); if(bb) bb.status = 'Bidding'; } }catch(e){}
+      close(); esDraw(el); refresh();
+    };
+  };
+  document.body.appendChild(back); draw();
+}
+function esSubmissionsCard(d){
+  const sb = d.submissions || []; if(!sb.length) return '';
+  const fd = ms => new Date(ms).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' });
+  return `<div class="es-card"><h4>Sent</h4>${sb.slice().reverse().map((x, ri) => { const i = sb.length - 1 - ri; return `<div class="es-sent"><b>${esc(fd(x.at))}</b> by ${esc(x.by || '')}<br><span style="color:var(--text-dim)">${x.mode === 'split' ? 'Split into ' + x.pieces.length : 'One master file'}</span><div style="display:flex;gap:6px;flex-wrap:wrap;margin-top:4px">${x.pieces.map((pc, j) => `<button class="btn small ghost" data-sent="${i}.${j}" type="button">#${esc(pc.number)}${pc.label && x.mode === 'split' ? ' ' + esc(pc.label) : ''}</button>`).join('')}</div></div>`; }).join('')}</div>`;
+}
+function esCloneCard(){
+  const b = EST.bid; if(!b || b.status === 'Draft' || !canWrite() || b.archived) return '';
+  const fd = v => { const m = /^(\d{4})-(\d\d)-(\d\d)/.exec(v || ''); return m ? new Date(+m[1], +m[2] - 1, +m[3]).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' }) : ''; };
+  if(b.status === 'Lost') return `<div class="es-card" style="border-left:4px solid #D32F2F"><h4>Lost${b.decidedOn ? ' · ' + esc(fd(b.decidedOn)) : ''}</h4><div class="es-hint">Kept exactly as it was submitted, so it can't be edited. If the GC comes back (new terms, an addendum, a changed scope, or a different contractor fell through), clone it and revise the copy.</div><button class="es-bigbtn es-bluebtn" id="esClone" type="button" style="margin-top:8px">Clone To Revise</button></div>`;
+  return `<div class="es-card"><button class="btn small" id="esClone" type="button" title="Make a new draft copy to revise; this one stays as submitted">Clone This Bid</button><div class="es-sub-note">Makes a new draft copy with its own project number. This one is not changed.</div></div>`;
+}
+function esSubmitCard(){
+  const b = EST.bid; if(!b) return '';
+  const fd = v => { const m = /^(\d{4})-(\d\d)-(\d\d)/.exec(v || ''); return m ? new Date(+m[1], +m[2] - 1, +m[3]).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' }) : ''; };
+  if(b.status === 'Draft') return EST.ro || !canWrite() ? '' : `<div class="es-card es-submit"><button class="es-bigbtn es-bluebtn" id="esMark" type="button">Mark As Submitted</button><div class="es-sub-note">Moves this bid from Draft to Bidding.</div></div>`;
+  return `<div class="es-card es-submit done"><div class="es-sub-state">${b.status === 'Bidding' ? 'Submitted' : esc(b.status)}${b.bidSubmitted ? ' · ' + esc(fd(b.bidSubmitted)) : ''}</div>${b.status === 'Bidding' && !EST.ro && canWrite() ? '<a id="esUnmark" class="es-sub-note" style="cursor:pointer;text-decoration:underline">Move back to Draft</a>' : ''}</div>`;
+}
+async function esSetStatus(el, status){
+  if(EST.dirty && !(await esSaveNow(el))) return;
+  try{ const r = await api('PATCH', '/bids/' + EST.bid.id, { status }); const nb = r && r.bid ? r.bid : { status }; Object.assign(EST.bid, nb); const bb = BIDS.find(x => x.id === EST.bid.id); if(bb) Object.assign(bb, nb); Object.keys(HO_CACHE).forEach(k => delete HO_CACHE[k]); esDraw(el); }
+  catch(e){ alert('Could not change the status (' + (e.message || 'error') + ').'); }
+}
+function esDraw(el){
+  const d = EST.doc, ro = EST.ro, t = esTotals(), pf = d.preparedFor || {}, needs = d.lines.filter(l => l.source === 'ai' && !l.reviewed).length, ai = d.lines.some(l => l.source === 'ai');
+  const rowHtml = (l, r) => `<div class="es-row ${r.head ? 'head' : ''}" data-row="${r.id}" data-line="${l.id}">${ro ? '' : '<span class="es-grip es-rgrip" draggable="true" title="Drag this row (to another line too)">⠿</span>'}<textarea rows="1" data-rf="${r.id}" ${ro ? 'disabled' : ''}>${esc(r.text)}</textarea>${ro ? '' : `<button class="es-x" data-rdel="${r.id}" data-line="${l.id}" type="button" title="Remove this row">×</button>`}</div>`;
+  const lineHtml = l => `<div class="es-line ${(l.source === 'ai' && !l.reviewed) || l.repriceCheck ? 'needs' : ''}" data-lid="${l.id}">
+    <div class="es-lh">${ro ? '' : '<span class="es-grip es-lgrip" draggable="true" title="Drag to reorder this line">⠿</span>'}<textarea rows="1" class="es-title" data-lt="${l.id}" ${ro ? 'disabled' : ''}>${esc(l.title)}</textarea>
+      <span class="es-price"><span>$</span><input data-la="${l.id}" type="number" step="0.01" min="0" value="${Number(l.amount) || 0}" ${ro ? 'disabled' : ''}></span></div>
+    <div class="es-meta">${ro ? (esScopeList(d).length > 1 ? `<span class="es-chip" style="background:#eef0f6;color:#013CAE">${esc(lnScope(l))}</span>` : '') : `<select class="es-sc" data-lsc="${l.id}" title="Which scope of work this line belongs to">${ES_SCOPES.concat(ES_SCOPES.includes(lnScope(l)) ? [] : [lnScope(l)]).map(o => `<option ${o === lnScope(l) ? 'selected' : ''}>${esc(o)}</option>`).join('')}</select>`}${l.repriceCheck ? '<span class="es-chip flag">Check price</span>' + (ro ? '' : `<label class="es-rev"><input type="checkbox" data-lprice="${l.id}"> Price checked</label>`) : ''}${l.alt ? `<span class="es-chip alt">${esc(l.alt)}</span>` : ''}${l.source === 'ai' ? `<span class="es-chip ai">Estimator AI draft</span>${(l.flags || []).map(f => `<span class="es-chip flag">${esc(f)}</span>`).join('')}` : ''}${ro ? '' : (l.source === 'ai' ? `<label class="es-rev"><input type="checkbox" data-lrev="${l.id}" ${l.reviewed ? 'checked' : ''}> Reviewed</label>` : '')}${ro ? '' : `<button class="es-x txt" data-ldel="${l.id}" type="button">Remove line</button>`}</div>
+    <div class="es-rows" data-rows="${l.id}">${(l.rows || []).map(r => rowHtml(l, r)).join('')}</div>
+    ${ro ? '' : `<div class="es-add"><button type="button" data-radd="${l.id}">+ Row</button><button type="button" data-radd="${l.id}" data-head="1">+ Heading row</button></div>`}</div>`;
+  el.innerHTML = `<div class="es-wrap"><div class="es-main">
+    <div class="es-sheet">
+      <div class="es-doc-h"><div class="es-brand"><img src="/logo.png" alt="" onerror="this.style.display='none'"><b>LUCAS<br>INDUSTRIAL</b></div><div class="es-word">ESTIMATE</div></div>
+      <div class="es-two"><div><b>Lucas Industrial, LLC</b><br>1303 West College Street, Building D<br>Murfreesboro, TN 37129<br>Phone: (615) 209-0188<br>Email: Service@LucasIndustrial.us</div>
+        <div style="text-align:right"><b>Prepared For</b><br><input class="es-in" data-pf="name" value="${esc(pf.name || '')}" placeholder="Customer / GC" ${ro ? 'disabled' : ''}><textarea class="es-in" rows="3" data-pf="lines" placeholder="Address and phone" ${ro ? 'disabled' : ''}>${esc((pf.lines || []).join('\n'))}</textarea></div></div>
+      <div class="es-two" style="margin-top:6px"><span></span><div class="es-kv"><label>Estimate #</label><input data-ef="number" value="${esc(d.number || '')}" ${ro ? 'disabled' : ''}><label>Date</label><input data-ef="date" type="date" value="${esc(d.date || '')}" ${ro ? 'disabled' : ''}></div></div>
+      <div class="es-desc">Description</div>
+      ${d.clonedFrom ? `<div class="es-card" id="esCloneBanner" style="margin-bottom:12px;border-left:4px solid #B8860B"><b>Cloned from ${esc(d.clonedFrom.code || 'an earlier bid')}${d.clonedFrom.number ? ' (Estimate #' + esc(d.clonedFrom.number) + (d.clonedFrom.date ? ', ' + esc(d.clonedFrom.date) : '') + ')' : ''}.</b> The original is unchanged. Material costs move, so each line is marked <i>Check price</i>: update the amount if needed, then tick “Price checked”. <span id="esPriceLeft">${d.lines.filter(l => l.repriceCheck).length ? d.lines.filter(l => l.repriceCheck).length + ' left.' : 'All prices checked.'}</span>${ro || !d.lines.some(l => l.repriceCheck) ? '' : ' <a id="esPriceAll" style="cursor:pointer;text-decoration:underline">Mark all checked</a>'}</div>` : ''}
+      <div id="esLines">${d.lines.map(lineHtml).join('') || '<div class="empty" style="padding:30px">No lines yet. Add a line, or let the Estimator AI draft them from this bid\'s documents.</div>'}</div>
+      ${ro ? '' : '<div class="es-addline"><button class="btn small" id="esAddLine" type="button">+ Add line</button> <button class="btn small ghost" id="esCat" type="button" title="Add a row from the product catalog">+ From catalog</button></div>'}
+      ${totalsHtml(d, ro, t)}
+      <div class="es-notes"><b>Notes:</b><textarea rows="5" id="esNotes" placeholder="Destination, address, distance, construction start/end…" ${ro ? 'disabled' : ''}>${esc((d.notes || []).join('\n'))}</textarea>${ro ? '' : '<div style="display:flex;gap:10px;align-items:center;flex-wrap:wrap;margin-top:6px"><button class="btn small ghost" id="esNotesRefresh" type="button">Refresh from bid</button><span id="esNotesHint" style="font-size:12px;color:var(--text-dim)"></span></div>'}</div>
+      <div class="es-terms">Standard Terms &amp; Conditions are added automatically when the estimate is sent.</div>
+    </div></div>
+    <aside class="es-side">${esSubmitCard()}${esCloneCard()}
+      <div class="es-card"><h4>Send &amp; Split</h4><div style="display:flex;gap:8px;flex-wrap:wrap"><button class="btn small primary" id="esSend" type="button">Export</button>${esScopeList(d).length > 1 ? '<button class="btn small primary" id="esSendSplit" type="button">Split Export</button>' : ''}</div></div>
+      ${esSubmissionsCard(d)}
+      <div class="es-card"><h4>Estimator AI</h4>${ai ? `<div class="es-big"><span id="esNeeds">${needs}</span><small>lines need your review</small></div><div class="es-hint">Tick “Reviewed” on each line once you have checked the price and rows. Drag lines and rows to rearrange, or move a row from one line to another.</div>` : '<div class="es-hint">The Estimator AI will read this bid\'s Files and draft the estimate here. You then review, reprice and rearrange.</div>'}
+      <button class="btn small" type="button" disabled title="Coming soon: drafts the estimate from the documents in this bid's Files">Draft from documents (coming)</button></div>
+      <div id="hoBox"></div></aside></div>
+    <div class="bp-bar" id="esBar" style="display:none;margin-top:14px"><span>You have unsaved changes to the estimate</span><span id="esErr" style="color:#FFB4A9"></span><span style="flex:1"></span><button class="btn small" id="esDiscard" type="button">Discard</button><button class="btn small primary" id="esSave" type="button">Save estimate</button></div>`;
+  if(EST.bid) handoffBox(EST.bid, el);
+  esWire(el);
+}
+function esWire(el){
+  const d = EST.doc, L = id => d.lines.find(l => l.id === id), grow = ta => { ta.style.height = 'auto'; ta.style.height = ta.scrollHeight + 'px'; };
+  el.querySelectorAll('textarea').forEach(grow);
+  const on = (sel, ev, fn) => el.querySelectorAll(sel).forEach(x => x.addEventListener(ev, e => fn(x, e)));
+  on('[data-pf="name"]', 'input', x => { (d.preparedFor = d.preparedFor || {}).name = x.value; esDirty(el); });
+  on('[data-pf="lines"]', 'input', x => { (d.preparedFor = d.preparedFor || {}).lines = x.value.split('\n'); grow(x); esDirty(el); });
+  on('[data-ef]', 'input', x => { d[x.dataset.ef] = x.value; esDirty(el); });
+  on('[data-lt]', 'input', x => { L(x.dataset.lt).title = x.value; grow(x); esDirty(el); });
+  on('[data-la]', 'input', x => { L(x.dataset.la).amount = x.value; esDirty(el); });
+  const priceLeft = () => { const n = d.lines.filter(l => l.repriceCheck).length, e = $('#esPriceLeft'); if(e) e.textContent = n ? n + ' left.' : 'All prices checked.'; const a = $('#esPriceAll'); if(a && !n) a.remove(); };
+  on('[data-lprice]', 'change', x => { const l = L(x.dataset.lprice); if(x.checked){ delete l.repriceCheck; esDirty(el); const ln = x.closest('.es-line'); ln.classList.toggle('needs', l.source === 'ai' && !l.reviewed); x.closest('label').remove(); const c = [...ln.querySelectorAll('.es-chip.flag')].find(c => c.textContent === 'Check price'); if(c) c.remove(); priceLeft(); } });
+  on('#esPriceAll', 'click', () => { d.lines.forEach(l => { delete l.repriceCheck; }); esDirty(el); esDraw(el); });
+  on('[data-lrev]', 'change', x => { L(x.dataset.lrev).reviewed = x.checked; esDirty(el); x.closest('.es-line').classList.toggle('needs', !x.checked); });
+  on('[data-rf]', 'input', x => { const r = d.lines.flatMap(l => l.rows || []).find(r => r.id === x.dataset.rf); r.text = x.value; grow(x); esDirty(el); });
+  on('#esTax', 'input', x => { d.tax = x.value; esDirty(el); });
+  on('[data-st]', 'input', x => { (d.scopeTax = d.scopeTax || {})[x.dataset.st] = x.value; esDirty(el); });
+  on('[data-lsc]', 'change', x => { const before = esScopeList(d).length; L(x.dataset.lsc).scope = x.value; esSyncTax(d, before); EST.dirty = true; esDraw(el); esDirty(el); });
+  on('#esNotes', 'input', x => { d.notes = x.value.split('\n'); grow(x); esDirty(el); });
+  on('[data-ldel]', 'click', x => { d.lines = d.lines.filter(l => l.id !== x.dataset.ldel); EST.dirty = true; esDraw(el); esDirty(el); });
+  on('[data-rdel]', 'click', x => { const l = L(x.dataset.line); l.rows = l.rows.filter(r => r.id !== x.dataset.rdel); esDraw(el); esDirty(el); });
+  on('[data-radd]', 'click', x => { const l = L(x.dataset.radd); (l.rows = l.rows || []).push({ id: uid_(), text: '', head: !!x.dataset.head }); esDraw(el); esDirty(el); const ta = el.querySelectorAll(`[data-rows="${l.id}"] textarea`); if(ta.length) ta[ta.length - 1].focus(); });
+  on('#esCat', 'click', () => openCatalogPicker(d, el));
+  on('#esMark', 'click', () => esSetStatus(el, 'Bidding'));
+  on('#esUnmark', 'click', () => esSetStatus(el, 'Draft'));
+  on('#esClone', 'click', () => cloneBid(EST.bid.id));
+  on('#esSend', 'click', () => esSendDialog(el, 'single'));
+  on('#esSendSplit', 'click', () => esSendDialog(el, 'split'));
+  on('[data-sent]', 'click', x => { const [i, j] = x.dataset.sent.split('.').map(Number); if(!window.EstimatePrint.open(d.submissions[i].pieces[j])) alert('Your browser blocked the new window. Allow pop-ups for this site and try again.'); });
+  on('#esNotesRefresh', 'click', () => esAutoNotes(el, true));
+  on('#esAddLine', 'click', () => { d.lines.push({ id: uid_(), title: 'NEW LINE', amount: 0, source: 'manual', rows: [{ id: uid_(), text: 'Materials & Installation', head: true }] }); esDraw(el); esDirty(el); });
+  on('#esDiscard', 'click', () => estimatePane(el, EST.bid, EST.ro));
+  on('#esSave', 'click', () => esSaveNow(el));
+  if(EST.ro) return;
+  // drag whole lines
+  const box = $('#esLines'); let dl = null, dr = null;
+  box.querySelectorAll('.es-lgrip').forEach(g => { const c = g.closest('.es-line'); g.ondragstart = e => { dl = c.dataset.lid; e.dataTransfer.effectAllowed = 'move'; try{ e.dataTransfer.setData('text/plain', 'line'); e.dataTransfer.setDragImage(c, 20, 20); }catch(x){} setTimeout(() => c.classList.add('dragging'), 0); }; g.ondragend = () => { dl = null; box.querySelectorAll('.dragging,.over,.over-row').forEach(x => x.classList.remove('dragging', 'over', 'over-row')); }; });
+  box.querySelectorAll('.es-rgrip').forEach(g => { const row = g.closest('.es-row'); g.ondragstart = e => { dr = { id: row.dataset.row, line: row.dataset.line }; e.dataTransfer.effectAllowed = 'move'; try{ e.dataTransfer.setData('text/plain', 'row'); e.dataTransfer.setDragImage(row, 10, 10); }catch(x){} setTimeout(() => row.classList.add('dragging'), 0); }; g.ondragend = () => { dr = null; box.querySelectorAll('.dragging,.over,.over-row').forEach(x => x.classList.remove('dragging', 'over', 'over-row')); }; });
+  box.querySelectorAll('.es-line').forEach(c => {
+    c.ondragover = e => { if(dl && dl !== c.dataset.lid){ e.preventDefault(); c.classList.add('over'); } else if(dr){ e.preventDefault(); c.classList.add('over-row'); } };
+    c.ondragleave = e => { if(!c.contains(e.relatedTarget)) c.classList.remove('over', 'over-row'); };
+    c.ondrop = e => { e.preventDefault(); e.stopPropagation();
+      if(dl){ const from = d.lines.findIndex(l => l.id === dl), to = d.lines.findIndex(l => l.id === c.dataset.lid); if(from > -1 && to > -1 && from !== to){ const [m] = d.lines.splice(from, 1); const r = c.getBoundingClientRect(), after = (e.clientY - r.top) > r.height / 2; d.lines.splice(d.lines.findIndex(l => l.id === c.dataset.lid) + (after ? 1 : 0), 0, m); esDraw(el); esDirty(el); } }
+      else if(dr){ const src = L(dr.line), dst = L(c.dataset.lid), i = src.rows.findIndex(r => r.id === dr.id); if(i > -1){ const [row] = src.rows.splice(i, 1); const tgt = e.target.closest('.es-row'); let at = dst.rows.length; if(tgt && tgt.dataset.line === dst.id){ const k = dst.rows.findIndex(r => r.id === tgt.dataset.row), rr = tgt.getBoundingClientRect(); at = k + ((e.clientY - rr.top) > rr.height / 2 ? 1 : 0); } dst.rows.splice(at, 0, row); esDraw(el); esDirty(el); } }
+      dl = null; dr = null; };
+  });
+}
+
 function loadMaps(cb){
   if(window.google && window.google.maps && window.google.maps.places) return cb();
   const ex = document.getElementById('gmapsScript'); if(ex){ ex.addEventListener('load', cb); return; }
@@ -1106,7 +1988,7 @@ async function calendar(el){
   <div class="legend"><span><span class="dot" style="background:#FFDC4B"></span> Bid due</span><span><span class="dot" style="background:#dfe8fb"></span> Active job</span><span><span class="dot" style="background:#d8f0e0"></span> Won bid (planned dates)</span></div>
   <div class="cal-wrap"><div class="cal-head">${['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'].map(d => `<div>${d}</div>`).join('')}</div><div class="cal-grid">${cells.map(dayHtml).join('')}</div></div>`;
   $('#cp').onclick = () => { CAL = new Date(y, mo - 1, 1); calendar(el); }; $('#cn').onclick = () => { CAL = new Date(y, mo + 1, 1); calendar(el); }; $('#ct').onclick = () => { CAL = new Date(); calendar(el); };
-  el.querySelectorAll('[data-bid]').forEach(b => b.onclick = () => bidModal(Number(b.dataset.bid)));
+  el.querySelectorAll('[data-bid]').forEach(b => b.onclick = () => openBid(Number(b.dataset.bid)));
 }
 boot();
 </script>
