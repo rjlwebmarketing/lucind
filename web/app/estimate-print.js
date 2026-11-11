@@ -44,5 +44,21 @@
     <div class="terms"><h3>IMPORTANT TERMS AND CONDITIONS - PLEASE READ!</h3>${TERMS.map(t => '<p>' + esc(t) + '</p>').join('')}</div>
     <div class="foot">Lucas Industrial, LLC &middot; (615) 209-0188 &middot; Service@LucasIndustrial.us</div></div></body></html>`;
   }
-  window.EstimatePrint = { html, terms: TERMS, open(piece){ const w = window.open('', '_blank'); if(!w) return false; w.document.open(); w.document.write(html(piece)); w.document.close(); return true; } };
+  // Opens the estimate in a new window; when the browser (or the preview panel) blocks pop-ups it shows the same page full-screen on top of the app,
+  // with its own Print / Save as PDF button, so viewing and saving a PDF always works.
+  function open(piece){
+    let w = null; try{ w = window.open('', '_blank'); }catch(e){}
+    if(w){ w.document.open(); w.document.write(html(piece)); w.document.close(); return true; }
+    const ov = document.createElement('div'); ov.style.cssText = 'position:fixed;inset:0;z-index:100000;background:#fff;display:flex;flex-direction:column';
+    const bar = document.createElement('div'); bar.style.cssText = 'display:flex;align-items:center;gap:10px;padding:8px 12px;background:#013CAE;color:#fff;font:600 13px system-ui,sans-serif';
+    bar.innerHTML = '<span style="flex:1">Estimate ' + esc(piece.number || '') + '</span>';
+    const pr = document.createElement('button'); pr.type = 'button'; pr.textContent = 'Print / Save as PDF'; pr.style.cssText = 'padding:6px 12px;border:0;border-radius:6px;font-weight:700;cursor:pointer';
+    const cl = document.createElement('button'); cl.type = 'button'; cl.textContent = 'Close'; cl.style.cssText = pr.style.cssText;
+    bar.append(pr, cl);
+    const fr = document.createElement('iframe'); fr.style.cssText = 'flex:1;border:0;width:100%'; fr.srcdoc = html(piece);
+    pr.onclick = () => { try{ fr.contentWindow.focus(); fr.contentWindow.print(); }catch(e){ window.print(); } };
+    cl.onclick = () => ov.remove();
+    ov.append(bar, fr); document.body.appendChild(ov); return true;
+  }
+  window.EstimatePrint = { html, terms: TERMS, open };
 })();

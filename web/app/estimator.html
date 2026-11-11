@@ -877,7 +877,7 @@
   .es-rev{margin-left:auto;display:flex;gap:5px;align-items:center;font-weight:600;font-size:12px;cursor:pointer}.es-x{border:0;background:none;color:var(--text-faint,#999);cursor:pointer;font-size:16px;line-height:1;padding:2px 6px}.es-x.txt{font-size:11.5px;margin-left:4px;text-decoration:underline}.es-x:hover{color:#b3261e}
   .es-rows{padding:6px 12px 4px}.es-row{display:flex;align-items:flex-start;gap:6px;padding:2px 0}.es-row textarea{flex:1;border:1px solid transparent;background:transparent;font-size:13px;line-height:1.45;font-family:inherit;resize:none;border-radius:6px;padding:2px 6px;color:#222}.es-row.head textarea{font-size:15px;font-weight:500}.es-row textarea:hover,.es-row textarea:focus{border-color:var(--line,#ccc);background:#fff}
   .es-grip{cursor:grab;color:#aaa;font-size:16px;line-height:1.6;user-select:none}.es-grip:active{cursor:grabbing}.es-add{padding:0 12px 10px;display:flex;gap:10px}.es-add button{border:0;background:none;color:var(--brand-blue,#013CAE);font-size:12px;font-weight:600;cursor:pointer;padding:2px 0}
-  .nb-opts{display:grid;grid-template-columns:1fr 1fr;gap:12px;padding:16px}.nb-opt{border:2px solid var(--line);border-radius:12px;padding:18px 14px;text-align:center;cursor:pointer;background:var(--surface,#fff);color:var(--text);font:inherit}
+  .nb-opts{display:grid;grid-template-columns:minmax(0,1fr) minmax(0,1fr);gap:12px;padding:16px}.nb-opt{min-width:0;overflow:hidden;box-sizing:border-box}.nb-opt .nb-st{min-width:0;overflow:hidden}.nb-opt .nb-st div{max-width:100%}.nb-opt{border:2px solid var(--line);border-radius:12px;padding:18px 14px;text-align:center;cursor:pointer;background:var(--surface,#fff);color:var(--text);font:inherit}
   .nb-opt:hover,.nb-opt:focus-visible{border-color:var(--accent,#013CAE)}.nb-opt b{display:block;font-size:15px;margin:6px 0 4px}.nb-opt span{font-size:12.5px;color:var(--text-dim)}.nb-opt .ic{font-size:26px}
   .nb-dz{border-style:dashed;border-width:2px}.nb-dz.over{border-color:var(--accent,#013CAE);background:#013CAE12}.nb-sub{margin-top:10px;font-size:12px}.nb-msg{margin-top:8px;min-height:15px;font-size:12px}
   .nb-drop{margin:0 16px 16px;padding:26px 14px;border:2px dashed var(--line);border-radius:12px;text-align:center;font-size:13px;color:var(--text-dim)}.nb-drop.over{border-color:var(--accent,#013CAE);background:#013CAE10}
@@ -1879,8 +1879,8 @@ function esSendDialog(el, first){
         <label class="es-opt"><input type="radio" name="sdm" value="single" ${mode === 'single' ? 'checked' : ''}> <span><b>As one master file</b><small>All scopes in a single estimate, each with its own subtotal and tax.</small></span></label>
         <label class="es-opt"><input type="radio" name="sdm" value="split" ${mode === 'split' ? 'checked' : ''}> <span><b>Split into ${esScopeList(d).length} separate files</b><small>One estimate per scope, each with its own number, tax and total. The master stays here.</small></span></label>` : '<div style="font-size:13px;color:var(--text-dim);margin-bottom:8px">One scope of work, so this goes out as a single estimate.</div>'}
       <div style="margin-top:12px">${pcs.map((pc, i) => `<div class="es-pc"><div style="flex:1;min-width:0"><b>${esc(pc.label || 'Estimate')}</b><small>${pc.groups.reduce((a, g) => a + g.lines.length, 0)} lines · subtotal ${money(pc.sub)} · tax ${mode === 'split' ? `<span class="es-price" style="display:inline-flex"><span>$</span><input data-sdt="${i}" type="number" step="0.01" min="0" value="${pc.tax}" style="width:90px"></span>` : money(pc.tax)} · <b>${money(pc.total)}</b></small></div>
-        <label style="font-size:12px">Estimate #<input data-sdn="${i}" value="${esc(pc.number)}" style="width:90px;display:block" ${mode === 'single' ? 'disabled' : ''}></label><button class="btn small" data-sdo="${i}" type="button">Open to print</button></div>`).join('')}</div>
-      <div style="font-size:12px;color:var(--text-dim);margin-top:8px">“Open to print” shows the estimate in a new window with the standard terms. Choose Save as PDF there to make the file.</div>
+        <label style="font-size:12px">Estimate #<input data-sdn="${i}" value="${esc(pc.number)}" style="width:90px;display:block" ${mode === 'single' ? 'disabled' : ''}></label><button class="btn small" data-sdo="${i}" type="button">View / Print / PDF</button></div>`).join('')}</div>
+      <div style="font-size:12px;color:var(--text-dim);margin-top:8px">“View / Print / PDF” shows the estimate with the standard terms. Press Print / Save as PDF there and choose Save as PDF to make the file.</div>
       ${canRec ? `<label class="es-opt" style="margin-top:14px"><input type="checkbox" id="sdb" ${EST.bid.status === 'Draft' ? 'checked' : 'disabled'}> <span><b>Mark the bid as submitted</b><small>${EST.bid.status === 'Draft' ? 'Moves the bid from Draft to Bidding and records today as the submitted date.' : 'The bid is already ' + esc(EST.bid.status) + '.'}</small></span></label>
       <div style="display:flex;gap:8px;margin-top:12px;align-items:center"><button class="btn primary small" id="sdr" type="button">Record as submitted</button><span id="sdm" style="font-size:12.5px;color:var(--text-dim)">Keeps an exact copy of what was sent, so you can open it again later.</span></div>` : ''}
       </div></div>`;
@@ -1919,6 +1919,8 @@ function esSubmitCard(){
   return `<div class="es-card es-submit done"><div class="es-sub-state">${b.status === 'Bidding' ? 'Submitted' : esc(b.status)}${b.bidSubmitted ? ' · ' + esc(fd(b.bidSubmitted)) : ''}</div>${b.status === 'Bidding' && !EST.ro && canWrite() ? '<a id="esUnmark" class="es-sub-note" style="cursor:pointer;text-decoration:underline">Move back to Draft</a>' : ''}</div>`;
 }
 async function esSetStatus(el, status){
+  // Marking a Draft as submitted also keeps an exact copy of what was sent (shown under "Sent"), so Export can stay one click.
+  if(status === 'Bidding' && EST.bid.status === 'Draft' && !EST.ro){ const d = EST.doc; (d.submissions = d.submissions || []).push({ id: uid_(), at: Date.now(), by: ME && ME.name || '', mode: 'single', pieces: esPieces(d, 'single', []) }); EST.dirty = true; }
   if(EST.dirty && !(await esSaveNow(el))) return;
   try{ const r = await api('PATCH', '/bids/' + EST.bid.id, { status }); const nb = r && r.bid ? r.bid : { status }; Object.assign(EST.bid, nb); const bb = BIDS.find(x => x.id === EST.bid.id); if(bb) Object.assign(bb, nb); Object.keys(HO_CACHE).forEach(k => delete HO_CACHE[k]); esDraw(el); }
   catch(e){ alert('Could not change the status (' + (e.message || 'error') + ').'); }
@@ -2034,7 +2036,7 @@ function aiPaint(el){
     ${ar.reading ? '<details><summary>What the AI read and how it matched the email to the plans</summary><div style="margin-top:4px">' + E(ar.reading) + '</div></details>' : ''}
     <details><summary>Documents (${(ar.files || []).length} read${(ar.skipped || []).length ? ', ' + ar.skipped.length + ' not read' : ''})</summary>${li((ar.files || []).map(f => f.name + (f.pages ? ' (' + f.pages + ' pages)' : f.how === 'email' ? ' (the GC email)' : '')))}${(ar.skipped || []).length ? '<div style="font-weight:600;margin-top:4px">Not read</div>' + li(ar.skipped.map(f => f.name + ': ' + f.why)) : ''}</details>
     ${ar.contacts && ar.contacts.length ? '<details><summary>Contacts in the email</summary>' + li(ar.contacts.map(c => c.name + (c.role ? ', ' + c.role : '') + (c.email ? ' · ' + c.email : '') + (c.phone ? ' · ' + c.phone : ''))) + '</details>' : ''}
-    <div class="es-hint" style="margin-top:6px">${E(ar.byName || 'Estimator AI')} · ${E(new Date(ar.at).toLocaleString('en-US', { month: 'short', day: 'numeric', hour: 'numeric', minute: '2-digit' }))}${ar.model ? ' · ' + E(ar.model) : ''}</div></div>`;
+    <div class="es-hint" style="margin-top:6px">${E(ar.byName || 'Estimator AI')} · ${E(new Date(ar.at).toLocaleString('en-US', { month: 'short', day: 'numeric', hour: 'numeric', minute: '2-digit' }))}</div></div>`;
   $('#aiHide').onclick = () => { AIX.hide[b.id] = true; aiPaint(el); };
 }
 function esWire(el){
@@ -2063,7 +2065,7 @@ function esWire(el){
   on('#esMark', 'click', () => esSetStatus(el, 'Bidding'));
   on('#esUnmark', 'click', () => esSetStatus(el, 'Draft'));
   on('#esClone', 'click', () => cloneBid(EST.bid.id));
-  on('#esSend', 'click', () => esSendDialog(el, 'single'));
+  on('#esSend', 'click', () => { if(!window.EstimatePrint.open(esPieces(d, 'single', [])[0])) esSendDialog(el, 'single'); });   // straight to the printable estimate; the longer dialog stays on Split Export
   on('#esSendSplit', 'click', () => esSendDialog(el, 'split'));
   on('[data-sent]', 'click', x => { const [i, j] = x.dataset.sent.split('.').map(Number); if(!window.EstimatePrint.open(d.submissions[i].pieces[j])) alert('Your browser blocked the new window. Allow pop-ups for this site and try again.'); });
   on('#esNotesRefresh', 'click', () => esAutoNotes(el, true));

@@ -211,6 +211,36 @@ router.put('/roles/:key', requirePerm('builder.roles', 'write'), wrap(async (req
 }));
 
 // Builder-only health page: yes/no and names only. Never returns a secret value.
+// Builder-only backup: every table in the database as one JSON file (people, roles, bids, estimates, catalog, contracts, PM board, history...).
+// Left out on purpose: live sign-in sessions, password-reset tokens, half-finished upload records and AI draft runs (can be re-run).
+// NOT in it: the uploaded files themselves (they live on the server's file storage, not in the database).
+const BACKUP_SKIP = new Set(['sessions', 'password_resets', 'media_uploads', 'est_ai_runs']);
+router.get('/backup', requirePerm('builder.settings', 'read'), wrap(async (req, res) => {
+  if(!req.user || req.user.role_key !== 'builder') return res.status(403).json({ error: 'forbidden' });
+  const [tl] = await pool.query('SHOW TABLES');
+  const tables = tl.map(r => Object.values(r)[0]).filter(t => /^[A-Za-z0-9_]+$/.test(t) && !BACKUP_SKIP.has(t)).sort();
+  const stamp = new Date().toISOString().slice(0, 16).replace(/[-:]/g, '').replace('T', '-');
+  res.setHeader('Content-Type', 'application/json; charset=utf-8');
+  res.setHeader('Content-Disposition', 'attachment; filename="lucas-go-backup-' + stamp + '.json"');
+  const rep = (k, v) => (v && v.type === 'Buffer' && Array.isArray(v.data)) ? { $base64: Buffer.from(v.data).toString('base64') } : v;
+  res.write('{"app":"Lucas Go","kind":"backup","createdAt":' + Date.now() + ',"createdBy":' + JSON.stringify(req.user.name || '') + ',"format":1,"tables":{');
+  const counts = {};
+  for(let i = 0; i < tables.length; i++){
+    const t = tables[i]; counts[t] = 0;
+    res.write((i ? ',' : '') + JSON.stringify(t) + ':[');
+    for(let off = 0; ; off += 500){
+      const [rows] = await pool.query('SELECT * FROM `' + t + '` LIMIT 500 OFFSET ' + off);
+      if(!rows.length) break;
+      res.write((off ? ',' : '') + rows.map(r => JSON.stringify(r, rep)).join(','));
+      counts[t] += rows.length;
+      if(rows.length < 500) break;
+    }
+    res.write(']');
+  }
+  res.write('},"counts":' + JSON.stringify(counts) + '}');
+  res.end();
+  await audit(req.user, 'backup.download', 'system', 0, counts, req.ip);
+}));
 router.get('/system', requirePerm('builder.settings', 'read'), wrap(async (req, res) => {
   let db = false; try{ await pool.query('SELECT 1'); db = true; }catch(e){}
   const [uc] = await pool.query("SELECT status, COUNT(*) n FROM users GROUP BY status");
