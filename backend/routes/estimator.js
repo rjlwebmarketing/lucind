@@ -321,6 +321,8 @@ router.post('/demo-data', W, wrap(async (req, res) => {
   const st = await demoState(); if(st.bids || st.items) return res.status(409).json({ error: 'already_loaded', state: st });
   const demo = require('../lib/demoData');
   const day = 86400000, at = n => new Date(now + n * day).toISOString().slice(0, 10);
+  const made = { bids: [], items: [] };
+  try{
   const cc = await codes.nextCodes(demo.bids.length);
   let nb = 0, ne = 0, ni = 0;
   for(let i = 0; i < demo.bids.length; i++){
@@ -332,7 +334,7 @@ router.post('/demo-data', W, wrap(async (req, res) => {
     row.owner_id = req.user.id; row.owner_name = req.user.name; row.owner_username = req.user.username || null; row.created_at = row.updated_at = now; row.project_code = cc[i];
     const cols = Object.keys(row);
     const [ins] = await pool.query('INSERT INTO est_bids (' + cols.join(', ') + ') VALUES (' + cols.map(() => '?').join(',') + ')', cols.map(c => row[c]));
-    nb++; await history(ins.insertId, req.user, 'create', { name: row.name, amount: row.amount, status: row.status, demo: true });
+    made.bids.push(ins.insertId); nb++; await history(ins.insertId, req.user, 'create', { name: row.name, amount: row.amount, status: row.status, demo: true });
     const est = demo.estimates[String(d.key)];
     if(est){ await pool.query('INSERT INTO est_estimates (bid_id, doc, updated_at, updated_by) VALUES (?, ?, ?, ?)', [ins.insertId, JSON.stringify(est), now, req.user.name]); ne++; }
   }
@@ -340,10 +342,19 @@ router.post('/demo-data', W, wrap(async (req, res) => {
   for(const it of demo.catalog){
     const o = catClean(it, false, cats); o.source = str(it.source, 120);
     await pool.query('INSERT INTO est_catalog (category, name, stock_no, description, unit, unit_price, taxable, notes, source, icon, active, created_at, updated_at, updated_by) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 1, ?, ?, ?)',
-      [o.category, o.name, o.stock_no, o.description, o.unit, o.unit_price, o.taxable, o.notes, o.source, o.icon || null, now, now, req.user.name]); ni++;
+      [o.category, o.name, o.stock_no, o.description, o.unit, o.unit_price, o.taxable, o.notes, o.source, o.icon || null, now, now, req.user.name]).then(r => made.items.push(r[0].insertId)); ni++;
   }
   await audit(req.user, 'demo.load', 'demo', 0, { bids: nb, estimates: ne, items: ni }, req.ip);
   res.json({ ok: true, bids: nb, estimates: ne, items: ni, state: await demoState() });
+  }catch(e){
+    // Undo the half-loaded rows so the button can be pressed again, and tell the Builder what the database said.
+    console.error('[estimator] demo load failed', e);
+    try{
+      if(made.bids.length){ const q = made.bids.map(() => '?').join(','); await pool.query('DELETE FROM est_estimates WHERE bid_id IN (' + q + ')', made.bids); await pool.query('DELETE FROM est_bid_history WHERE bid_id IN (' + q + ')', made.bids); await pool.query('DELETE FROM est_bids WHERE id IN (' + q + ')', made.bids); }
+      if(made.items.length) await pool.query('DELETE FROM est_catalog WHERE id IN (' + made.items.map(() => '?').join(',') + ')', made.items);
+    }catch(x){ console.error('[estimator] demo cleanup failed', x.message); }
+    res.status(500).json({ error: 'server_error', detail: String((e && (e.sqlMessage || e.message)) || e).slice(0, 300) });
+  }
 }));
 
 // Hand-off hook: tie a bid to the PM project it became, so the bid's documents show up inside that project. Needs write on both sides.
