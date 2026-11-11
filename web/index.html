@@ -1,6 +1,6 @@
 <!doctype html>
 <html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
-<meta name="app-build" content="10.0.4"><title>Lucas Industrial | Platform</title><link rel="icon" type="image/png" href="/logo.png"><link rel="apple-touch-icon" href="/logo.png">
+<meta name="app-build" content="10.2.0"><title>Lucas Industrial | Platform</title><link rel="icon" type="image/png" href="/logo.png"><link rel="apple-touch-icon" href="/logo.png">
 <style>
 @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap');
 :root{
@@ -64,6 +64,10 @@ body.gm-open #gm{display:block}
 body.fullpage .side{display:none}
 .tiles{display:grid;grid-template-columns:repeat(auto-fill,minmax(220px,1fr));gap:14px}.tiles a{display:block;text-decoration:none;color:var(--ink);background:var(--card);border:1px solid var(--line);border-radius:var(--radius);padding:16px;font-weight:700}.tiles a small{display:block;font-weight:400;color:var(--mut);margin-top:4px}.tiles a:hover{border-color:var(--brand-blue)}
 @media(max-width:760px){.layout{flex-direction:column}.side{width:auto}.main{padding:16px}}
+
+/* Every title starts each word with a capital letter, everywhere in the app */
+h1,h2,h3,h4,h5,.pk-h b,.mp-h b,.es-aic summary{text-transform:capitalize}
+#bpTitle{text-transform:none}
 </style></head><body>
 <div id="app"></div>
 <script src="/config.js"></script>
@@ -122,7 +126,21 @@ async function route(){
   if(path === 'login' || !path) { const m = ME.menu || [], pref = { estimator: 'estimator', pm: 'pm' }[ME.user.role], pick = m.find(x => x.key === pref) || m[0]; navTo(pick ? menuHref(pick) : '/home', true); return; }
   shell(path);
 }
-function plain(html){ document.body.classList.remove('fullpage', 'menu-open'); $('#app').innerHTML = '<div class="center"><img class="logo" src="/logo.png" alt="Lucas Industrial"><div class="box">' + html + '</div></div>'; }
+function plain(html){ document.body.classList.remove('fullpage', 'menu-open'); $('#app').innerHTML = '<div class="center"><img class="logo" src="/logo.png" alt="Lucas Industrial"><div class="box">' + html + '</div></div>'; eyeify($('#app')); }
+// Show/hide eye button on every password box in a plain screen (login, choose password, change password).
+const EYE_ON = '<svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M2 12s3.6-7 10-7 10 7 10 7-3.6 7-10 7S2 12 2 12z"/><circle cx="12" cy="12" r="3"/></svg>';
+const EYE_OFF = '<svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M17.9 17.9A10.3 10.3 0 0 1 12 19c-6.4 0-10-7-10-7a17.6 17.6 0 0 1 4.1-5.1M9.9 5.2A9.8 9.8 0 0 1 12 5c6.4 0 10 7 10 7a17.7 17.7 0 0 1-2.1 3.1M14.1 14.1a3 3 0 1 1-4.2-4.2"/><path d="M2 2l20 20"/></svg>';
+function eyeify(root){
+  root.querySelectorAll('input[type=password]').forEach(inp => {
+    if(inp.dataset.eye) return; inp.dataset.eye = '1';
+    const wrap = document.createElement('div'); wrap.style.cssText = 'position:relative';
+    inp.parentNode.insertBefore(wrap, inp); wrap.appendChild(inp); inp.style.paddingRight = '42px';
+    const b = document.createElement('button'); b.type = 'button'; b.tabIndex = -1; b.setAttribute('aria-label', 'Show password'); b.title = 'Show password'; b.innerHTML = EYE_ON;
+    b.style.cssText = 'position:absolute;right:4px;top:50%;transform:translateY(-50%);width:34px;height:34px;display:flex;align-items:center;justify-content:center;background:none;border:0;padding:0;margin:0;color:var(--mut,#666);cursor:pointer;border-radius:6px';
+    b.onclick = () => { const show = inp.type === 'password'; inp.type = show ? 'text' : 'password'; b.innerHTML = show ? EYE_OFF : EYE_ON; const t = show ? 'Hide password' : 'Show password'; b.title = t; b.setAttribute('aria-label', t); inp.focus(); };
+    wrap.appendChild(b);
+  });
+}
 
 // ---------- public views ----------
 function viewLogin(){
@@ -291,20 +309,23 @@ function managePerson(u, cat, done){
     return `<tr><td>${esc(p.label)}</td><td><select data-k="${p.key}" ${locked || u.role === 'builder' ? 'disabled' : ''}><option value="">Role default</option>${cat.levels.map(l => `<option value="${l}" ${ov[p.key] === l ? 'selected' : ''}>${l}</option>`).join('')}</select></td></tr>`;
   }).join('')).join('');
   const m = modal(`<h2>${esc(u.name)}</h2><div class="mut">${esc(u.username || '')} · ${esc(u.email)} · ${esc(u.status)}</div>
+  <div class="row" style="margin:10px 0 0;gap:8px"><button class="btn sec sm" id="tp">Set temporary password</button><button class="btn sec sm" id="em">Email a reset link</button>${isBuilder && u.role !== 'builder' ? '<button class="btn sec sm" id="sw">Set password myself</button>' : ''}</div><div id="pwm"></div><hr style="margin:12px 0">
   <div class="row"><div><label>Name</label><input id="n" value="${esc(u.name)}"></div><div><label>Username</label><input id="un" value="${esc(u.username || '')}" autocapitalize="none" spellcheck="false"></div><div><label>Email</label><input id="e" value="${esc(u.email)}"></div><div><label>Main role</label><select id="r">${roles.map(r => `<option value="${r.key}" ${u.role === r.key ? 'selected' : ''}>${esc(r.label)}</option>`).join('')}</select></div></div>${u.role === 'builder' ? '' : extraBoxes(roles, u.role, u.extraRoles)}
   <div style="margin-top:8px"><button class="btn sm" id="sv">Save details</button></div><div id="m"></div><hr>
   <h2 style="font-size:15px">Access for this person only</h2><div class="mut">Leave on "Role default" unless this person needs more or less than their role.</div>
   <table>${grid}</table><div style="margin-top:8px"><button class="btn sm" id="sp" ${u.role === 'builder' ? 'disabled' : ''}>Save access</button></div><hr>
-  <div class="row"><button class="btn sec sm" id="tp">Set temporary password</button><button class="btn sec sm" id="em">Email a reset link</button>${isBuilder && u.role !== 'builder' ? '<button class="btn sec sm" id="sw">Set password myself</button>' : ''}${u.status === 'active' ? '<button class="btn bad sm" id="dis">Turn off</button>' : '<button class="btn sm" id="en">Turn back on</button>'}</div>
+  <div class="row">${u.status === 'active' ? '<button class="btn bad sm" id="dis">Turn off</button>' : '<button class="btn sm" id="en">Turn back on</button>'}</div>
   <div style="margin-top:12px;text-align:right"><button class="btn sec" id="x">Close</button></div>`);
   const msg = (t, ok) => { m.querySelector('#m').innerHTML = `<div class="${ok ? 'okm' : 'err'}">${esc(t)}</div>`; };
   const run = fn => async () => { try{ await fn(); }catch(e){ msg(say(e)); } };
+  const pmsg = (t, ok) => { m.querySelector('#pwm').innerHTML = `<div class="${ok ? 'okm' : 'err'}">${esc(t)}</div>`; };
+  const prun = fn => async () => { try{ await fn(); }catch(e){ pmsg(say(e)); } };
   m.querySelector('#x').onclick = () => { m.close(); done(); };
   m.querySelector('#sv').onclick = run(async () => { await api('PATCH', '/admin/users/' + u.id, { name: m.querySelector('#n').value, username: m.querySelector('#un').value, email: m.querySelector('#e').value, role: m.querySelector('#r').value, extraRoles: u.role === 'builder' ? undefined : pickedExtras(m) }); msg('Saved.', true); });
   m.querySelector('#sp').onclick = run(async () => { const perms = {}; m.querySelectorAll('select[data-k]').forEach(s => { if(s.disabled) return; const v = s.value || null; if((ov[s.dataset.k] || null) !== v) perms[s.dataset.k] = v; }); await api('PUT', '/admin/users/' + u.id + '/permissions', { perms }); msg('Access saved.', true); });
-  m.querySelector('#tp').onclick = run(async () => { if(!confirm('Set a new temporary password? Their current sessions end.')) return; const r = await api('POST', '/admin/users/' + u.id + '/reset-password', { mode: 'temp' }); m.querySelector('#m').innerHTML = `<div class="okm">Temporary password (shown once):</div><div class="pw">${esc(r.temporaryPassword)}</div>`; });
-  m.querySelector('#em').onclick = run(async () => { await api('POST', '/admin/users/' + u.id + '/reset-password', { mode: 'email' }); msg('Link emailed.', true); });
-  const sw = m.querySelector('#sw'); if(sw) sw.onclick = () => { m.querySelector('#m').innerHTML = `<div style="margin-top:10px;padding:12px;border:1px solid var(--line,#dfe3e8);border-radius:8px"><div style="font-weight:600;margin-bottom:2px">Set password for ${esc(u.name)}</div><div class="mut" style="margin-bottom:10px">4 or more characters, any kind. Their open sessions end.</div><div style="display:flex;gap:8px;align-items:center;flex-wrap:wrap"><input id="spw" type="text" placeholder="New password" autocomplete="off" autocapitalize="none" spellcheck="false" style="flex:1 1 220px;max-width:340px;margin:0"><button class="btn sm" id="sgo" style="white-space:nowrap">Set password</button></div><label style="display:inline-flex;align-items:center;gap:8px;margin:10px 0 0;font-weight:400;cursor:pointer"><input type="checkbox" id="smc" checked style="width:auto;margin:0;flex:none"><span>Ask them to change it at first sign-in</span></label><div id="smm"></div></div>`; const smm = (t, ok) => { m.querySelector('#smm').innerHTML = `<div class="${ok ? 'okm' : 'err'}" style="margin-top:10px">${esc(t)}</div>`; }; m.querySelector('#sgo').onclick = async () => { try{ const pw = m.querySelector('#spw').value; const mc = m.querySelector('#smc').checked; await api('POST', '/admin/users/' + u.id + '/set-password', { password: pw, mustChange: mc }); smm('Password set. Give it to ' + u.name + (mc ? ' (they will choose their own at first sign-in).' : '.'), true); }catch(e){ smm(say(e)); } }; m.querySelector('#spw').focus(); };
+  m.querySelector('#tp').onclick = prun(async () => { if(!confirm('Set a new temporary password? Their current sessions end.')) return; const r = await api('POST', '/admin/users/' + u.id + '/reset-password', { mode: 'temp' }); m.querySelector('#pwm').innerHTML = `<div class="okm">Temporary password (shown once):</div><div class="pw">${esc(r.temporaryPassword)}</div>`; });
+  m.querySelector('#em').onclick = prun(async () => { await api('POST', '/admin/users/' + u.id + '/reset-password', { mode: 'email' }); pmsg('Link emailed.', true); });
+  const sw = m.querySelector('#sw'); if(sw) sw.onclick = () => { m.querySelector('#pwm').innerHTML = `<div style="margin-top:10px;padding:12px;border:1px solid var(--line,#dfe3e8);border-radius:8px"><div style="font-weight:600;margin-bottom:2px">Set password for ${esc(u.name)}</div><div class="mut" style="margin-bottom:10px">4 or more characters, any kind. Their open sessions end.</div><div style="display:flex;gap:8px;align-items:center;flex-wrap:wrap"><input id="spw" type="text" placeholder="New password" autocomplete="off" autocapitalize="none" spellcheck="false" style="flex:1 1 220px;max-width:340px;margin:0"><button class="btn sm" id="sgo" style="white-space:nowrap">Set password</button></div><label style="display:inline-flex;align-items:center;gap:8px;margin:10px 0 0;font-weight:400;cursor:pointer"><input type="checkbox" id="smc" checked style="width:auto;margin:0;flex:none"><span>Ask them to change it at first sign-in</span></label><div id="smm"></div></div>`; const smm = (t, ok) => { m.querySelector('#smm').innerHTML = `<div class="${ok ? 'okm' : 'err'}" style="margin-top:10px">${esc(t)}</div>`; }; m.querySelector('#sgo').onclick = async () => { try{ const pw = m.querySelector('#spw').value; const mc = m.querySelector('#smc').checked; await api('POST', '/admin/users/' + u.id + '/set-password', { password: pw, mustChange: mc }); smm('Password set. Give it to ' + u.name + (mc ? ' (they will choose their own at first sign-in).' : '.'), true); }catch(e){ smm(say(e)); } }; m.querySelector('#spw').focus(); };
   const d = m.querySelector('#dis'); if(d) d.onclick = run(async () => { if(!confirm('Turn off ' + u.name + '? They are signed out now and cannot sign in. Everything they did stays on record under their name.')) return; await api('POST', '/admin/users/' + u.id + '/disable'); m.close(); done(); });
   const en = m.querySelector('#en'); if(en) en.onclick = run(async () => { await api('POST', '/admin/users/' + u.id + '/enable'); m.close(); done(); });
 }

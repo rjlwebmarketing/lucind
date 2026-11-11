@@ -195,6 +195,21 @@ const DDL = [
   ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4`,
   // The product catalog: the ~50 things Lucas buys, makes and installs, each with a standard description and a unit price.
   // Owner/Estimator edit it (pane estimator.pricebook). Nothing is deleted: an item is retired (active = 0) and stays in old estimates.
+  `CREATE TABLE IF NOT EXISTS est_ai_runs (
+    id BIGINT UNSIGNED NOT NULL AUTO_INCREMENT PRIMARY KEY,
+    bid_id BIGINT UNSIGNED NOT NULL,
+    status VARCHAR(12) NOT NULL DEFAULT 'running',
+    stage VARCHAR(60) NULL,
+    started_by BIGINT NULL,
+    started_by_name VARCHAR(120) NULL,
+    started_at BIGINT NOT NULL,
+    finished_at BIGINT NULL,
+    model VARCHAR(80) NULL,
+    error_code VARCHAR(40) NULL,
+    error_msg VARCHAR(500) NULL,
+    result MEDIUMTEXT NULL,
+    KEY idx_bid (bid_id, id)
+  ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4`,
   `CREATE TABLE IF NOT EXISTS est_catalog (
     id BIGINT UNSIGNED NOT NULL AUTO_INCREMENT PRIMARY KEY,
     category VARCHAR(40) NOT NULL DEFAULT 'Materials',
@@ -391,6 +406,7 @@ async function ensureSchema(){
   try{ await pool.query('ALTER TABLE est_bids ADD COLUMN cloned_from BIGINT UNSIGNED NULL'); }catch(e){ /* already there */ }
   try{ await pool.query('ALTER TABLE est_bids ADD COLUMN cloned_parent BIGINT UNSIGNED NULL'); }catch(e){ /* already there */ }
   try{ await pool.query('ALTER TABLE est_catalog ADD COLUMN icon VARCHAR(24) NULL'); }catch(e){ /* already there */ }
+  try{ await pool.query('ALTER TABLE est_bids ADD COLUMN deleted_at BIGINT NULL'); }catch(e){ /* already there */ }
   try{ await pool.query('ALTER TABLE media_files ADD COLUMN share_ok TINYINT NULL'); }catch(e){ /* already there */ }
   try{ await pool.query('ALTER TABLE audit_log ADD COLUMN user_username VARCHAR(40) NULL'); }catch(e){ /* already there */ }
   try{ await require('./codes').backfillBidCodes(); }catch(e){ console.error('bid code backfill failed', e); }

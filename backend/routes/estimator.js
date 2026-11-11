@@ -8,6 +8,7 @@ const handoff = require('../lib/handoff');
 const codes = require('../lib/codes');
 const tasksLib = require('../lib/tasks');
 const { notify } = require('../lib/notify');
+const estAi = require('../lib/estimatorAi');
 
 const router = express.Router();
 router.use(requireAuth, blockUntilPasswordChanged);
@@ -26,7 +27,7 @@ const shape = b => ({ id: Number(b.id), name: b.name, storeNumber: b.store_numbe
   lat: b.lat == null ? null : Number(b.lat), lon: b.lon == null ? null : Number(b.lon), amount: Number(b.amount), status: b.status,
   ownerId: b.owner_id == null ? null : Number(b.owner_id), ownerName: b.owner_name || '', ownerUsername: b.owner_username || '',
   bidDue: b.bid_due || '', bidSubmitted: b.bid_submitted || '', decidedOn: b.decided_on || '', startDate: b.start_date || '', endDate: b.end_date || '',
-  notes: b.notes || '', projectId: b.project_id || null, code: b.project_code || '', clonedFrom: b.cloned_from == null ? null : Number(b.cloned_from), archived: !!b.archived, createdAt: Number(b.created_at), updatedAt: Number(b.updated_at) });
+  notes: b.notes || '', projectId: b.project_id || null, code: b.project_code || '', clonedFrom: b.cloned_from == null ? null : Number(b.cloned_from), archived: !!b.archived, deleted: !!b.deleted_at, deletedAt: b.deleted_at ? Number(b.deleted_at) : null, createdAt: Number(b.created_at), updatedAt: Number(b.updated_at) });
 
 // field name in the API -> column, with a cleaner for each
 const FIELDS = {
@@ -60,7 +61,7 @@ async function autoLose(){
 
 router.get('/bids', R, wrap(async (req, res) => {
   await autoLose();
-  const [rows] = await pool.query('SELECT * FROM est_bids' + (req.query.archived === '1' ? '' : ' WHERE archived = 0') + ' ORDER BY id DESC');
+  const [rows] = await pool.query('SELECT * FROM est_bids' + (req.query.archived === '1' ? '' : ' WHERE archived = 0') + ' ORDER BY id DESC');   // deleted bids are archived too, so they show only under Archived (flagged "deleted")
   // Won + handed off but no GC contract on file yet -> awaitingContract (drives the "Awaiting Contract" bubble and the Add Contract button)
   const have = new Set((await pool.query('SELECT project_id FROM est_contracts'))[0].map(x => String(x.project_id)));
   res.json({ statuses: STATUSES, bids: rows.map(r => Object.assign(shape(r), { awaitingContract: r.status === 'Won' && !!r.project_id && !have.has(String(r.project_id)) })) });
@@ -127,6 +128,32 @@ for(const [verb, flag] of [['archive', 1], ['unarchive', 0]]){
     res.json({ ok: true });
   }));
 }
+
+// Delete / undo delete (Owner and Builder). A "delete" hides the bid everywhere (lists, search, numbers, analytics) with a short Undo on screen. The record itself is kept
+// (deleted_at + history + audit), so nothing is ever truly lost. A bid that was handed off to the PM cannot be deleted (a project depends on it).
+const DEL = requirePerm('admin.users', 'write');
+router.post('/bids/delete', DEL, wrap(async (req, res) => {
+  const ids = [...new Set((Array.isArray(req.body && req.body.ids) ? req.body.ids : []).map(Number).filter(n => n > 0))].slice(0, 500);
+  if(!ids.length) return res.status(400).json({ error: 'no_bids' });
+  const [rows] = await pool.query('SELECT id, name, project_id, deleted_at FROM est_bids WHERE id IN (' + ids.map(() => '?').join(',') + ')', ids);
+  const deleted = [], blocked = [], now = Date.now();
+  for(const b of rows){
+    if(b.deleted_at) continue;
+    if(b.project_id){ blocked.push({ id: Number(b.id), name: b.name, why: 'handed off to the Project Manager' }); continue; }
+    await pool.query('UPDATE est_bids SET archived = 1, deleted_at = ?, updated_at = ? WHERE id = ? AND deleted_at IS NULL', [now, now, b.id]);
+    await history(b.id, req.user, 'deleted', { name: b.name }); deleted.push(Number(b.id));
+  }
+  if(deleted.length) await audit(req.user, 'bid.delete', 'bid', deleted.join(','), { count: deleted.length }, req.ip);
+  res.json({ ok: true, deleted, blocked });
+}));
+router.post('/bids/undelete', DEL, wrap(async (req, res) => {
+  const ids = [...new Set((Array.isArray(req.body && req.body.ids) ? req.body.ids : []).map(Number).filter(n => n > 0))].slice(0, 500);
+  if(!ids.length) return res.status(400).json({ error: 'no_bids' });
+  const [rows] = await pool.query('SELECT id FROM est_bids WHERE deleted_at IS NOT NULL AND id IN (' + ids.map(() => '?').join(',') + ')', ids); const back = [], now = Date.now();
+  for(const b of rows){ await pool.query('UPDATE est_bids SET archived = 0, deleted_at = NULL, updated_at = ? WHERE id = ?', [now, b.id]); await history(b.id, req.user, 'undeleted', null); back.push(Number(b.id)); }
+  if(back.length) await audit(req.user, 'bid.undelete', 'bid', back.join(','), { count: back.length }, req.ip);
+  res.json({ ok: true, restored: back });
+}));
 
 router.get('/bids/:id/history', R, wrap(async (req, res) => {
   const [h] = await pool.query('SELECT * FROM est_bid_history WHERE bid_id = ? ORDER BY id DESC', [Number(req.params.id)]);
@@ -220,6 +247,103 @@ router.put('/bids/:id/estimate', W, wrap(async (req, res) => {
   await history(id, req.user, 'estimate', { lines: est.lines.length, subtotal: Math.round(sub * 100) / 100 });
   await audit(req.user, 'estimator.estimate_save', 'bid', id, { lines: est.lines.length }, req.ip);
   res.json({ ok: true, updatedAt: now });
+}));
+
+// ---------- Estimator AI: draft the estimate from the bid's email and documents ----------
+// A draft takes a few minutes, so it runs as a background job (a row in est_ai_runs) that the screen polls. Nothing is put into the estimate here:
+// the screen loads the finished draft for the Estimator to review. A run that is still "running" after 15 minutes is treated as failed.
+const AI_STALE_MS = 15 * 60 * 1000;
+const runShape = (r, withResult) => {
+  let res = null; if(r.result){ try{ res = JSON.parse(r.result); }catch(e){} }
+  return { id: Number(r.id), status: r.status, stage: r.stage || '', startedAt: Number(r.started_at), finishedAt: r.finished_at ? Number(r.finished_at) : null, startedBy: r.started_by_name || '', model: r.model || '',
+    error: r.error_code ? { code: r.error_code, message: r.error_msg || '' } : null, files: res ? res.files : [], skipped: res ? res.skipped : [], draft: withResult && res ? res.draft : undefined };
+};
+async function latestRun(bidId){
+  const [r] = await pool.query('SELECT * FROM est_ai_runs WHERE bid_id = ? ORDER BY id DESC LIMIT 1', [bidId]); const run = r[0]; if(!run) return null;
+  if(run.status === 'running' && Date.now() - Number(run.started_at) > AI_STALE_MS){
+    await pool.query("UPDATE est_ai_runs SET status = 'failed', finished_at = ?, error_code = 'timed_out', error_msg = ? WHERE id = ? AND status = 'running'", [Date.now(), 'The draft took too long and was stopped. Try again.', run.id]);
+    run.status = 'failed'; run.error_code = 'timed_out'; run.error_msg = 'The draft took too long and was stopped. Try again.'; run.finished_at = Date.now();
+  }
+  return run;
+}
+const AI_MSG = { ai_not_configured: 'Estimator AI is not set up on the server yet (the Anthropic key is missing).', no_documents: 'There is nothing the AI can read yet. Add the GC email and the plan set (PDF) to the bid\'s files.', ai_too_long: 'The draft was too long for one pass. Try with fewer documents.', ai_bad_answer: 'The AI answer could not be read. Try again.' };
+async function runAiJob(runId, bidId, user){
+  try{
+    const out = await estAi.draftForBid(bidId, stage => pool.query('UPDATE est_ai_runs SET stage = ? WHERE id = ?', [stage, runId]).catch(() => {}));
+    await pool.query("UPDATE est_ai_runs SET status = 'done', stage = NULL, finished_at = ?, model = ?, result = ? WHERE id = ?", [Date.now(), out.model, JSON.stringify({ draft: out.draft, files: out.files, skipped: out.skipped }), runId]);
+    await history(bidId, user, 'ai_draft', { lines: out.draft.lines.length, files: out.files.length, skipped: out.skipped.length });
+    await audit(user, 'estimator.ai_draft', 'bid', bidId, { run: runId, lines: out.draft.lines.length, model: out.model }, null);
+  }catch(e){
+    const code = e.code || (e.status === 401 ? 'ai_key_rejected' : e.status === 404 ? 'ai_model_not_found' : e.status === 429 ? 'ai_busy' : e.status === 413 ? 'ai_too_big' : 'ai_failed');
+    const msg = AI_MSG[code] || (code === 'ai_key_rejected' ? 'The Anthropic key was rejected.' : code === 'ai_model_not_found' ? 'The AI model name is not available to this key (' + estAi.modelName() + '). Set AI_ESTIMATOR_MODEL on the server.' : code === 'ai_busy' ? 'The AI service is busy. Try again in a minute.' : code === 'ai_too_big' ? 'The documents together are too large for the AI. Try with fewer or smaller files.' : 'The AI could not finish (' + String(e.message || 'error').slice(0, 200) + ').');
+    console.error('[estimator-ai]', code, e.message);
+    await pool.query("UPDATE est_ai_runs SET status = 'failed', stage = NULL, finished_at = ?, error_code = ?, error_msg = ? WHERE id = ?", [Date.now(), code, msg.slice(0, 500), runId]).catch(() => {});
+  }
+}
+router.post('/bids/:id/ai-draft', W, wrap(async (req, res) => {
+  const id = Number(req.params.id) || 0;
+  const [b] = await pool.query('SELECT id, archived, status FROM est_bids WHERE id = ?', [id]); if(!b.length) return res.status(404).json({ error: 'not_found' });
+  if(Number(b[0].archived)) return res.status(409).json({ error: 'archived' });
+  if(b[0].status === 'Lost') return res.status(409).json({ error: 'lost_clone_instead' });
+  if(!process.env.ANTHROPIC_API_KEY) return res.status(503).json({ error: 'ai_not_configured', message: AI_MSG.ai_not_configured });
+  const cur = await latestRun(id); if(cur && cur.status === 'running') return res.json({ run: runShape(cur, false), already: true });
+  const [ins] = await pool.query('INSERT INTO est_ai_runs (bid_id, status, stage, started_by, started_by_name, started_at) VALUES (?, ?, ?, ?, ?, ?)', [id, 'running', 'Starting', req.user.id, req.user.name, Date.now()]);
+  runAiJob(ins.insertId, id, req.user);   // background: not awaited
+  const [r] = await pool.query('SELECT * FROM est_ai_runs WHERE id = ?', [ins.insertId]);
+  res.json({ run: runShape(r[0], false) });
+}));
+router.get('/bids/:id/ai-draft', R, wrap(async (req, res) => {
+  const run = await latestRun(Number(req.params.id) || 0);
+  res.json({ configured: !!process.env.ANTHROPIC_API_KEY, run: run ? runShape(run, run.status === 'done') : null });
+}));
+
+// ---------- Demo data (Builder only): sample bids and catalog items so people can click around before real jobs are in ----------
+// Every demo bid is named "DEMO · ..." and every demo catalog item has a source starting "DEMO ·". Loading twice is refused. "Archive" tucks the demo bids away
+// (archived, nothing deleted) and retires the demo catalog items. Demo bids are ordinary bids otherwise (they can be opened, edited, handed off, cloned).
+const DEMO_PREFIX = 'DEMO · ';
+const isBuilderUser = u => u && u.role_key === 'builder';
+async function demoState(){
+  const [b] = await pool.query("SELECT COUNT(*) AS n, SUM(archived = 0) AS live FROM est_bids WHERE name LIKE ?", [DEMO_PREFIX + '%']);
+  const [c] = await pool.query("SELECT COUNT(*) AS n, SUM(active = 1) AS live FROM est_catalog WHERE source LIKE ?", ['DEMO ·%']);
+  return { bids: Number(b[0].n), liveBids: Number(b[0].live || 0), items: Number(c[0].n), liveItems: Number(c[0].live || 0) };
+}
+router.get('/demo-data', R, wrap(async (req, res) => { res.json(Object.assign({ canManage: isBuilderUser(req.user) }, await demoState())); }));
+router.post('/demo-data', W, wrap(async (req, res) => {
+  if(!isBuilderUser(req.user)) return res.status(403).json({ error: 'forbidden' });
+  const action = req.body && req.body.action, now = Date.now();
+  if(action === 'archive'){
+    const [u1] = await pool.query("UPDATE est_bids SET archived = 1, updated_at = ? WHERE name LIKE ? AND archived = 0", [now, DEMO_PREFIX + '%']);
+    const [u2] = await pool.query("UPDATE est_catalog SET active = 0, updated_at = ?, updated_by = ? WHERE source LIKE ? AND active = 1", [now, req.user.name, 'DEMO ·%']);
+    await audit(req.user, 'demo.archive', 'demo', 0, { bids: u1.affectedRows, items: u2.affectedRows }, req.ip);
+    return res.json({ ok: true, archivedBids: u1.affectedRows, retiredItems: u2.affectedRows, state: await demoState() });
+  }
+  if(action !== 'load') return res.status(400).json({ error: 'bad_action' });
+  const st = await demoState(); if(st.bids || st.items) return res.status(409).json({ error: 'already_loaded', state: st });
+  const demo = require('../lib/demoData');
+  const day = 86400000, at = n => new Date(now + n * day).toISOString().slice(0, 10);
+  const cc = await codes.nextCodes(demo.bids.length);
+  let nb = 0, ne = 0, ni = 0;
+  for(let i = 0; i < demo.bids.length; i++){
+    const d = demo.bids[i], row = {};
+    const val = k => d[k + 'Rel'] != null ? at(d[k + 'Rel']) : (d[k] || null);
+    row.name = str(DEMO_PREFIX + d.name, 200); row.store_number = str(d.storeNumber, 40); row.customer = str(d.customer, 200); row.address = str(d.address, 255); row.city = str(d.city, 100); row.state = str(d.state, 40);
+    row.lat = d.lat; row.lon = d.lon; row.amount = Math.max(0, num(d.amount) || 0); row.status = STATUSES.includes(d.status) ? d.status : 'Draft';
+    row.bid_due = val('bidDue'); row.bid_submitted = val('bidSubmitted'); row.decided_on = val('decidedOn'); row.start_date = val('startDate'); row.end_date = val('endDate'); row.notes = str(d.notes, 20000);
+    row.owner_id = req.user.id; row.owner_name = req.user.name; row.owner_username = req.user.username || null; row.created_at = row.updated_at = now; row.project_code = cc[i];
+    const cols = Object.keys(row);
+    const [ins] = await pool.query('INSERT INTO est_bids (' + cols.join(', ') + ') VALUES (' + cols.map(() => '?').join(',') + ')', cols.map(c => row[c]));
+    nb++; await history(ins.insertId, req.user, 'create', { name: row.name, amount: row.amount, status: row.status, demo: true });
+    const est = demo.estimates[String(d.key)];
+    if(est){ await pool.query('INSERT INTO est_estimates (bid_id, doc, updated_at, updated_by) VALUES (?, ?, ?, ?)', [ins.insertId, JSON.stringify(est), now, req.user.name]); ne++; }
+  }
+  const cats = await catList();
+  for(const it of demo.catalog){
+    const o = catClean(it, false, cats); o.source = str(it.source, 120);
+    await pool.query('INSERT INTO est_catalog (category, name, stock_no, description, unit, unit_price, taxable, notes, source, icon, active, created_at, updated_at, updated_by) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 1, ?, ?, ?)',
+      [o.category, o.name, o.stock_no, o.description, o.unit, o.unit_price, o.taxable, o.notes, o.source, o.icon || null, now, now, req.user.name]); ni++;
+  }
+  await audit(req.user, 'demo.load', 'demo', 0, { bids: nb, estimates: ne, items: ni }, req.ip);
+  res.json({ ok: true, bids: nb, estimates: ne, items: ni, state: await demoState() });
 }));
 
 // Hand-off hook: tie a bid to the PM project it became, so the bid's documents show up inside that project. Needs write on both sides.
@@ -357,7 +481,7 @@ router.delete('/tasks/:id', W, wrap(async (req, res) => {
 // Analytics: bid totals, conversion and awards by month. Counts archived bids too (history); "mine" unless the person may see everyone.
 router.get('/analytics', R, wrap(async (req, res) => {
   const all = req.query.all === '1' && canSeeAll(req), n = [6, 12, 24].includes(Number(req.query.months)) ? Number(req.query.months) : 12;
-  const [rows] = await pool.query('SELECT status, amount, bid_submitted, decided_on, owner_id FROM est_bids' + (all ? '' : ' WHERE owner_id = ?'), all ? [] : [req.user.id]);
+  const [rows] = await pool.query('SELECT status, amount, bid_submitted, decided_on, owner_id FROM est_bids WHERE deleted_at IS NULL' + (all ? '' : ' AND owner_id = ?'), all ? [] : [req.user.id]);
   res.json(Object.assign({ all, canAll: canSeeAll(req), monthsBack: n }, tasksLib.monthly(rows, today().slice(0, 7), n)));
 }));
 
