@@ -149,8 +149,20 @@ const TOOL = {
 
 // ---------- calling the API (streamed, so a long answer never times out) ----------
 async function callApi(key, model, blocks, system){
-  const body = { model, max_tokens: 32000, stream: true, system, tools: [TOOL], tool_choice: { type: 'tool', name: TOOL.name }, messages: [{ role: 'user', content: blocks }] };
-  const res = await fetch(API, { method: 'POST', headers: { 'content-type': 'application/json', 'x-api-key': key, 'anthropic-version': '2023-06-01' }, body: JSON.stringify(body) });
+  // Some models refuse a forced tool call ("tool_choice: type tool and any are not supported for this model"). Then ask with
+  // tool_choice auto, which still ends in the tool call because the system prompt says to reply only by calling it.
+  const send = async force => {
+    const body = { model, max_tokens: 32000, stream: true, system, tools: [TOOL], messages: [{ role: 'user', content: blocks }] };
+    if(force) body.tool_choice = { type: 'tool', name: TOOL.name };
+    return fetch(API, { method: 'POST', headers: { 'content-type': 'application/json', 'x-api-key': key, 'anthropic-version': '2023-06-01' }, body: JSON.stringify(body) });
+  };
+  let res = await send(true);
+  if(!res.ok){
+    let j = {}; try{ j = await res.json(); }catch(e){}
+    const msg = (j.error && j.error.message) || ('http_' + res.status);
+    if(res.status === 400 && /tool_choice/i.test(msg)) res = await send(false);
+    else { const e = new Error(msg); e.status = res.status; throw e; }
+  }
   if(!res.ok){ let j = {}; try{ j = await res.json(); }catch(e){} const e = new Error((j.error && j.error.message) || ('http_' + res.status)); e.status = res.status; throw e; }
   let buf = '', json = '', stop = '';
   const dec = new TextDecoder();
