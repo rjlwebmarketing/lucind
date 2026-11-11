@@ -159,8 +159,9 @@ router.post('/users/:id/set-password', W, wrap(async (req, res) => {
   if(id === req.user.id) return res.status(400).json({ error: 'use_change_password' });
   const [rows] = await pool.query('SELECT * FROM users WHERE id = ?', [id]); const u = rows[0];
   if(!u) return res.status(404).json({ error: 'not_found' });
-  const problem = passwordProblem(pw, u.email);
-  if(problem) return res.status(400).json({ error: 'weak_password', message: problem });
+  // Builder choice: short and simple passwords are allowed here for now (4+ characters).
+  if(pw.length < 4) return res.status(400).json({ error: 'weak_password', message: 'Use at least 4 characters.' });
+  if(pw.length > 200) return res.status(400).json({ error: 'weak_password', message: 'That password is too long.' });
   const must = b.mustChange === false ? 0 : 1;
   await pool.query('UPDATE users SET password_hash = ?, must_change_password = ?, failed_count = 0, locked_until = 0 WHERE id = ?', [await hashPassword(pw), must, id]);
   await revokeSessions(id);
