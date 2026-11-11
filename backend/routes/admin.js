@@ -1,7 +1,7 @@
 const express = require('express');
 const pool = require('../config/db');
 const { requireAuth, requirePerm, blockUntilPasswordChanged, revokeSessions } = require('../lib/auth');
-const { hashPassword, randomPassword } = require('../lib/password');
+const { hashPassword, randomPassword, passwordProblem } = require('../lib/password');
 const { newToken, sha256 } = require('../lib/tokens');
 const { SECTIONS, PANE_KEYS, LEVELS, BUILDER_ONLY } = require('../lib/catalog');
 const { audit } = require('../lib/audit');
@@ -150,6 +150,22 @@ router.post('/users/:id/reset-password', W, wrap(async (req, res) => {
   await revokeSessions(id);
   await audit(req.user, 'user.temp_password', 'user', id, null, req.ip);
   res.json({ ok: true, temporaryPassword: temp });
+}));
+
+// Builder only: type a password for someone. They are asked to change it at first sign-in unless mustChange is false.
+router.post('/users/:id/set-password', W, wrap(async (req, res) => {
+  if(req.user.role_key !== 'builder') return res.status(403).json({ error: 'forbidden' });
+  const id = Number(req.params.id), b = req.body || {}, pw = String(b.password || '');
+  if(id === req.user.id) return res.status(400).json({ error: 'use_change_password' });
+  const [rows] = await pool.query('SELECT * FROM users WHERE id = ?', [id]); const u = rows[0];
+  if(!u) return res.status(404).json({ error: 'not_found' });
+  const problem = passwordProblem(pw, u.email);
+  if(problem) return res.status(400).json({ error: 'weak_password', message: problem });
+  const must = b.mustChange === false ? 0 : 1;
+  await pool.query('UPDATE users SET password_hash = ?, must_change_password = ?, failed_count = 0, locked_until = 0 WHERE id = ?', [await hashPassword(pw), must, id]);
+  await revokeSessions(id);
+  await audit(req.user, 'user.password_set', 'user', id, { mustChange: !!must }, req.ip);
+  res.json({ ok: true, mustChange: !!must });
 }));
 
 // Per-person overrides on top of the role template. body: { perms: { 'pm.dispatch': 'read', 'pm.people': null } } (null removes the override)

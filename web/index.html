@@ -1,6 +1,6 @@
 <!doctype html>
 <html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
-<meta name="app-build" content="10.0.1"><title>Lucas Industrial | Platform</title><link rel="icon" type="image/png" href="/logo.png"><link rel="apple-touch-icon" href="/logo.png">
+<meta name="app-build" content="10.0.2"><title>Lucas Industrial | Platform</title><link rel="icon" type="image/png" href="/logo.png"><link rel="apple-touch-icon" href="/logo.png">
 <style>
 @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap');
 :root{
@@ -295,7 +295,7 @@ function managePerson(u, cat, done){
   <div style="margin-top:8px"><button class="btn sm" id="sv">Save details</button></div><div id="m"></div><hr>
   <h2 style="font-size:15px">Access for this person only</h2><div class="mut">Leave on "Role default" unless this person needs more or less than their role.</div>
   <table>${grid}</table><div style="margin-top:8px"><button class="btn sm" id="sp" ${u.role === 'builder' ? 'disabled' : ''}>Save access</button></div><hr>
-  <div class="row"><button class="btn sec sm" id="tp">Set temporary password</button><button class="btn sec sm" id="em">Email a reset link</button>${u.status === 'active' ? '<button class="btn bad sm" id="dis">Turn off</button>' : '<button class="btn sm" id="en">Turn back on</button>'}</div>
+  <div class="row"><button class="btn sec sm" id="tp">Set temporary password</button><button class="btn sec sm" id="em">Email a reset link</button>${isBuilder && u.role !== 'builder' ? '<button class="btn sec sm" id="sw">Set password myself</button>' : ''}${u.status === 'active' ? '<button class="btn bad sm" id="dis">Turn off</button>' : '<button class="btn sm" id="en">Turn back on</button>'}</div>
   <div style="margin-top:12px;text-align:right"><button class="btn sec" id="x">Close</button></div>`);
   const msg = (t, ok) => { m.querySelector('#m').innerHTML = `<div class="${ok ? 'okm' : 'err'}">${esc(t)}</div>`; };
   const run = fn => async () => { try{ await fn(); }catch(e){ msg(say(e)); } };
@@ -304,6 +304,7 @@ function managePerson(u, cat, done){
   m.querySelector('#sp').onclick = run(async () => { const perms = {}; m.querySelectorAll('select[data-k]').forEach(s => { if(s.disabled) return; const v = s.value || null; if((ov[s.dataset.k] || null) !== v) perms[s.dataset.k] = v; }); await api('PUT', '/admin/users/' + u.id + '/permissions', { perms }); msg('Access saved.', true); });
   m.querySelector('#tp').onclick = run(async () => { if(!confirm('Set a new temporary password? Their current sessions end.')) return; const r = await api('POST', '/admin/users/' + u.id + '/reset-password', { mode: 'temp' }); m.querySelector('#m').innerHTML = `<div class="okm">Temporary password (shown once):</div><div class="pw">${esc(r.temporaryPassword)}</div>`; });
   m.querySelector('#em').onclick = run(async () => { await api('POST', '/admin/users/' + u.id + '/reset-password', { mode: 'email' }); msg('Link emailed.', true); });
+  const sw = m.querySelector('#sw'); if(sw) sw.onclick = () => { m.querySelector('#m').innerHTML = `<div class="mut" style="margin-top:8px">Type the password for ${esc(u.name)} (10+ characters). Their open sessions end.</div><div class="row"><div><label>New password</label><input id="spw" type="text" autocomplete="off" autocapitalize="none" spellcheck="false"></div></div><label style="display:flex;gap:6px;align-items:center;margin-top:6px"><input type="checkbox" id="smc" checked> Ask them to change it at first sign-in</label><div style="margin-top:8px"><button class="btn sm" id="sgo">Set password</button></div>`; m.querySelector('#sgo').onclick = run(async () => { const pw = m.querySelector('#spw').value; await api('POST', '/admin/users/' + u.id + '/set-password', { password: pw, mustChange: m.querySelector('#smc').checked }); msg('Password set. Give it to ' + u.name + (m.querySelector('#smc').checked ? ' (they will choose their own at first sign-in).' : '.'), true); }); };
   const d = m.querySelector('#dis'); if(d) d.onclick = run(async () => { if(!confirm('Turn off ' + u.name + '? They are signed out now and cannot sign in. Everything they did stays on record under their name.')) return; await api('POST', '/admin/users/' + u.id + '/disable'); m.close(); done(); });
   const en = m.querySelector('#en'); if(en) en.onclick = run(async () => { await api('POST', '/admin/users/' + u.id + '/enable'); m.close(); done(); });
 }
