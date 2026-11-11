@@ -981,7 +981,7 @@ h1,h2,h3,h4,h5,.pk-h b,.mp-h b,.es-aic summary{text-transform:capitalize}
 <div class="modal-back" id="modalBack"><div class="modal" id="modalBody"></div></div>
 <script src="/config.js"></script>
 <script src="/app/media.js"></script>
-<script src="/app/estimate-print.js"></script>
+<script src="/app/estimate-print.js?v=10.3.2"></script>
 <script>
 const $ = s => document.querySelector(s);
 const esc = s => String(s == null ? '' : s).replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
@@ -2003,13 +2003,17 @@ async function aiApply(el, run){
   const before = esScopeList(d).length;
   d.lines = d.lines.filter(l => !(l.source === 'ai' && !l.reviewed)).concat(aiLines(dr));   // earlier AI lines the Estimator has not marked Reviewed are replaced; their own lines stay
   esSyncTax(d, before);
-  if(!(d.preparedFor && d.preparedFor.name) && dr.bid.customer) d.preparedFor = Object.assign({ lines: [] }, d.preparedFor, { name: dr.bid.customer });
+  if(!(d.preparedFor && d.preparedFor.name) && dr.bid.customer) d.preparedFor = Object.assign({ lines: [] }, d.preparedFor, { name: dr.bid.customer + (dr.bid.projectName ? ' (' + dr.bid.projectName + ')' : '') });
   d.aiRun = { runId: run.id, at: run.finishedAt || Date.now(), model: run.model, reading: dr.reading, questions: dr.questions, missing: dr.missing, contacts: dr.bid.contacts || [], files: run.files, skipped: run.skipped, lines: dr.lines.length, byName: run.startedBy };
   // bid details found in the email fill only EMPTY fields (never overwrite what the Estimator typed); a start date already past is skipped so the bid is not auto-Lost
   const patch = {}, F = dr.bid, T = iso(new Date());
   [['customer'], ['storeNumber'], ['address'], ['city'], ['state'], ['bidDue'], ['startDate'], ['endDate']].forEach(([k]) => { if(F[k] && !b[k]) patch[k] = F[k]; });
   if(patch.startDate && patch.startDate <= T) delete patch.startDate;
+  // A bid still named after its first file (the New Bid dialog names it that way) gets the job's real name from the documents.
+  const nrm = x => String(x || '').toLowerCase().replace(/\.[a-z0-9]{2,4}$/, '').replace(/[_\s]+/g, ' ').trim();
+  if(F.projectName && (run.files || []).some(f => nrm(f.name) === nrm(b.name))) patch.name = F.projectName;
   if(Object.keys(patch).length){ try{ const r = await api('PATCH', '/bids/' + b.id, patch); const nb = r && r.bid ? r.bid : patch; Object.assign(b, nb); const bb = BIDS.find(x => x.id === b.id); if(bb) Object.assign(bb, nb); }catch(e){} }
+  if(patch.name || patch.address) await esAutoNotes(el, true);   // the Destination / Address / Distance notes follow the real name and address
   EST.dirty = true; esDraw(el); esDirty(el);
   await esSaveNow(el); const bar = $('#esBar'); if(bar && !EST.dirty) bar.style.display = 'none';
   aiPaint(el);
