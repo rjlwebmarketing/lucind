@@ -42,7 +42,8 @@ function monthly(rows, endMonth, n){
   for(let i = 0; i < n; i++){ keys.unshift(y + '-' + String(m).padStart(2, '0')); m--; if(m === 0){ m = 12; y--; } }
   const mo = {}; keys.forEach(k => { mo[k] = { month: k, bids: 0, bidAmt: 0, won: 0, wonAmt: 0, lost: 0, lostAmt: 0 }; });
   for(const r of rows){
-    const amt = Number(r.amount) || 0, sk = (r.bid_submitted || '').slice(0, 7), dk = (r.decided_on || '').slice(0, 7);
+    const ms2 = v => { const n = Number(v); return n > 0 ? new Date(n).toISOString().slice(0, 7) : ''; };   // bids moved to Won/Lost without the dates (older or imported records) still count, by the month they were last changed
+    const amt = Number(r.amount) || 0, dk = (r.decided_on || '').slice(0, 7) || ((r.status === 'Won' || r.status === 'Lost') ? ms2(r.updated_at) : ''), sk = (r.bid_submitted || '').slice(0, 7) || ((['Bidding', 'Won', 'Lost'].includes(r.status)) ? (dk || ms2(r.updated_at) || ms2(r.created_at)) : '');
     if(['Bidding', 'Won', 'Lost'].includes(r.status) && mo[sk]){ mo[sk].bids++; mo[sk].bidAmt += amt; }
     if(r.status === 'Won' && mo[dk]){ mo[dk].won++; mo[dk].wonAmt += amt; }
     if(r.status === 'Lost' && mo[dk]){ mo[dk].lost++; mo[dk].lostAmt += amt; }

@@ -161,12 +161,12 @@ router.get('/bids/:id/history', R, wrap(async (req, res) => {
 }));
 
 // ---- quota -----------------------------------------------------------------
-async function quotaFor(userId){
+async function quotaFor(userId, company){
   const [q] = await pool.query('SELECT * FROM est_quotas WHERE user_id = ?', [userId]);
   const bidTarget = q.length ? Number(q[0].bid_target) : DEFAULT_QUOTA.bidTarget, convTarget = q.length ? Number(q[0].conv_target) : DEFAULT_QUOTA.convTarget;
   const now = new Date(), month = now.toISOString().slice(0, 7);
   const since = new Date(now.getFullYear() - 1, now.getMonth(), now.getDate()).toISOString().slice(0, 10);
-  const [mine] = await pool.query('SELECT status, amount, bid_submitted, decided_on FROM est_bids WHERE owner_id = ? AND archived = 0', [userId]);
+  const [mine] = company ? await pool.query('SELECT status, amount, bid_submitted, decided_on FROM est_bids WHERE deleted_at IS NULL AND archived = 0') : await pool.query('SELECT status, amount, bid_submitted, decided_on FROM est_bids WHERE owner_id = ? AND archived = 0 AND deleted_at IS NULL', [userId]);
   let bidThisMonth = 0, bidCount = 0, wonAmt = 0, lostAmt = 0, won = 0, lost = 0;
   for(const b of mine){
     const amt = Number(b.amount);
@@ -177,9 +177,10 @@ async function quotaFor(userId){
   return { userId, month, bidTarget, convTarget, bidThisMonth, bidCount, pctOfQuota: bidTarget ? Math.round(bidThisMonth / bidTarget * 1000) / 10 : 0,
     // Conversion = dollars won / dollars decided (won + lost) over the trailing 12 months. Counts are returned too.
     conversion: decidedAmt ? Math.round(wonAmt / decidedAmt * 1000) / 10 : null, conversionByCount: decided ? Math.round(won / decided * 1000) / 10 : null,
-    wonAmount: wonAmt, lostAmount: lostAmt, won, lost, windowStart: since, custom: q.length > 0 };
+    wonAmount: wonAmt, lostAmount: lostAmt, won, lost, windowStart: since, custom: q.length > 0, company: !!company };
 }
 router.get('/quota', R, wrap(async (req, res) => {
+  if(req.query.all === '1' && canSeeAll(req)) return res.json(await quotaFor(req.user.id, true));   // the Owner / Builder see the company's month, not a personal quota
   let uid = req.user.id;
   if(req.query.userId && Number(req.query.userId) !== Number(req.user.id)){
     if(!(req.perms['admin.users'] && req.perms['admin.users'] !== 'none')) return res.status(403).json({ error: 'forbidden' });
@@ -492,7 +493,7 @@ router.delete('/tasks/:id', W, wrap(async (req, res) => {
 // Analytics: bid totals, conversion and awards by month. Counts archived bids too (history); "mine" unless the person may see everyone.
 router.get('/analytics', R, wrap(async (req, res) => {
   const all = req.query.all === '1' && canSeeAll(req), n = [6, 12, 24].includes(Number(req.query.months)) ? Number(req.query.months) : 12;
-  const [rows] = await pool.query('SELECT status, amount, bid_submitted, decided_on, owner_id FROM est_bids WHERE deleted_at IS NULL' + (all ? '' : ' AND owner_id = ?'), all ? [] : [req.user.id]);
+  const [rows] = await pool.query('SELECT status, amount, bid_submitted, decided_on, owner_id, created_at, updated_at FROM est_bids WHERE deleted_at IS NULL' + (all ? '' : ' AND owner_id = ?'), all ? [] : [req.user.id]);
   res.json(Object.assign({ all, canAll: canSeeAll(req), monthsBack: n }, tasksLib.monthly(rows, today().slice(0, 7), n)));
 }));
 

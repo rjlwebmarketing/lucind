@@ -981,7 +981,7 @@ h1,h2,h3,h4,h5,.pk-h b,.mp-h b,.es-aic summary{text-transform:capitalize}
 <div class="modal-back" id="modalBack"><div class="modal" id="modalBody"></div></div>
 <script src="/config.js"></script>
 <script src="/app/media.js"></script>
-<script src="/app/estimate-print.js?v=10.3.2"></script>
+<script src="/app/estimate-print.js?v=10.3.4"></script>
 <script>
 const $ = s => document.querySelector(s);
 const esc = s => String(s == null ? '' : s).replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
@@ -1021,7 +1021,7 @@ async function boot(){
 const closeNav = () => { $('#sidebar').classList.remove('mobile-open'); $('#mobileNavBackdrop').classList.remove('open'); };
 async function refresh(first){
   try{
-    const [b, q] = await Promise.all([api('GET', '/bids'), api('GET', '/quota')]);
+    const [b, q] = await Promise.all([api('GET', '/bids'), api('GET', '/quota' + (has('admin.users') ? '?all=1' : ''))]);
     BIDS = b.bids; STATUSES = b.statuses; QUOTA = q;
   }catch(e){ $('#main').innerHTML = '<div class="empty">Could not load: ' + esc(e.message) + '</div>'; return; }
   render();
@@ -1032,13 +1032,13 @@ const NAV = () => [['dashboard', 'Dashboard'], ['bids', 'Bids'], ['analytics', '
 const ICON = { analytics: '<path d="M4 20V10"/><path d="M10 20V4"/><path d="M16 20v-7"/><path d="M22 20H2"/>', catalog: '<path d="M4 4h16v4H4z"/><path d="M4 12h16v4H4z"/><path d="M4 20h16"/>', dashboard: '<rect x="3" y="3" width="7" height="7"/><rect x="14" y="3" width="7" height="7"/><rect x="14" y="14" width="7" height="7"/><rect x="3" y="14" width="7" height="7"/>', bids: '<path d="M16 4h2a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2H6a2 2 0 0 1-2-2V6a2 2 0 0 1 2-2h2"/><rect x="8" y="2" width="8" height="4" rx="1"/><path d="M9 12h6M9 16h6"/>', crew: '<path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 0 0-3-3.87M16 3.13a4 4 0 0 1 0 7.75"/>', map: '<path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0 1 18 0z"/><circle cx="12" cy="10" r="3"/>', calendar: '<rect x="3" y="4" width="18" height="18" rx="2"/><path d="M16 2v4M8 2v4M3 10h18"/>' };
 function quotaWidget(){
   // Same box as Logistics Health in the PM: big figure, label under it, small grey line under that. Not clickable.
-  const q = QUOTA, w = $('#quotaWidget'), mine = !!(ME && (ME.role === 'builder' || (ME.roles || [ME.role]).includes('estimator')));   // quotas are personal: only estimators carry one
+  const q = QUOTA, w = $('#quotaWidget'), mine = !!(ME && (ME.role === 'builder' || has('admin.users') || (ME.roles || [ME.role]).includes('estimator')));   // estimators see their own month; the Owner and Builder see the company's
   w.style.display = mine ? '' : 'none';
   if(!q || !mine){ w.innerHTML = ''; return; }
   // like Logistics Health in the PM: the whole box is a link, here to Analytics
   w.classList.add('link'); w.setAttribute('role', 'button'); w.tabIndex = 0; w.title = 'Open Analytics'; w.setAttribute('aria-label', 'Monthly bid total. Open Analytics');
   w.onclick = () => { VIEW = 'analytics'; OPEN_BID = null; closeNav(); render(); }; w.onkeydown = e => { if(e.key === 'Enter' || e.key === ' '){ e.preventDefault(); w.onclick(); } };
-  w.innerHTML = `<div class="grade-letter" style="color:var(--ok)">${moneyShort(q.bidThisMonth)}</div><div class="lbl">Monthly Bid Total</div><div class="grade-detail">Conversion rate ${q.conversion == null ? '—' : q.conversion.toFixed(1) + '%'}</div>`;
+  w.innerHTML = `<div class="grade-letter" style="color:var(--ok)">${moneyShort(q.bidThisMonth)}</div><div class="lbl">Monthly Bid Total</div><div class="grade-detail">${q.company ? 'Company · ' : ''}Conversion rate ${q.conversion == null ? '—' : q.conversion.toFixed(1) + '%'}</div>`;
 }
 function render(){
   $('#navList').innerHTML = NAV().map(([id, l]) => `<button data-view="${id}" class="${VIEW === id ? 'active' : ''}"><svg class="icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">${ICON[id]}</svg><span class="lbl">${l}</span></button>`).join('');
@@ -1105,7 +1105,7 @@ async function tasksPanel(){
   box.querySelectorAll('[data-tr]').forEach(b => b.onclick = async () => { try{ await api('DELETE', '/tasks/' + b.dataset.tr); tasksPanel(); }catch(e){ alert(e.message); } });
 }
 // ---------- dashboard: analytics (bid totals, conversion, awards by month) ----------
-let AN_MONTHS = 12, AN_ALL = false, AN_TABLE = false;
+let AN_MONTHS = 12, AN_ALL = false, AN_TABLE = false, AN_INIT = false;
 const AN_C = { bids: '#2a78d6', awards: '#1baf7a', conv: '#6250d6' };
 const anLabel = k => new Date(k + '-15').toLocaleDateString('en-US', { month: 'short' }) + (k.endsWith('-01') ? " '" + k.slice(2, 4) : '');
 const anMonthLong = k => new Date(k + '-15').toLocaleDateString('en-US', { month: 'long', year: 'numeric' });
@@ -1143,6 +1143,7 @@ function analyticsView(el){
 }
 async function analyticsPanel(){
   const box = $('#anBox'); if(!box) return;
+  if(!AN_INIT){ AN_INIT = true; if(has('admin.users')) AN_ALL = true; }   // the Owner and Builder start on everyone's bids
   let r; try{ r = await api('GET', '/analytics?months=' + AN_MONTHS + (AN_ALL ? '&all=1' : '')); }catch(e){ box.innerHTML = '<div class="hint" style="color:var(--text-dim)">Could not load analytics (' + esc(e.message) + ').</div>'; return; }
   if(!$('#anBox')) return;
   const t = r.totals, ms = r.months, d0 = ms.length ? anMonthLong(ms[0].month) : '', d1 = ms.length ? anMonthLong(ms[ms.length - 1].month) : '';
@@ -2003,7 +2004,10 @@ async function aiApply(el, run){
   const before = esScopeList(d).length;
   d.lines = d.lines.filter(l => !(l.source === 'ai' && !l.reviewed)).concat(aiLines(dr));   // earlier AI lines the Estimator has not marked Reviewed are replaced; their own lines stay
   esSyncTax(d, before);
-  if(!(d.preparedFor && d.preparedFor.name) && dr.bid.customer) d.preparedFor = Object.assign({ lines: [] }, d.preparedFor, { name: dr.bid.customer + (dr.bid.projectName ? ' (' + dr.bid.projectName + ')' : '') });
+  { const pf = d.preparedFor || (d.preparedFor = { name: '', lines: [] }), cur = String(pf.name || '').trim(), cust = String(dr.bid.customer || '').trim(), want = cust + (dr.bid.projectName ? ' (' + dr.bid.projectName + ')' : '');
+    // fill Prepared For when empty, or when it is still just the customer's bare name (a redraft adds the job in parentheses); a name the Estimator typed is left alone
+    if(cust && (!cur || cur === cust || cur === String(b.customer || '').trim() || (pf.auto && !pf.edited))){ pf.name = want; pf.auto = true; }
+    if((!pf.lines || !pf.lines.some(x => String(x).trim())) && Array.isArray(dr.bid.customerLines) && dr.bid.customerLines.length) pf.lines = dr.bid.customerLines.slice(0, 6); }
   d.aiRun = { runId: run.id, at: run.finishedAt || Date.now(), model: run.model, reading: dr.reading, questions: dr.questions, missing: dr.missing, contacts: dr.bid.contacts || [], files: run.files, skipped: run.skipped, lines: dr.lines.length, byName: run.startedBy };
   // bid details found in the email fill only EMPTY fields (never overwrite what the Estimator typed); a start date already past is skipped so the bid is not auto-Lost
   const patch = {}, F = dr.bid, T = iso(new Date());
@@ -2048,7 +2052,7 @@ function esWire(el){
   el.querySelectorAll('textarea').forEach(grow);
   const on = (sel, ev, fn) => el.querySelectorAll(sel).forEach(x => x.addEventListener(ev, e => fn(x, e)));
   on('#esAiGo', 'click', () => { const n = d.lines.filter(l => l.source === 'ai' && !l.reviewed).length; if(n && !confirm('Draw up a fresh draft? The ' + n + ' AI line' + (n === 1 ? '' : 's') + ' you have not marked Reviewed will be replaced. Your own lines and Reviewed lines stay.')) return; aiStart(el); });
-  on('[data-pf="name"]', 'input', x => { (d.preparedFor = d.preparedFor || {}).name = x.value; esDirty(el); });
+  on('[data-pf="name"]', 'input', x => { (d.preparedFor = d.preparedFor || {}).name = x.value; d.preparedFor.edited = true; esDirty(el); });
   on('[data-pf="lines"]', 'input', x => { (d.preparedFor = d.preparedFor || {}).lines = x.value.split('\n'); grow(x); esDirty(el); });
   on('[data-ef]', 'input', x => { d[x.dataset.ef] = x.value; esDirty(el); });
   on('[data-lt]', 'input', x => { L(x.dataset.lt).title = x.value; grow(x); esDirty(el); });
