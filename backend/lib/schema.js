@@ -148,6 +148,13 @@ const DDL = [
     updated_at BIGINT NOT NULL,
     updated_by VARCHAR(120) NULL
   ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4`,
+  `CREATE TABLE IF NOT EXISTS est_sow (
+    bid_id BIGINT UNSIGNED NOT NULL PRIMARY KEY,
+    doc LONGTEXT NOT NULL,
+    complete TINYINT(1) NOT NULL DEFAULT 0,
+    updated_at BIGINT NOT NULL,
+    updated_by VARCHAR(120) NULL
+  ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4`,
   `CREATE TABLE IF NOT EXISTS user_roles (
     user_id BIGINT NOT NULL,
     role_key VARCHAR(32) NOT NULL,

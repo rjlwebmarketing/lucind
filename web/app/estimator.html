@@ -815,6 +815,12 @@
 .toast{ touch-action:pan-y; user-select:none; -webkit-user-select:none; }
 .toast .toast-go{ flex-shrink:0; background:var(--accent, #c8102e); color:#fff; border:0; border-radius:6px; padding:6px 12px; font-weight:700; font-size:12.5px; cursor:pointer; }
 .toast.leaving{ opacity:0; transform:translateX(24px); transition:all .18s ease-in; }
+.toast .toast-x{ position:relative; flex-shrink:0; width:26px; height:26px; padding:0; border:0; background:none; color:var(--text-dim, #666); cursor:pointer; border-radius:50%; display:flex; align-items:center; justify-content:center; }
+.toast .toast-x:hover{ background:var(--panel-2, #eee); color:var(--text, #111); }
+.toast .toast-x svg.ring{ position:absolute; inset:0; width:26px; height:26px; transform:rotate(-90deg); pointer-events:none; }
+.toast .toast-x svg.ring circle{ fill:none; stroke-width:2; } .toast .toast-x svg.ring .track{ stroke:var(--line, #ddd); } .toast .toast-x svg.ring .bar{ stroke:var(--accent, #c8102e); stroke-dasharray:62.83; stroke-dashoffset:0; animation:toastRing 8s linear forwards; }
+.toast:hover .toast-x svg.ring .bar, .toast:focus-within .toast-x svg.ring .bar{ animation-play-state:paused; }
+@keyframes toastRing{ from{ stroke-dashoffset:0; } to{ stroke-dashoffset:62.83; } }
 @keyframes toastIn{ from{ opacity:0; transform:translateX(24px);} to{ opacity:1; transform:none;} }
 @media (prefers-reduced-motion: reduce){ .toast{ animation:none; } .toast.leaving{ transition:none; } }
 
@@ -924,6 +930,11 @@
   .pk-f{padding:10px 16px;border-top:1px solid var(--line);display:flex;gap:10px;align-items:center;font-size:12.5px;color:var(--text-dim)}
   .es-sc{font-size:11px;padding:2px 6px;border:1px solid var(--line);border-radius:8px;background:var(--surface,#fff);color:var(--text);font-family:inherit}.es-totals.es-multi .es-sc-h{font-weight:700;border-top:2px solid var(--line);margin-top:6px}.es-totals.es-multi .es-sc-h:first-child{border-top:0;margin-top:0}
   .es-opt{display:flex;gap:10px;align-items:flex-start;padding:8px 10px;border:1px solid var(--line);border-radius:10px;margin-bottom:6px;cursor:pointer;font-size:13px}.es-opt small{display:block;color:var(--text-dim);font-size:12px}.es-pc{display:flex;gap:10px;align-items:center;flex-wrap:wrap;padding:10px 0;border-top:1px solid var(--line);font-size:13px}.es-pc small{display:block;color:var(--text-dim);font-size:12px;margin-top:2px}.es-sent{font-size:12.5px;padding:6px 0;border-top:1px solid var(--line)}.es-sent:first-of-type{border-top:0}
+  .bp-tabs .sw-dot{display:inline-block;width:8px;height:8px;border-radius:50%;margin-left:7px;background:#C0392B;vertical-align:middle}.bp-tabs .sw-dot.ok{background:#1E8449}.bp-tabs .sw-dot:empty{}
+  .sw-wrap{max-width:900px}.sw-row{display:grid;grid-template-columns:34px 1fr auto;gap:10px;align-items:start;padding:10px 0;border-top:1px solid var(--line,#dde)}.sw-row:first-child{border-top:0}
+  .sw-n{font-weight:700;color:var(--text-dim,#777);padding-top:9px;text-align:right}.sw-row input.sw-t,.sw-row textarea.sw-d,#swPasteTxt{box-sizing:border-box;border:1px solid var(--line,#dde);border-radius:8px;padding:8px 10px;font:inherit;background:var(--bg,#fff)}.sw-row input.sw-t{width:100%;font-weight:600}.sw-row textarea.sw-d{width:100%;min-height:34px;margin-top:6px;font-size:13px;resize:vertical}
+  .sw-act{display:flex;gap:2px;padding-top:4px}.sw-act button{border:0;background:none;cursor:pointer;color:var(--text-dim,#777);font-size:15px;padding:4px 7px;border-radius:6px}.sw-act button:hover:not(:disabled){background:var(--panel-2,#eef)}.sw-act button:disabled{opacity:.3;cursor:default}
+  .sw-chip{display:inline-block;font-size:11.5px;font-weight:700;padding:2px 10px;border-radius:10px;margin-left:8px;vertical-align:middle}.sw-chip.no{background:#fde3e1;color:#a1241a}.sw-chip.ok{background:#e8f5e9;color:#1b6e2d}
   .es-bigbtn{width:100%;padding:14px 16px;font-size:15px;font-weight:700;border-radius:10px;cursor:pointer}.es-bluebtn{background:#013CAE;color:#fff;border:0}.es-bluebtn:hover{filter:brightness(1.12)}.es-submit{padding:0;border:0;background:none}.es-submit .es-sub-note{font-size:12px;color:var(--text-dim);margin-top:6px;display:block}.es-submit.done{background:#E8F3EC;border:1px solid #bfe0cb;border-radius:12px;padding:12px 14px}.es-sub-state{font-weight:700;color:#1E6B3A}
   .bp-code{font-family:ui-monospace,Menlo,Consolas,monospace;font-size:11.5px;color:var(--text-faint,#8a93a6);font-weight:400;margin-left:6px;letter-spacing:.02em}
   .es-addline{margin:6px 0 14px}.es-totals{margin:18px 0 0 auto;width:min(380px,100%);font-size:14px}.es-totals>div{display:flex;justify-content:space-between;align-items:center;padding:8px 0;border-bottom:1px solid #999}.es-totals .tot{border-bottom:0;font-size:15px}
@@ -1058,8 +1069,12 @@ function showToast(o){
   const kill = () => { el.classList.add('leaving'); setTimeout(() => el.remove(), 180); };
   const msg = document.createElement('span'); msg.style.flex = '1'; msg.textContent = o.text; el.appendChild(msg);
   if(o.onGo){ const go = document.createElement('button'); go.type = 'button'; go.className = 'toast-go'; go.textContent = (o.goLabel || 'Go') + (o.noArrow ? '' : ' →'); go.onclick = e => { e.stopPropagation(); kill(); o.onGo(); }; el.appendChild(go); }
+  const x = document.createElement('button'); x.type = 'button'; x.className = 'toast-x'; x.setAttribute('aria-label', 'Close notice'); x.title = 'Close';
+  x.innerHTML = '<svg class="ring" viewBox="0 0 26 26" aria-hidden="true"><circle class="track" cx="13" cy="13" r="10"/><circle class="bar" cx="13" cy="13" r="10"/></svg><span aria-hidden="true" style="font-size:15px;line-height:1;font-weight:700">\u00d7</span>';
+  x.onclick = ev => { ev.stopPropagation(); kill(); };
+  el.appendChild(x);
+  x.querySelector('.bar').addEventListener('animationend', kill);   // 8-second countdown ring; hovering pauses it
   el.onclick = kill; st.appendChild(el); while(st.children.length > 4) st.firstChild.remove();
-  if(!o.sticky) setTimeout(kill, o.ms || 12000);
 }
 const dayDiff = (iso1, iso2) => Math.round((new Date(iso1 + 'T12:00:00') - new Date(iso2 + 'T12:00:00')) / 86400000);
 // Draft bids (not yet submitted) that are due within 3 days, due today, or past due. Each bid + stage + day is shown once per browser.
@@ -1377,12 +1392,14 @@ function bidPage(el){
   el.innerHTML = `<div class="bp-top"><button class="btn small ghost" id="bpBack" type="button">← All bids</button>
     <div class="bp-title"><h2 id="bpTitle">${esc(d.name || 'New bid')}</h2>${b ? tag(b.status) + `<span class="bp-amt">${money(b.amount)}</span>` + (b.code ? '<span class="bp-code" id="bpCode">' + esc(b.code) + '</span>' : '') : ''}${b && b.archived ? '<span class="bp-sub">Archived</span>' : ''}</div>
     <span class="sp" style="flex:1"></span><button class="btn small ghost" id="bpReset" type="button" title="Put the sections back in the default order">Reset layout</button></div>
-    ${b ? `<div class="bp-tabs"><button type="button" data-tab="estimate" class="${BID_TAB === 'estimate' ? 'on' : ''}">Estimate</button><button type="button" data-tab="overview" class="${BID_TAB === 'overview' ? 'on' : ''}">Overview &amp; Files</button></div>` : ''}
+    ${b ? `<div class="bp-tabs"><button type="button" data-tab="estimate" class="${BID_TAB === 'estimate' ? 'on' : ''}">Estimate</button><button type="button" data-tab="overview" class="${BID_TAB === 'overview' ? 'on' : ''}">Overview &amp; Files</button><button type="button" data-tab="sow" class="${BID_TAB === 'sow' ? 'on' : ''}">Scope of Work<span class="sw-dot" id="swDot"></span></button></div>` : ''}
     <div class="bp-bar" id="bpBar" style="display:none"><span>You have unsaved changes</span><span id="fe" style="color:#FFB4A9"></span><span style="flex:1"></span><button class="btn small" id="bpDiscard" type="button">Discard</button><button class="btn small primary" id="bpSave" type="button">Save changes</button></div>
     <div class="bp-grid" id="bpGrid">${order.map(k => cards[k]).join('')}</div>`;
   $('#bpBack').onclick = closeBid;
   el.querySelectorAll('.bp-tabs [data-tab]').forEach(t => t.onclick = () => { BID_TAB = t.dataset.tab; bidPage(el); });
+  if(b && BID_TAB !== 'sow') api('GET', '/bids/' + b.id + '/sow').then(r => { const d = $('#swDot'); if(d) d.className = 'sw-dot' + (r.complete && r.tasks.length ? ' ok' : ''); }).catch(() => {});   // the tab's dot: red until the Scope of Work is complete
   if(b && BID_TAB === 'estimate'){ $('#bpReset').style.display = 'none'; $('#bpGrid').outerHTML = '<div id="esPane"></div>'; return estimatePane($('#esPane'), b, ro || !!b.projectId || b.status === 'Lost'); }
+  if(b && BID_TAB === 'sow'){ $('#bpReset').style.display = 'none'; $('#bpGrid').outerHTML = '<div id="sowPane"></div>'; return sowPane($('#sowPane'), b, ro || !!b.projectId || b.status === 'Lost'); }
   $('#bpReset').onclick = () => { setOrder(DEFAULT_ORDER); bidPage(el); };
   if(b && window.MediaPanel) { const pend = PENDING_FILES; PENDING_FILES = null; MediaPanel.mount($('#bidMedia'), { type: 'bid', id: b.id, api: GO_CONFIG.API, token: () => TOKEN, me: () => ME && ME.id, pending: pend, onUploaded: pend && AI_AFTER === b.id ? aiAfterUpload : null }); }
   if(!b && $('#stDrop')) stagedFiles();
@@ -1516,6 +1533,69 @@ function newBidDialog(){
 // Everything the bid and its estimate already say becomes the PM project (customer, store #, address, dates, files, contract lines).
 // The original contract is locked there; the PM adds change orders / addendums beside it.
 const HO_CACHE = {};
+// ---------- Scope of Work: the itemized tasks that carry into the PM (0-100% each). The Estimator marks it complete before the hand-off. ----------
+async function sowPane(el, b, ro){
+  let S = { tasks: [], complete: false, updatedAt: null }, timer = null, saving = false, note = '';
+  try{ S = await api('GET', '/bids/' + b.id + '/sow'); }catch(e){ el.innerHTML = '<div class="es-card">The Scope of Work could not be loaded.</div>'; return; }
+  const uid = () => 'sw' + Date.now().toString(36) + Math.random().toString(36).slice(2, 6);
+  const count = () => S.tasks.filter(t => (t.title || '').trim()).length;
+  const dot = () => { const d = $('#swDot'); if(d) d.className = 'sw-dot' + (S.complete ? ' ok' : ''); };
+  const bust = () => Object.keys(HO_CACHE).forEach(k => { if(k.startsWith(b.id + ':')) delete HO_CACHE[k]; });
+  async function save(complete){
+    clearTimeout(timer); if(ro) return; saving = true; paintStatus('Saving…');
+    try{
+      const r = await api('PUT', '/bids/' + b.id + '/sow', { tasks: S.tasks, complete: complete === undefined ? S.complete : complete, updatedAt: S.updatedAt });
+      S.updatedAt = r.updatedAt; S.complete = r.complete; bust(); note = 'Saved'; dot();
+    }catch(e){ note = e.message === 'changed_elsewhere' || e.status === 409 ? 'Someone else changed this. Reload the page to see their version.' : (e.message || 'Could not save.'); }
+    saving = false; paintStatus(note); paintHead();
+  }
+  const later = () => { if(S.complete){ S.complete = false; note = 'Edited, so it is open again. Mark it complete when you are done.'; } paintStatus('Unsaved…'); clearTimeout(timer); timer = setTimeout(() => save(), 900); paintHead(); };
+  function paintStatus(t){ const s2 = $('#swStatus'); if(s2) s2.textContent = t || ''; }
+  function paintHead(){
+    const h = $('#swHead'); if(!h) return; const n = count();
+    h.innerHTML = `<h4 style="margin:0 0 4px">Scope of Work <span class="sw-chip ${S.complete ? 'ok' : 'no'}">${S.complete ? 'Complete' : (n ? 'Not marked complete' : 'Not started')}</span></h4>
+      <div class="es-hint">Break the job into itemized tasks. They carry into the Project Manager, who tracks each one from 0 to 100%. This bid cannot be handed off until the Scope of Work is marked complete.${ro ? ' <b>Read only: this bid was handed off, lost or archived.</b>' : ''}</div>`;
+    const m = $('#swMark'); if(m){ m.textContent = S.complete ? 'Reopen Scope of Work' : 'Mark Scope of Work Complete'; m.disabled = !n && !S.complete; }
+  }
+  function paintRows(){
+    const box = $('#swRows'); if(!box) return;
+    box.innerHTML = S.tasks.length ? S.tasks.map((t, i) => `<div class="sw-row" data-i="${i}"><div class="sw-n">${i + 1}</div>
+      <div><input class="sw-t" data-f="title" value="${esc(t.title || '')}" placeholder="Task, e.g. Set and bolt structural steel" ${ro ? 'disabled' : ''}><textarea class="sw-d" data-f="detail" placeholder="Details (optional)" ${ro ? 'disabled' : ''}>${esc(t.detail || '')}</textarea></div>
+      ${ro ? '<span></span>' : `<div class="sw-act"><button type="button" data-up title="Move up" ${i === 0 ? 'disabled' : ''}>↑</button><button type="button" data-dn title="Move down" ${i === S.tasks.length - 1 ? 'disabled' : ''}>↓</button><button type="button" data-rm title="Remove">✕</button></div>`}</div>`).join('') : '<div class="es-hint" style="padding:8px 0">No tasks yet. Add them one at a time, paste a list, or start from the estimate lines.</div>';
+    box.querySelectorAll('.sw-row').forEach(row => { const i = +row.dataset.i;
+      row.querySelectorAll('[data-f]').forEach(inp => inp.oninput = () => { S.tasks[i][inp.dataset.f] = inp.value; later(); });
+      const up = row.querySelector('[data-up]'), dn = row.querySelector('[data-dn]'), rm = row.querySelector('[data-rm]');
+      if(up) up.onclick = () => { [S.tasks[i - 1], S.tasks[i]] = [S.tasks[i], S.tasks[i - 1]]; paintRows(); later(); };
+      if(dn) dn.onclick = () => { [S.tasks[i + 1], S.tasks[i]] = [S.tasks[i], S.tasks[i + 1]]; paintRows(); later(); };
+      if(rm) rm.onclick = () => { if(!(S.tasks[i].title || '').trim() || confirm('Remove this task?')){ S.tasks.splice(i, 1); paintRows(); later(); } };
+    });
+  }
+  el.innerHTML = `<div class="sw-wrap"><div class="es-card" id="swHead" style="margin-bottom:12px"></div>
+    <div class="es-card"><div id="swRows"></div>
+    ${ro ? '' : `<div style="display:flex;gap:8px;flex-wrap:wrap;margin-top:12px"><button class="btn small primary" id="swAdd" type="button">+ Add Task</button><button class="btn small" id="swPaste" type="button">Paste A List</button><button class="btn small" id="swSeed" type="button" title="Adds one task for each line of the estimate">Start From Estimate Lines</button></div>
+      <div id="swPasteBox" style="display:none;margin-top:10px"><textarea id="swPasteTxt" style="width:100%;min-height:120px" placeholder="One task per line"></textarea><div style="margin-top:6px;display:flex;gap:8px"><button class="btn small primary" id="swPasteGo" type="button">Add These Tasks</button><button class="btn small ghost" id="swPasteX" type="button">Cancel</button></div></div>`}</div>
+    ${ro ? '' : `<div style="display:flex;gap:12px;align-items:center;margin-top:12px"><button class="btn primary" id="swMark" type="button"></button><span id="swStatus" class="es-hint" style="margin:0"></span></div>`}</div>`;
+  paintHead(); paintRows(); dot();
+  if(ro) return;
+  const addTasks = list => { list.map(x => String(x).replace(/^\s*(?:[-*•]|\d+[.)])\s*/, '').trim()).filter(Boolean).forEach(t => S.tasks.push({ id: uid(), title: t.slice(0, 200), detail: '' })); paintRows(); later(); };
+  $('#swAdd').onclick = () => { S.tasks.push({ id: uid(), title: '', detail: '' }); paintRows(); const r = $('#swRows').querySelectorAll('.sw-t'); if(r.length) r[r.length - 1].focus(); };
+  $('#swPaste').onclick = () => { $('#swPasteBox').style.display = ''; $('#swPasteTxt').focus(); };
+  $('#swPasteX').onclick = () => { $('#swPasteBox').style.display = 'none'; };
+  $('#swPasteGo').onclick = () => { addTasks($('#swPasteTxt').value.split(/\r?\n/)); $('#swPasteTxt').value = ''; $('#swPasteBox').style.display = 'none'; };
+  $('#swSeed').onclick = async () => {
+    try{ const r = await api('GET', '/bids/' + b.id + '/estimate'); const ls = (r.estimate && r.estimate.lines || []).map(l => String(l.title || '').trim()).filter(Boolean);
+      if(!ls.length){ alert('The estimate has no lines yet.'); return; }
+      const have = new Set(S.tasks.map(t => (t.title || '').trim().toLowerCase())); const add = ls.filter(t => !have.has(t.toLowerCase()));
+      if(!add.length){ alert('Every estimate line is already a task.'); return; } addTasks(add);
+    }catch(e){ alert('Could not read the estimate.'); }
+  };
+  $('#swMark').onclick = async () => {
+    if(S.complete){ await save(false); return; }
+    S.tasks = S.tasks.filter(t => (t.title || '').trim()); paintRows();
+    if(!S.tasks.length){ alert('Add at least one task first.'); return; }
+    await save(true);
+  };
+}
 async function handoffBox(b, el){
   const box = $('#hoBox'); if(!box || !b) return;
   const key = b.id + ':' + b.status + ':' + (b.projectId || '');
@@ -1536,14 +1616,16 @@ async function handoffBox(b, el){
       ${multi ? `<div style="font-size:12.5px;font-weight:600;margin-bottom:2px">Which scopes did we win?</div>${sc.map(x => `<label class="es-opt" style="margin:4px 0"><input type="checkbox" data-hs="${esc(x.scope)}" ${picked.has(x.scope) ? 'checked' : ''} ${canWrite() ? '' : 'disabled'}> <span><b>${esc(x.scope)}</b><small>${x.lines} line${x.lines === 1 ? '' : 's'} · ${money(x.subtotal)} + tax ${money(x.tax)} = ${money(x.total)}</small></span></label>`).join('')}` : ''}
       <div class="es-kv2" style="margin:8px 0"><span>Subtotal</span><b>${money(sub)}</b><span>Tax</span><b>${money(tax)}</b><span>Contract</span><b>${money(tot)}</b></div>
       ${diff ? `<div class="ho-warn" style="margin:0 0 8px">Bid amount ${money(b.amount)} differs from ${multi && ch.length < sc.length ? 'the awarded total' : 'the estimate total'}. The contract uses the estimate.</div>` : ''}
-      ${canWrite() ? `<button class="btn primary es-bigbtn" id="hoGo" type="button" ${ch.length ? '' : 'disabled'}>Hand Off</button>` : ''}</div>`;
+      ${h.sow && !h.sow.complete ? `<div class="ho-warn" style="margin:0 0 8px">The Scope of Work is not complete. Add the tasks and mark it complete first, because it carries into the PM. <a href="#" id="hoSow">Open Scope of Work</a></div>` : ''}
+      ${canWrite() ? `<button class="btn primary es-bigbtn" id="hoGo" type="button" ${ch.length && !(h.sow && !h.sow.complete) ? '' : 'disabled'}>Hand Off</button>` : ''}</div>`;
+    const hs = $('#hoSow'); if(hs) hs.onclick = ev => { ev.preventDefault(); BID_TAB = 'sow'; render(); };
     box.querySelectorAll('[data-hs]').forEach(c => c.onchange = () => { if(c.checked) picked.add(c.dataset.hs); else picked.delete(c.dataset.hs); draw(); });
     const go = $('#hoGo'); if(go) go.onclick = async () => {
       const part = multi && ch.length < sc.length;
       if(!confirm('Hand off "' + (b.name || 'this bid') + '" to the Project Manager' + (part ? ' (' + ch.map(x => x.scope).join(', ') + ' only)' : '') + '? The estimate becomes the locked original contract.')) return;
       go.disabled = true; go.textContent = 'Handing Off…';
       try{ const r = await api('POST', '/bids/' + b.id + '/handoff', multi ? { scopes: ch.map(x => x.scope) } : {}); b.projectId = r.projectId; await refresh(); }
-      catch(e){ go.disabled = false; go.textContent = 'Hand Off'; alert(e.message === 'busy' || e.status === 503 ? 'The board was busy. Nothing was created; try again.' : (e.message || 'Could not hand off.')); }
+      catch(e){ go.disabled = false; go.textContent = 'Hand Off'; alert(e.message === 'sow_incomplete' ? 'Finish the Scope of Work first.' : e.message === 'busy' || e.status === 503 ? 'The board was busy. Nothing was created; try again.' : (e.message || 'Could not hand off.')); }
     };
   };
   draw();

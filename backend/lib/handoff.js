@@ -49,7 +49,7 @@ function contractFrom(bid, doc, who, now, scopes){
 }
 
 // Pure: the PM project for a bid.
-function projectFrom(bid, contract, now){
+function projectFrom(bid, contract, now, sow){
   const money = { contractOriginal: contract.total, percentComplete: 0, changeOrders: [], payApps: [], subDeals: [], notes: '', contract };
   return {
     id: rid('proj'), code: bid.project_code || undefined, name: bid.name || '', customer: bid.customer || '', storeNumber: bid.store_number || '', address: bid.address || '',
@@ -57,6 +57,14 @@ function projectFrom(bid, contract, now){
     status: 'Not Urgent', plannedStart: bid.start_date || '', plannedEnd: bid.end_date || '', notes: '', blockers: [], assignedIds: [], requiredSkills: [], phases: [], contacts: [],
     fromBidId: Number(bid.id), money
   };
+}
+function withSow(project, sow, who, now){
+  if(sow && sow.tasks.length) project.sow = sowFrom(sow, who, now);
+  return project;
+}
+// Pure: the Estimator's Scope of Work -> the project's task list, every task at 0%.
+function sowFrom(sow, who, now){
+  return { source: { handedOffAt: now, handedOffBy: who }, tasks: sow.tasks.map((t, i) => ({ id: rid('sw'), no: i + 1, title: String(t.title || '').slice(0, 200), detail: String(t.detail || '').slice(0, 2000), pct: 0 })) };
 }
 
 async function readBoard(){
@@ -73,7 +81,7 @@ async function addToBoard(project, role){
     next.projects = Array.isArray(next.projects) ? next.projects : [];
     next.projects.push(structuredClone(project));
     const pre = project.code ? { [project.id]: project.code } : null;   // the bid's own number carries over to the project
-    const st = projects.stampBoard(cur.board, next, Date.now(), { presetCodes: pre });
+    const st = projects.stampBoard(cur.board, next, Date.now(), { presetCodes: pre, allowSow: true });
     next.revision = (Number.isInteger(cur.board.revision) ? cur.board.revision : 0) + 1;
     let ok = false;
     if(!cur.row){
@@ -95,4 +103,4 @@ async function addToBoard(project, role){
   const e = new Error('busy'); e.status = 503; throw e;
 }
 
-module.exports = { scopeBreak, contractFrom, projectFrom, addToBoard };
+module.exports = { scopeBreak, contractFrom, projectFrom, withSow, sowFrom, addToBoard };

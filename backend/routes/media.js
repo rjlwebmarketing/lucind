@@ -33,12 +33,20 @@ const MAX_MB = Number(process.env.MEDIA_MAX_MB) || 5120;   // per file; drawing 
 const CHUNK = 8 * 1024 * 1024;
 const LINKS = new Map();   // short-lived download links: token -> { fileId, userId, exp }
 const KINDS = ['Drawings', 'Bid documents', 'Contracts', 'Photos', 'Reports', 'Other'];
+// Material we deliver while a sub does the work: the driver's bill of lading and the delivery photos belong to the job.
+const PROJECT_KINDS = ['Drawings', 'Bid documents', 'Contracts', 'Bill of Lading', 'Delivery Photos', 'Photos', 'Reports', 'Other'];
+// A crew member's / subcontractor's own folder (certificates of insurance, licenses, W-9s). These documents are replaced over time, so the old ones stay on record (hidden, never deleted).
+const PERSON_KINDS = ['Certificate of Insurance (COI)', 'Business License', 'W-9', 'Other'];
+const ALL_KINDS = PROJECT_KINDS.concat(PERSON_KINDS.filter(k => !PROJECT_KINDS.includes(k)));
+const kindsFor = type => type === 'person' ? PERSON_KINDS : type === 'project' ? PROJECT_KINDS : KINDS;
 const EXT_OK = new Set(['pdf', 'jpg', 'jpeg', 'png', 'gif', 'webp', 'heic', 'heif', 'doc', 'docx', 'xls', 'xlsx', 'csv', 'txt', 'ppt', 'pptx', 'dwg', 'dxf', 'zip', 'eml', 'msg', 'mp4', 'mov']);
 const INLINE = { pdf: 'application/pdf', jpg: 'image/jpeg', jpeg: 'image/jpeg', png: 'image/png', gif: 'image/gif', webp: 'image/webp' };
 const MIME = { ...INLINE, heic: 'image/heic', heif: 'image/heif', doc: 'application/msword', docx: 'application/vnd.openxmlformats-officedocument.wordprocessingml.document', xls: 'application/vnd.ms-excel', xlsx: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet', csv: 'text/csv', txt: 'text/plain', ppt: 'application/vnd.ms-powerpoint', pptx: 'application/vnd.openxmlformats-officedocument.presentationml.presentation', dwg: 'application/octet-stream', dxf: 'application/octet-stream', zip: 'application/zip', eml: 'message/rfc822', msg: 'application/octet-stream', mp4: 'video/mp4', mov: 'video/quicktime' };
 const MAGIC = { pdf: b => b.slice(0, 5).toString() === '%PDF-', jpg: b => b[0] === 0xFF && b[1] === 0xD8, jpeg: b => b[0] === 0xFF && b[1] === 0xD8, png: b => b.slice(1, 4).toString() === 'PNG', gif: b => b.slice(0, 3).toString() === 'GIF' };
 const isBuilder = u => u.role_key === 'builder';
 const isOwnerLike = u => isBuilder(u) || u.role_key === 'owner' || (u.roles || []).includes('owner');
+// Who may hide/restore/edit a file: the Owner and Builder anywhere; for a person's own folder (insurance, license, W-9) also the PM, since those documents get replaced regularly. Nothing is ever deleted: every hide/restore is recorded with who and why.
+const canManage = (req, f) => isOwnerLike(req.user) || (f && f.entity_type === 'person' && can(req, 'pm.people', 'write'));
 const extOf = n => (String(n).toLowerCase().match(/\.([a-z0-9]{1,5})$/) || [])[1] || '';
 const cleanName = n => String(n || 'file').replace(/[\\/\0]/g, '_').replace(/[^\w.\- ()&,#+]/g, '_').replace(/\s+/g, ' ').trim().slice(0, 180) || 'file';
 const str = (v, n) => v == null ? null : String(v).slice(0, n);
@@ -81,6 +89,7 @@ async function folderAccess(req, type, id){
     return { name: b[0].name, view: can(req, 'estimator.estimates', 'read') || (viaProject && can(req, 'pm.projects', 'read')), add: can(req, 'estimator.estimates', 'write'), projectId: b[0].project_id };
   }
   if(type === 'project') return { name: '', view: can(req, 'pm.projects', 'read'), add: can(req, 'pm.projects', 'write') };
+  if(type === 'person') return /^[\w.\-:]{1,64}$/.test(String(id)) ? { name: '', view: can(req, 'pm.people', 'read'), add: can(req, 'pm.people', 'write') } : null;   // the PM, Owner and Builder keep these documents
   return null;
 }
 const fileAccess = async (req, f) => {
@@ -102,12 +111,12 @@ router.get('/', wrap(async (req, res) => {
     const [mine] = await pool.query('SELECT id FROM est_bids WHERE project_id = ?', [id]);
     let bidIds = mine.map(x => Number(x.id)); for(const b of [...bidIds]) for(const x of await ancestorsOf(b)) if(!bidIds.includes(x)) bidIds.push(x);
     [rows] = await pool.query(`SELECT m.*, b.name AS bid_name, b.project_code AS bid_code FROM media_files m LEFT JOIN est_bids b ON m.entity_type = 'bid' AND b.id = m.entity_id
-      WHERE (m.entity_type = 'project' AND m.entity_id = ?)` + (bidIds.length ? ` OR (m.entity_type = 'bid' AND m.entity_id IN (${bidIds.map(() => '?').join(',')}))` : '') + ' ORDER BY m.uploaded_at DESC', [id, ...bidIds]);
+      WHERE (m.entity_type = 'project' AND m.entity_id = ?)` + (bidIds.length ? ` OR (m.entity_type = 'bid' AND m.entity_id IN (${bidIds.map(() => '?').join(',')}))` : '') + ' ORDER BY m.uploaded_at DESC, m.id DESC', [id, ...bidIds]);
   }else if(type === 'bid'){
     const ids = [Number(id), ...(await ancestorsOf(id))];
-    [rows] = await pool.query(`SELECT m.*, b.name AS bid_name, b.project_code AS bid_code FROM media_files m LEFT JOIN est_bids b ON b.id = m.entity_id WHERE m.entity_type = 'bid' AND m.entity_id IN (${ids.map(() => '?').join(',')}) ORDER BY m.uploaded_at DESC`, ids);
-  }else [rows] = await pool.query('SELECT m.*, NULL AS bid_name, NULL AS bid_code FROM media_files m WHERE m.entity_type = ? AND m.entity_id = ? ORDER BY m.uploaded_at DESC', [type, id]);
-  res.json({ files: rows.map(f => shape(f, { fromBid: f.entity_type === 'bid' && (type === 'project' || String(f.entity_id) !== String(id)) ? (f.bid_name || 'Bid') : null, fromCode: f.entity_type === 'bid' && String(f.entity_id) !== String(id) ? (f.bid_code || '') : '' })), canAdd: a.add, canHide: isOwnerLike(req.user), canShare: type === 'project' && can(req, 'pm.projects', 'write'), kinds: KINDS, maxMb: MAX_MB });
+    [rows] = await pool.query(`SELECT m.*, b.name AS bid_name, b.project_code AS bid_code FROM media_files m LEFT JOIN est_bids b ON b.id = m.entity_id WHERE m.entity_type = 'bid' AND m.entity_id IN (${ids.map(() => '?').join(',')}) ORDER BY m.uploaded_at DESC, m.id DESC`, ids);
+  }else [rows] = await pool.query('SELECT m.*, NULL AS bid_name, NULL AS bid_code FROM media_files m WHERE m.entity_type = ? AND m.entity_id = ? ORDER BY m.uploaded_at DESC, m.id DESC', [type, id]);
+  res.json({ files: rows.map(f => shape(f, { fromBid: f.entity_type === 'bid' && (type === 'project' || String(f.entity_id) !== String(id)) ? (f.bid_name || 'Bid') : null, fromCode: f.entity_type === 'bid' && String(f.entity_id) !== String(id) ? (f.bid_code || '') : '' })), canAdd: a.add, canHide: isOwnerLike(req.user) || (type === 'person' && can(req, 'pm.people', 'write')), canShare: type === 'project' && can(req, 'pm.projects', 'write'), kinds: kindsFor(type), maxMb: MAX_MB });
 }));
 
 router.post('/', express.raw({ type: () => true, limit: '25mb' }), wrap(async (req, res) => {
@@ -119,7 +128,7 @@ router.post('/', express.raw({ type: () => true, limit: '25mb' }), wrap(async (r
   if(!Buffer.isBuffer(body) || !body.length) return res.status(400).json({ error: 'empty_file' });
   if(!EXT_OK.has(ext)) return res.status(415).json({ error: 'file_type_not_allowed', allowed: [...EXT_OK] });
   if(MAGIC[ext] && !MAGIC[ext](body)) return res.status(415).json({ error: 'file_does_not_match_its_type' });
-  const kind = KINDS.includes(req.query.kind) ? req.query.kind : (/^(jpe?g|png|gif|webp|heic|heif)$/.test(ext) ? 'Photos' : 'Other');
+  const kind = ALL_KINDS.includes(req.query.kind) ? req.query.kind : (/^(jpe?g|png|gif|webp|heic|heif)$/.test(ext) ? 'Photos' : 'Other');
   const sha = crypto.createHash('sha256').update(body).digest('hex');
   const stored = Date.now().toString(36) + '-' + crypto.randomBytes(8).toString('hex') + '.' + ext;
   await fs.promises.mkdir(DIR, { recursive: true });
@@ -151,7 +160,7 @@ router.post('/upload', wrap(async (req, res) => {
   if(size > MAX_MB * 1048576) return res.status(413).json({ error: 'too_large', maxMb: MAX_MB });
   const uid = crypto.randomBytes(12).toString('hex');
   await cs.begin(DIR, uid);
-  await pool.query('INSERT INTO media_uploads (id, user_id, entity_type, entity_id, name, kind, caption, size, created_at) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)', [uid, req.user.id, type, id, name, KINDS.includes(b.kind) ? b.kind : null, str(b.caption, 500), size, Date.now()]);
+  await pool.query('INSERT INTO media_uploads (id, user_id, entity_type, entity_id, name, kind, caption, size, created_at) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)', [uid, req.user.id, type, id, name, ALL_KINDS.includes(b.kind) ? b.kind : null, str(b.caption, 500), size, Date.now()]);
   res.json({ uploadId: uid, chunk: CHUNK, received: 0 });
 }));
 async function mine(req, res){
@@ -328,25 +337,25 @@ router.get('/:id/file', wrap(async (req, res) => {
 // Note / category: the person who uploaded it, or the Owner / Builder. (Files themselves can never be replaced or removed.)
 router.patch('/:id', wrap(async (req, res) => {
   const f = await load(req, res); if(!f) return;
-  if(!(isOwnerLike(req.user) || Number(f.uploaded_by) === Number(req.user.id))) return res.status(403).json({ error: 'forbidden' });
+  if(!(canManage(req, f) || Number(f.uploaded_by) === Number(req.user.id))) return res.status(403).json({ error: 'forbidden' });
   const sets = [], vals = [];
   if(req.body.caption !== undefined){ sets.push('caption = ?'); vals.push(str(req.body.caption, 500)); }
-  if(req.body.kind !== undefined && KINDS.includes(req.body.kind)){ sets.push('kind = ?'); vals.push(req.body.kind); }
+  if(req.body.kind !== undefined && ALL_KINDS.includes(req.body.kind)){ sets.push('kind = ?'); vals.push(req.body.kind); }
   if(!sets.length) return res.json({ ok: true });
   await pool.query('UPDATE media_files SET ' + sets.join(', ') + ' WHERE id = ?', [...vals, f.id]);
   await audit(req.user, 'media.edit', f.entity_type, f.entity_id, { fileId: f.id, ...req.body }, req.ip);
   res.json({ ok: true });
 }));
 router.post('/:id/hide', wrap(async (req, res) => {
-  if(!isOwnerLike(req.user)) return res.status(403).json({ error: 'forbidden', message: 'Only the Owner can hide a file.' });
   const f = await load(req, res); if(!f) return;
+  if(!canManage(req, f)) return res.status(403).json({ error: 'forbidden', message: 'Only the Owner can hide a file.' });
   await pool.query('UPDATE media_files SET hidden = 1, hidden_by_name = ?, hidden_at = ?, hidden_reason = ? WHERE id = ?', [req.user.name, Date.now(), str(req.body && req.body.reason, 300), f.id]);
   await audit(req.user, 'media.hide', f.entity_type, f.entity_id, { fileId: f.id, name: f.name, reason: req.body && req.body.reason }, req.ip);
   res.json({ ok: true });
 }));
 router.post('/:id/unhide', wrap(async (req, res) => {
-  if(!isOwnerLike(req.user)) return res.status(403).json({ error: 'forbidden', message: 'Only the Owner can restore a hidden file.' });
   const f = await load(req, res); if(!f) return;
+  if(!canManage(req, f)) return res.status(403).json({ error: 'forbidden', message: 'Only the Owner can restore a hidden file.' });
   await pool.query('UPDATE media_files SET hidden = 0, hidden_by_name = NULL, hidden_at = NULL, hidden_reason = NULL WHERE id = ?', [f.id]);
   await audit(req.user, 'media.unhide', f.entity_type, f.entity_id, { fileId: f.id, name: f.name }, req.ip);
   res.json({ ok: true });

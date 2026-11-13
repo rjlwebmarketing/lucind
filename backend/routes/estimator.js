@@ -250,6 +250,40 @@ router.put('/bids/:id/estimate', W, wrap(async (req, res) => {
   res.json({ ok: true, updatedAt: now });
 }));
 
+// ---------- Scope of Work: the itemized tasks the Estimator builds on the bid. They carry into the PM at hand-off, where progress is 0-100% per task. ----------
+// A bid cannot be handed off until its Scope of Work is marked complete (and has at least one task).
+const SOW_MAX = 300;
+async function readSow(bidId){
+  const [r] = await pool.query('SELECT doc, complete, updated_at, updated_by FROM est_sow WHERE bid_id = ?', [bidId]);
+  if(!r.length) return { tasks: [], complete: false, updatedAt: null, updatedBy: '' };
+  let d = {}; try{ d = JSON.parse(r[0].doc) || {}; }catch(e){}
+  return { tasks: Array.isArray(d.tasks) ? d.tasks : [], complete: !!Number(r[0].complete), updatedAt: Number(r[0].updated_at), updatedBy: r[0].updated_by || '' };
+}
+router.get('/bids/:id/sow', R, wrap(async (req, res) => { res.json(await readSow(Number(req.params.id) || 0)); }));
+router.put('/bids/:id/sow', W, wrap(async (req, res) => {
+  const id = Number(req.params.id) || 0, body = req.body || {};
+  const [b] = await pool.query('SELECT id, archived, status, project_id FROM est_bids WHERE id = ?', [id]);
+  if(!b.length) return res.status(404).json({ error: 'not_found' });
+  if(Number(b[0].archived)) return res.status(409).json({ error: 'archived' });
+  if(b[0].project_id) return res.status(409).json({ error: 'handed_off', message: 'This bid was handed off. The PM owns the tasks now.' });
+  if(b[0].status === 'Lost') return res.status(409).json({ error: 'lost_clone_instead' });
+  if(!Array.isArray(body.tasks) || body.tasks.length > SOW_MAX) return res.status(400).json({ error: 'bad_sow' });
+  const seen = new Set();
+  const tasks = body.tasks.map((t, i) => {
+    let tid = String((t && t.id) || '').replace(/[^\w-]/g, '').slice(0, 40); if(!tid || seen.has(tid)) tid = 'sw' + Date.now().toString(36) + i; seen.add(tid);
+    return { id: tid, title: String((t && t.title) || '').trim().slice(0, 200), detail: String((t && t.detail) || '').trim().slice(0, 2000) };
+  }).filter(t => t.title);
+  const complete = !!body.complete && tasks.length > 0;
+  const cur = await readSow(id);
+  if(cur.updatedAt != null && body.updatedAt != null && Number(body.updatedAt) !== cur.updatedAt) return res.status(409).json({ error: 'changed_elsewhere' });
+  const now = Date.now(), doc = JSON.stringify({ tasks });
+  await pool.query('INSERT INTO est_sow (bid_id, doc, complete, updated_at, updated_by) VALUES (?, ?, ?, ?, ?) ON DUPLICATE KEY UPDATE doc = VALUES(doc), complete = VALUES(complete), updated_at = VALUES(updated_at), updated_by = VALUES(updated_by)', [id, doc, complete ? 1 : 0, now, req.user.name]);
+  const before = cur.tasks.map(t => t.title).join('\n'), after = tasks.map(t => t.title).join('\n');
+  await history(id, req.user, complete !== cur.complete ? (complete ? 'sow_complete' : 'sow_reopened') : 'sow', { tasks: tasks.length, ...(before !== after ? { changed: true } : {}) });
+  await audit(req.user, 'estimator.sow_save', 'bid', id, { tasks: tasks.length, complete }, req.ip);
+  res.json({ ok: true, updatedAt: now, tasks, complete });
+}));
+
 // ---------- Estimator AI: draft the estimate from the bid's email and documents ----------
 // A draft takes a few minutes, so it runs as a background job (a row in est_ai_runs) that the screen polls. Nothing is put into the estimate here:
 // the screen loads the finished draft for the Estimator to review. A run that is still "running" after 15 minutes is treated as failed.
@@ -378,7 +412,8 @@ router.get('/bids/:id/handoff', R, wrap(async (req, res) => {
   const [e] = await pool.query('SELECT doc FROM est_estimates WHERE bid_id = ?', [b[0].id]);
   let doc = null; try{ doc = e.length ? JSON.parse(e[0].doc) : null; }catch(x){}
   const c = doc ? handoff.contractFrom(b[0], doc, '', 0) : null;
-  res.json({ status: b[0].status, projectId: b[0].project_id || null, code: b[0].project_code || '', hasEstimate: !!c,
+  const sow = await readSow(b[0].id);
+  res.json({ status: b[0].status, projectId: b[0].project_id || null, code: b[0].project_code || '', hasEstimate: !!c, sow: { tasks: sow.tasks.length, complete: sow.complete && sow.tasks.length > 0 },
     scopes: doc ? handoff.scopeBreak(doc) : [],
     preview: c ? { lines: c.lines.length, subtotal: c.subtotal, tax: c.tax, total: c.total, estimateNumber: c.source.estimateNumber } : null });
 }));
@@ -411,6 +446,10 @@ router.post('/bids/:id/clone', W, wrap(async (req, res) => {
       await pool.query('INSERT INTO est_estimates (bid_id, doc, updated_at, updated_by) VALUES (?, ?, ?, ?)', [ins.insertId, JSON.stringify(doc), now, req.user.name]);
     }
   }
+  try{   // the Scope of Work comes along too, but must be marked complete again (the estimate may change)
+    const sw = await readSow(o.id);
+    if(sw.tasks.length) await pool.query('INSERT INTO est_sow (bid_id, doc, complete, updated_at, updated_by) VALUES (?, ?, 0, ?, ?)', [ins.insertId, JSON.stringify({ tasks: sw.tasks }), now, req.user.name]);
+  }catch(x){ console.error('clone sow failed', x); }
   await history(ins.insertId, req.user, 'clone', { from: Number(o.id), fromCode: o.project_code || '', rev, lines });
   await history(o.id, req.user, 'cloned', { to: Number(ins.insertId), rev });
   await audit(req.user, 'bid.clone', 'bid', ins.insertId, { from: Number(o.id), rev }, req.ip);
@@ -429,18 +468,20 @@ router.post('/bids/:id/handoff', W, wrap(async (req, res) => {
   const [e] = await pool.query('SELECT doc FROM est_estimates WHERE bid_id = ?', [id]);
   let doc = null; try{ doc = e.length ? JSON.parse(e[0].doc) : null; }catch(x){}
   if(!doc || !Array.isArray(doc.lines) || !doc.lines.length) return res.status(409).json({ error: 'no_estimate', message: 'Build the estimate first; its lines become the contract.' });
+  const sow = await readSow(id);
+  if(!sow.complete || !sow.tasks.length) return res.status(409).json({ error: 'sow_incomplete', message: 'Finish the Scope of Work first (add the tasks, then mark it complete). It carries over to the PM.' });
   const now = Date.now();
   const names = handoff.scopeBreak(doc).map(x => x.scope);
   const want = Array.isArray(req.body && req.body.scopes) ? req.body.scopes.map(String).filter(x => names.includes(x)) : [];
   if(Array.isArray(req.body && req.body.scopes) && req.body.scopes.length && !want.length) return res.status(400).json({ error: 'bad_scopes', message: 'None of those scopes are on the estimate.' });
   const contract = handoff.contractFrom(bid, doc, req.user.name, now, want.length ? want : null);
-  const project = handoff.projectFrom(bid, contract, now);
+  const project = handoff.withSow(handoff.projectFrom(bid, contract, now), sow, req.user.name, now);
   let out;
   try{ out = await handoff.addToBoard(project, req.user.role_key === 'builder' ? 'builder' : (req.user.role_key === 'owner' ? 'owner' : 'manager')); }
   catch(x){ if(x && x.status === 503) return res.status(503).json({ error: 'busy' }); throw x; }
   // claim the bid only if nobody else did meanwhile
   const [u] = await pool.query('UPDATE est_bids SET project_id = ?, updated_at = ? WHERE id = ? AND project_id IS NULL', [out.projectId, now, id]);
-  await history(id, req.user, 'handoff', { projectId: out.projectId, code: out.code, lines: contract.lines.length, total: contract.total, scopes: contract.scopes ? contract.scopes.map(x => x.scope) : undefined });
+  await history(id, req.user, 'handoff', { projectId: out.projectId, code: out.code, lines: contract.lines.length, tasks: sow.tasks.length, total: contract.total, scopes: contract.scopes ? contract.scopes.map(x => x.scope) : undefined });
   await audit(req.user, 'estimator.handoff', 'bid', id, { projectId: out.projectId, code: out.code, total: contract.total }, req.ip);
   try{ await notify({ kind: 'handoff', text: (bid.name || 'A project') + ' was handed off from the Estimator (' + out.code + ').', route: '/pm', toPane: 'pm.projects', toLevel: 'write', from: req.user }); }catch(x){ console.error('handoff notify failed', x); }
   res.json({ ok: true, projectId: out.projectId, code: out.code, lines: contract.lines.length, total: contract.total, claimed: u.affectedRows === 1 });

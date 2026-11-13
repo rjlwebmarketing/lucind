@@ -26,6 +26,12 @@ router.get('/', requireAuth(), wrap(async (req, res) => {
   res.json({ value: JSON.stringify(obj), revision: rows[0].revision, role: req.auth.role });
 }));
 
+// GET /api/data/people/:id/events — the change record of one subcontractor's licensing / insurance details (who, when, before -> after).
+router.get('/people/:id/events', requireAuth(), wrap(async (req, res) => {
+  const [rows] = await pool.query('SELECT created_at, user_name, user_username, role, field, kind, old_value, new_value FROM project_events WHERE project_id = ? ORDER BY id DESC LIMIT 200', ['person:' + String(req.params.id).slice(0, 56)]);
+  res.json({ events: rows.map(r => ({ at: Number(r.created_at), by: r.user_name || '', username: r.user_username || '', role: r.role || '', field: r.field, kind: r.kind, oldValue: r.old_value || '', newValue: r.new_value || '' })) });
+}));
+
 // POST /api/data — save the board.
 // Every save is: logged-in -> shaped like a board -> not stale -> allowed for
 // the role -> not a mass deletion -> snapshotted -> written. The request body

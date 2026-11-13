@@ -4,10 +4,10 @@
   const esc = s => String(s == null ? '' : s).replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
   const size = n => n >= 1048576 ? (n / 1048576).toFixed(1) + ' MB' : Math.max(1, Math.round(n / 1024)) + ' KB';
   const when = t => new Date(t).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' });
-  const IMG = /^(jpe?g|png|gif|webp)$/, ORDER = ['Drawings', 'Bid documents', 'Contracts', 'Reports', 'Photos', 'Other'];
+  const IMG = /^(jpe?g|png|gif|webp)$/, ORDER = ['Drawings', 'Bid documents', 'Contracts', 'Bill of Lading', 'Delivery Photos', 'Reports', 'Photos', 'Other'];
   const ICON = { pdf: '📄', dwg: '📐', dxf: '📐', xls: '📊', xlsx: '📊', csv: '📊', doc: '📝', docx: '📝', zip: '🗜', mp4: '🎞', mov: '🎞' };
   const css2 = `.mp-md{position:fixed;inset:0;background:rgba(0,0,0,.5);z-index:100001;display:flex;align-items:flex-start;justify-content:center;padding:6vh 12px;overflow:auto}.mp-mc{background:var(--panel,#fff);color:var(--text,#1d1d1d);border-radius:14px;width:min(560px,100%);padding:20px}.mp-mc h3{margin:0 0 6px;font-size:17px}.mp-mc label{display:block;font-size:12.5px;font-weight:600;margin:12px 0 0}.mp-mc input:not([type=checkbox]),.mp-mc textarea,.mp-mc select{box-sizing:border-box;display:block;width:100%;margin-top:4px;padding:8px 10px;border:1px solid var(--line,#ccc);border-radius:8px;font:inherit;font-weight:400;background:var(--panel,#fff);color:inherit}.mp-two{display:grid;grid-template-columns:1fr 1fr;gap:12px}.mp-ck{display:flex!important;gap:8px;align-items:center;font-weight:400!important}.mp-s{font-size:13px;color:var(--text-dim,#666);margin:4px 0}.mp-er{color:#b3261e;font-size:13px;min-height:18px;margin-top:8px}.mp-bt{display:flex;gap:8px;justify-content:flex-end;align-items:center;margin-top:16px}.mp-sl{display:flex;gap:8px;align-items:flex-start;padding:10px 0;border-top:1px solid var(--line,#eee);font-size:13px}.mp-sl small{display:block;color:var(--text-dim,#777);font-size:11.5px;margin-top:2px}.mp-lg{font-size:11.5px;color:var(--text-dim,#666);margin-top:6px}@media(max-width:520px){.mp-two{grid-template-columns:1fr}}`;
-  const css = `.mp{border:1px solid var(--line,#ddd);border-radius:10px;background:var(--panel,#fff);margin:6px 0 14px}.mp-h{display:flex;align-items:center;gap:10px;padding:10px 14px;border-bottom:1px solid var(--line,#ddd)}.mp-h b{font-size:14px}.mp-h .sp{flex:1}
+  const css = `.mp{border:1px solid var(--line,#ddd);border-radius:10px;background:var(--panel,#fff);margin:6px 0 14px}.mp-h{display:flex;flex-wrap:wrap;align-items:center;gap:8px 10px;padding:10px 14px;border-bottom:1px solid var(--line,#ddd)}.mp-h b{font-size:14px}.mp-h .sp{flex:1}
   .mp-drop{margin:12px 14px;padding:14px;border:2px dashed var(--line,#ccc);border-radius:10px;text-align:center;font-size:12.5px;color:var(--text-dim,#666)}.mp-drop.over{border-color:var(--brand-blue,#013CAE);background:var(--panel-2,#eef)}
   .mp-g{padding:4px 14px 8px}.mp-g h4{margin:12px 0 4px;font-size:11px;letter-spacing:.07em;text-transform:uppercase;color:var(--text-faint,#888)}
   .mp-r{display:flex;align-items:center;gap:10px;padding:7px 0;border-top:1px solid var(--line,#eee);font-size:13px}.mp-r:first-of-type{border-top:0}.mp-r .nm{flex:1;min-width:0}.mp-r .nm a{color:var(--brand-blue,#013CAE);font-weight:600;cursor:pointer;word-break:break-all}
@@ -30,7 +30,8 @@
   }
   function mount(el, o){
     const A = o.api + '/api/media', tok = () => typeof o.token === 'function' ? o.token() : o.token, H = () => ({ Authorization: 'Bearer ' + tok() });
-    const blobs = {}; let S = null, showHidden = false;
+    const blobs = {}; let S = null, showHidden = false, sortMode = 'new';
+    try{ sortMode = localStorage.getItem('mpSort') || 'new'; }catch(e){}   // a remembered per-viewer choice: new | old | cat
     const get = async path => { const r = await fetch(A + path, { headers: H() }); const j = await r.json().catch(() => ({})); if(!r.ok) throw Object.assign(new Error(j.error || 'failed'), j); return j; };
     const post = async (path, body) => { const r = await fetch(A + path, { method: 'POST', headers: Object.assign({ 'Content-Type': 'application/json' }, H()), body: JSON.stringify(body || {}) }); const j = await r.json().catch(() => ({})); if(!r.ok) throw Object.assign(new Error(j.error || 'failed'), j); return j; };
     const blobOf = async (f, dl) => { const r = await fetch(A + '/' + f.id + '/file' + (dl ? '?download=1' : ''), { headers: H() }); if(!r.ok) throw new Error('Could not open the file'); return URL.createObjectURL(await r.blob()); };
@@ -45,26 +46,33 @@
     async function save(f){ try{ const a = document.createElement('a'); a.href = await linkOf(f, true); a.download = f.name; document.body.appendChild(a); a.click(); a.remove(); }catch(e){ alert(e.message); } }
     async function thumbs(){ for(const f of S.files.filter(f => IMG.test(f.ext) && f.size < 8e6).slice(0, 60)){ const t = el.querySelector(`[data-t="${f.id}"]`); if(!t) continue;
       try{ blobs[f.id] = blobs[f.id] || await blobOf(f); t.innerHTML = `<img src="${blobs[f.id]}" alt="">`; }catch(e){} } }
-    function row(f){
+    function row(f, showKind){
       const mine = S.me === f.uploadedById;
       return `<div class="mp-r ${f.hidden ? 'mp-hid' : ''}"><div class="mp-ic" data-t="${f.id}">${ICON[f.ext] || '📎'}</div>
-        <div class="nm"><a data-o="${f.id}">${esc(f.name)}</a>${f.fromBid ? `<span class="mp-tag" title="${esc(f.fromBid)}">From ${esc(f.fromCode || 'bid')}</span>` : ''}${f.hidden ? '<span class="mp-tag" style="background:#ddd">Hidden</span>' : ''}
+        <div class="nm"><a data-o="${f.id}">${esc(f.name)}</a>${f.fromBid ? `<span class="mp-tag" title="${esc(f.fromBid)}">From ${esc(f.fromCode || 'bid')}</span>` : ''}${showKind && f.kind ? `<span class="mp-tag">${esc(f.kind)}</span>` : ''}${f.hidden ? '<span class="mp-tag" style="background:#ddd">Hidden</span>' : ''}
         <small>${size(f.size)} · ${esc(f.uploadedBy || 'Unknown')} · ${when(f.uploadedAt)}${f.caption ? ' · ' + esc(f.caption) : ''}${f.hidden ? ` · hidden by ${esc(f.hiddenBy)}${f.hiddenReason ? ' (' + esc(f.hiddenReason) + ')' : ''}` : ''}</small></div>
         <button class="mp-b" data-d="${f.id}" type="button" title="Download">⬇</button>
         ${S.canShare && !f.hidden && f.source === 'project' ? (f.share && f.share.ok ? `<button class="mp-b" data-sh="${f.id}" type="button" title="Send this file to someone outside the company with a private link">Share</button>` : `<button class="mp-b" type="button" disabled style="opacity:.45" title="${esc((f.share && f.share.reason) || 'Not shareable')}">Share</button>`) : ''}
         ${S.canHide && S.canShare && !f.hidden && f.source === 'project' ? `<button class="mp-b" data-sr="${f.id}" type="button" title="Owner: decide whether this file may be shared outside the company">${f.share && f.share.ok ? 'Block sharing' : 'Allow sharing'}</button>` : ''}
         ${mine || S.canHide ? `<button class="mp-b" data-c="${f.id}" type="button" title="Edit note">✎</button>` : ''}
-        ${S.canHide ? (f.hidden ? `<button class="mp-b" data-u="${f.id}" type="button">Restore</button>` : `<button class="mp-b" data-h="${f.id}" type="button" title="Hide (Owner only). Nothing is deleted.">Hide</button>`) : ''}</div>`;
+        ${S.canHide ? (f.hidden ? `<button class="mp-b" data-u="${f.id}" type="button">Restore</button>` : `<button class="mp-b" data-h="${f.id}" type="button" title="${esc(o.hideTip || 'Hide (Owner only). Nothing is deleted.')}">Hide</button>`) : ''}</div>`;
     }
     function draw(){
-      const vis = S.files.filter(f => !f.hidden), hid = S.files.filter(f => f.hidden);
+      const byDate = (a, b) => (sortMode === 'old' ? 1 : -1) * ((a.uploadedAt - b.uploadedAt) || (Number(a.id) - Number(b.id)));
+      const vis = S.files.filter(f => !f.hidden).sort(byDate), hid = S.files.filter(f => f.hidden).sort(byDate);
+      const dayKey = f => new Date(f.uploadedAt).toLocaleDateString('en-CA');   // local calendar day
+      const dayHead = f => new Date(f.uploadedAt).toLocaleDateString('en-US', { weekday: 'long', month: 'long', day: 'numeric', year: 'numeric' });
+      let lastDay = '';
+      const dated = vis.map(f => { const k = dayKey(f), h = k !== lastDay ? `<h4>${esc(dayHead(f))}</h4>` : ''; lastDay = k; return h + row(f, true); }).join('');
       const kinds = ORDER.filter(k => vis.some(f => f.kind === k)).concat([...new Set(vis.map(f => f.kind))].filter(k => !ORDER.includes(k)));
-      el.innerHTML = `<div class="mp"><div class="mp-h"><b>Files</b><span class="mp-tag" style="margin:0;background:var(--panel-2,#eef)">${vis.length}</span><span class="sp"></span>
+      el.innerHTML = `<div class="mp"><div class="mp-h"><b>${esc(o.title || 'Files')}</b><span class="mp-tag" style="margin:0;background:var(--panel-2,#eef)">${vis.length}</span><span class="sp"></span>
+        <select id="mps" style="font-size:12px;padding:4px" title="How the files are ordered"><option value="new"${sortMode === 'new' ? ' selected' : ''}>Date: newest first</option><option value="old"${sortMode === 'old' ? ' selected' : ''}>Date: oldest first</option><option value="cat"${sortMode === 'cat' ? ' selected' : ''}>By category</option></select>
         ${S.canShare ? '<button class="btn small" id="mpl" type="button" title="Links you have sent to people outside the company">Shared links</button>' : ''}
         ${S.canAdd ? `<select id="mpk" style="font-size:12px;padding:4px" title="Category for the files you add"><option value="">Category: automatic</option>${S.kinds.map(k => `<option value="${esc(k)}">${esc(k)}</option>`).join('')}</select><button class="btn small primary" id="mpb" type="button">Add files</button><input type="file" id="mpf" multiple hidden>` : ''}</div>
-        ${S.canAdd ? `<div class="mp-drop" id="mpd">Drag drawings, PDFs or photos here, or use “Add files”. Large drawing sets are fine (up to ${Math.round(S.maxMb / 1024)} GB each). Files are never deleted.<div id="mpp"></div></div>` : ''}
-        <div class="mp-g">${kinds.length ? kinds.map(k => `<h4>${esc(k)}</h4>${vis.filter(f => f.kind === k).map(row).join('')}`).join('') : '<div style="padding:10px 0;color:var(--text-dim,#777);font-size:13px">No files yet.</div>'}
+        ${S.canAdd ? `<div class="mp-drop" id="mpd">${o.dropText ? esc(o.dropText) : `Drag drawings, PDFs or photos here, or use “Add files”. Large drawing sets are fine (up to ${Math.round(S.maxMb / 1024)} GB each). Files are never deleted.`}<div id="mpp"></div></div>` : ''}
+        <div class="mp-g">${vis.length && sortMode !== 'cat' ? dated : kinds.length ? kinds.map(k => `<h4>${esc(k)}</h4>${vis.filter(f => f.kind === k).map(row).join('')}`).join('') : '<div style="padding:10px 0;color:var(--text-dim,#777);font-size:13px">No files yet.</div>'}
         ${hid.length ? `<h4 style="margin-top:16px"><a id="mph" style="cursor:pointer">${showHidden ? '▾' : '▸'} Hidden files (${hid.length})</a></h4>${showHidden ? hid.map(row).join('') : ''}` : ''}</div></div>`;
+      const ms = el.querySelector('#mps'); if(ms) ms.onchange = () => { sortMode = ms.value; try{ localStorage.setItem('mpSort', sortMode); }catch(e){} draw(); };
       el.querySelectorAll('[data-o]').forEach(a => a.onclick = () => open(S.files.find(f => f.id == a.dataset.o)));
       el.querySelectorAll('[data-d]').forEach(b => b.onclick = () => save(S.files.find(f => f.id == b.dataset.d)));
       el.querySelectorAll('[data-sh]').forEach(b => b.onclick = () => shareDialog(S.files.find(f => f.id == b.dataset.sh)));
@@ -87,7 +95,7 @@
       x.upload.onprogress = e => { if(e.lengthComputable) onProg(e.loaded); }; x.onload = () => { let j = {}; try{ j = JSON.parse(x.responseText); }catch(e){} x.status === 200 ? res(j) : rej(Object.assign(new Error(j.error || 'failed'), { status: x.status, body: j })); }; x.onerror = () => rej(Object.assign(new Error('network'), { status: 0 })); x.send(blob); });
     // Big files go up in 8 MB pieces; a dropped connection picks up where it left off instead of starting over.
     async function one(file){
-      const k = el.querySelector('#mpk') ? el.querySelector('#mpk').value : '', pr = el.querySelector('#mpp'), bar = document.createElement('div'); bar.className = 'mp-prog'; bar.innerHTML = '<i></i>'; const lab = document.createElement('div'); lab.style.cssText = 'font-size:11px;margin-top:6px'; lab.textContent = file.name; pr.append(lab, bar);
+      let k = el.querySelector('#mpk') ? el.querySelector('#mpk').value : ''; if(!k && o.guessKind) k = o.guessKind(file.name) || ''; const pr = el.querySelector('#mpp'), bar = document.createElement('div'); bar.className = 'mp-prog'; bar.innerHTML = '<i></i>'; const lab = document.createElement('div'); lab.style.cssText = 'font-size:11px;margin-top:6px'; lab.textContent = file.name; pr.append(lab, bar);
       const fail = m => { lab.innerHTML = '<span style="color:#D32F2F">✗ ' + esc(file.name) + ': ' + esc(m) + '</span>'; };
       try{
         const st = await post('/upload', { type: o.type, id: o.id, name: file.name, size: file.size, kind: k });
@@ -107,7 +115,7 @@
         bar.remove(); lab.textContent = '✓ ' + file.name + (j.duplicateOf ? ' (same content as ' + j.duplicateOf + ')' : '');
       }catch(e){ bar.remove(); fail(e.error === 'file_type_not_allowed' ? 'file type not allowed' : e.error === 'too_large' ? 'over the ' + S.maxMb + ' MB limit' : e.error === 'file_does_not_match_its_type' ? 'file does not match its type' : (e.message || 'failed')); }
     }
-    async function upload(files){ for(const f of files){ if(f.size > S.maxMb * 1048576){ const pr = el.querySelector('#mpp'); pr.insertAdjacentHTML('beforeend', `<div style="color:#D32F2F;font-size:11px;margin-top:6px">✗ ${esc(f.name)}: over the size limit</div>`); continue; } await one(f); } await load(true); }
+    async function upload(files){ for(const f of files){ if(f.size > S.maxMb * 1048576){ const pr = el.querySelector('#mpp'); pr.insertAdjacentHTML('beforeend', `<div style="color:#D32F2F;font-size:11px;margin-top:6px">✗ ${esc(f.name)}: over the size limit</div>`); continue; } await one(f); } await load(true); if(o.onUploaded){ const cb = o.onUploaded; o.onUploaded = null; cb(files); } }
     // ---- share links: send a project file to someone outside the company (no Google Drive, no sign-in for them) ----
     const SH = o.api + '/api/shares';
     const shReq = async (method, path, body) => { const r = await fetch(SH + path, { method, headers: Object.assign({ 'Content-Type': 'application/json' }, H()), body: body === undefined ? undefined : JSON.stringify(body) }); const j = await r.json().catch(() => ({})); if(!r.ok) throw Object.assign(new Error(j.message || j.error || 'failed'), j); return j; };
@@ -151,7 +159,7 @@
       };
       paint();
     }
-    async function load(keepNotes){ try{ S = await get('?type=' + o.type + '&id=' + encodeURIComponent(o.id)); S.me = (o.me && o.me()) || null; const prog = keepNotes && el.querySelector('#mpp') ? el.querySelector('#mpp').innerHTML : ''; draw(); if(prog && el.querySelector('#mpp')) el.querySelector('#mpp').innerHTML = prog; }
+    async function load(keepNotes){ try{ S = await get('?type=' + o.type + '&id=' + encodeURIComponent(o.id)); S.me = (o.me && o.me()) || null; if(o.onLoad){ try{ o.onLoad(S.files); }catch(e){} } const prog = keepNotes && el.querySelector('#mpp') ? el.querySelector('#mpp').innerHTML : ''; draw(); if(prog && el.querySelector('#mpp')) el.querySelector('#mpp').innerHTML = prog; }
       catch(e){ el.innerHTML = `<div class="mp"><div class="mp-h"><b>Files</b></div><div class="mp-g" style="color:var(--text-dim,#777);font-size:13px">${e.error === 'forbidden' ? 'You do not have access to these files.' : 'Files could not be loaded.'}</div></div>`; } }
     el.innerHTML = '<div class="mp"><div class="mp-h"><b>Files</b></div><div class="mp-g" style="font-size:13px;color:#777">Loading…</div></div>'; load().then(() => { if(o.pending && o.pending.length && S && S.canAdd){ const f = o.pending; o.pending = null; upload(f); } });
   }

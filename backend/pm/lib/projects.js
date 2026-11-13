@@ -53,6 +53,33 @@ function stampCodes(cur, next, opts) {
   return codes;
 }
 
+// Scope of Work: the Estimator owns the task list (titles, details, order); a PM page can only move a task's progress, in steps of 25.
+// A page can never add, remove or reword tasks, or invent a Scope of Work on a project that has none. Only the hand-off (opts.allowSow) creates one.
+// Equal weight: the project's % complete is the plain average of its tasks (kept on money.percentComplete, which Pay Apps reads).
+const SOW_STEPS = [0, 25, 50, 75, 100];
+const stepPct = v => { const n = Number(v); if (!Number.isFinite(n)) return 0; return SOW_STEPS.reduce((a, b) => Math.abs(b - n) < Math.abs(a - n) ? b : a, 0); };
+const sowAverage = sow => { const t = asList(sow && sow.tasks); return t.length ? Math.round(t.reduce((a, x) => a + stepPct(x.pct), 0) / t.length) : 0; };
+function protectSow(cur, next, opts) {
+  const was = new Map(asList(cur && cur.projects).map(p => [p && p.id, p]));
+  for (const p of asList(next.projects)) {
+    if (!p || typeof p !== 'object') continue;
+    const old = was.get(p.id), keep = old && old.sow && Array.isArray(old.sow.tasks) ? old.sow : null;
+    if (!keep) {
+      if (opts && opts.allowSow && p.sow && Array.isArray(p.sow.tasks)) p.sow.tasks.forEach(t => { t.pct = stepPct(t.pct); });
+      else delete p.sow;
+    } else {
+      const sent = new Map(asList(p.sow && p.sow.tasks).map(t => [t && t.id, t]));
+      const now = new Date().toISOString();
+      p.sow = structuredClone(keep);
+      p.sow.tasks.forEach(t => {
+        const s2 = sent.get(t.id), pct = s2 ? stepPct(s2.pct) : stepPct(t.pct);
+        if (pct !== stepPct(t.pct)) { t.pct = pct; t.at = now; } else t.pct = pct;
+      });
+    }
+    if (p.sow && p.sow.tasks.length && p.money && typeof p.money === 'object') p.money.percentComplete = sowAverage(p.sow);
+  }
+}
+
 // Compares the stored board with the one about to be stored. Returns the change-log rows.
 function diffProjects(cur, next) {
   const out = [];
@@ -74,6 +101,12 @@ function diffProjects(cur, next) {
     const a0 = new Set(asList(was.assignedIds)), a1 = new Set(asList(p.assignedIds));
     for (const id of a1) if (!a0.has(id)) ev(p, 'Crew', 'added', null, nameOf(id));
     for (const id of a0) if (!a1.has(id)) ev(p, 'Crew', 'removed', nameOf(id), null);
+    const st = new Map(asList(was.sow && was.sow.tasks).map(x => [x && x.id, x]));
+    for (const t of asList(p.sow && p.sow.tasks)) {
+      const t0 = st.get(t.id);
+      if (!t0) continue;
+      if (stepPct(t0.pct) !== stepPct(t.pct)) ev(p, 'Scope of Work: ' + clip(t.title, 80), 'changed', stepPct(t0.pct) + '%', stepPct(t.pct) + '%');
+    }
     const wp = new Map(asList(was.phases).map(x => [x && x.id, x]));
     const np = new Map(asList(p.phases).map(x => [x && x.id, x]));
     for (const [id, ph] of np) {
@@ -89,6 +122,39 @@ function diffProjects(cur, next) {
   }
   for (const p of curProjects) if (p && !nextById.has(p.id)) ev(p, 'Project', 'removed', p.name || '', null);
   return out.slice(0, MAX_EVENTS_PER_SAVE);
+}
+
+// Compliance records on a subcontractor (licensed states, business license, W-9 / EIN, certificate of insurance) are documents that get
+// replaced over time, so every change is written to the same change log, filed under "person:<id>". The EIN is logged masked.
+const mask = v => { const d = String(v || '').replace(/\D/g, ''); return d ? 'ending ' + d.slice(-4) : ''; };
+const yn = v => (v ? 'on file' : 'not on file');
+function personFacts(x) {
+  const c = (x && x.compliance) || {}, lic = c.license || {}, w9 = c.w9 || {}, coi = c.coi || {};
+  return [
+    ['Licensed states', asList(x && x.licStates).map(v => str(v).toUpperCase()).filter(Boolean).sort().join(', ')],
+    ['Business license', yn(lic.has) + (lic.number ? ' #' + str(lic.number) : '')],
+    ['W-9', yn(w9.has)],
+    ['EIN', mask(w9.ein)],
+    ['COI', yn(coi.has)],
+    ['COI expires', str(coi.expires)],
+    ['COI carrier', str(coi.carrier)],
+    ['COI policy #', str(coi.policy)]
+  ];
+}
+function diffPeople(cur, next) {
+  const out = [], was = new Map(asList(cur && cur.people).map(x => [x && x.id, x]));
+  for (const p of asList(next.people)) {
+    if (!p || p.type !== 'sub') continue;
+    const old = was.get(p.id);
+    if (!old && !asList(p.licStates).length && !(p.compliance && Object.keys(p.compliance).length)) continue;
+    const before = new Map(personFacts(old));
+    for (const [label, v] of personFacts(p)) {
+      const o = old ? before.get(label) : '';
+      if (!old && /^not on file$/.test(v)) continue;
+      if ((o || '') !== (v || '')) out.push({ projectId: 'person:' + str(p.id), code: '', name: str(p.name), field: label, kind: old ? 'changed' : 'added', oldV: o ? clip(o, 480) : null, newV: v ? clip(v, 480) : null });
+    }
+  }
+  return out;
 }
 
 // "who is on what" as a set of keys: personId|projectId|phaseId
@@ -139,9 +205,10 @@ async function writeEvents(pool, role, rows, atMs) {
 // One call from the save route. Mutates `next`; returns what to log and what to tell the page.
 function stampBoard(cur, next, nowMs, opts) {
   const codes = stampCodes(cur || {}, next, opts);
-  const events = diffProjects(cur || {}, next);
+  protectSow(cur || {}, next, opts);
+  const events = diffProjects(cur || {}, next).concat(diffPeople(cur || {}, next));
   const histories = stampHistory(cur || {}, next, new Date(nowMs).toISOString());
   return { events, stamps: { codes, histories } };
 }
 
-module.exports = { stampBoard, stampCodes, diffProjects, stampHistory, writeEvents, codeFor, CODE_RE };
+module.exports = { protectSow, sowAverage, stepPct, stampBoard, stampCodes, diffProjects, diffPeople, stampHistory, writeEvents, codeFor, CODE_RE };
