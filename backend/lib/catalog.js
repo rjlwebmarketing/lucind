@@ -34,7 +34,8 @@ const SECTIONS = [
     { key: 'admin.users', label: 'Users & Access' },
     { key: 'admin.audit', label: 'Audit Log' },
     { key: 'admin.analytics', label: 'Analytics' },
-    { key: 'admin.requests', label: 'Removal Requests' } ] },
+    { key: 'admin.requests', label: 'Removal Requests' },
+    { key: 'admin.contacts', label: 'Core Contacts' } ] },
   { key: 'sensitive', menu: 'admin', label: 'Sensitive Data', panes: [
     { key: 'sensitive.wages', label: 'Wages & Labor Rates' },
     { key: 'sensitive.estimate_costs', label: 'Estimate Costs & Margin' },
@@ -42,9 +43,11 @@ const SECTIONS = [
   { key: 'builder', menu: 'builder', label: 'Builder', builderOnly: true, panes: [
     { key: 'builder.settings', label: 'Settings & Connections' },
     { key: 'builder.roles', label: 'Roles & Templates' },
-    { key: 'builder.pmsettings', label: 'PM Settings & Rules' },
-    { key: 'builder.devtools', label: 'Dev Backlog' },
+    { key: 'builder.pmsettings', label: 'House Rules' },
+    { key: 'builder.devtools', label: 'Loose Ends' },
     { key: 'builder.architecture', label: 'System Architecture' },
+    { key: 'builder.pathways', label: 'Pathways' },
+    { key: 'builder.report', label: 'Progress Report' },
     { key: 'builder.data', label: 'Import / Export Data' } ] }
 ];
 // Cross-department panes: viewable from another branch (e.g. the Estimator's Map, Calendar and Crew & Subs) without opening this branch's own app.

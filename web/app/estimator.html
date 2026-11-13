@@ -70,6 +70,11 @@
   .mono{font-family:'Inter',sans-serif;}
   button{font-family:inherit;cursor:pointer;}
   input,select,textarea{font-family:inherit;font-size:14px;}
+  /* Field look, shared with the search bars: rounded, white, soft blue focus ring. Zero-specificity so compact inline editors keep their own sizing. */
+  :where(input:not([type=checkbox]):not([type=radio]):not([type=range]):not([type=file]):not([type=color]):not([type=button]):not([type=submit]):not([type=hidden]), select, textarea){background:#fff; border:1px solid var(--line); border-radius:10px; padding:9px 14px; color:var(--text); transition:border-color .15s, box-shadow .15s;}
+  :where(input:not([type=checkbox]):not([type=radio]):not([type=range]):not([type=file]), select, textarea):focus{outline:none; border-color:var(--accent); box-shadow:0 0 0 3px rgba(1,60,174,.14);}
+  :where(input, textarea)::placeholder{color:#8B9D9D;}
+
   a{color:inherit;}
 
   /* ---- App shell ---- */
@@ -401,10 +406,10 @@
   .field{margin-bottom:14px;}
   .field label{display:block; font-size:11.5px; color:var(--text-dim); margin-bottom:5px; font-weight:600; text-transform:uppercase; letter-spacing:.03em;}
   .field input, .field select, .field textarea{
-    width:100%; background:var(--bg); border:1px solid var(--line); color:var(--text);
-    padding:9px 10px; border-radius:var(--radius);
+    width:100%; background:#fff; border:1px solid var(--line); color:var(--text);
+    padding:10px 14px; border-radius:10px;
   }
-  .field input:focus, .field select:focus, .field textarea:focus{outline:none; border-color:var(--accent);}
+  .field input:focus, .field select:focus, .field textarea:focus{outline:none; border-color:var(--accent); box-shadow:0 0 0 3px rgba(1,60,174,.14);}
   .field textarea{resize:vertical; min-height:56px;}
   .row2{display:grid; grid-template-columns:1fr 1fr; gap:12px;}
   .mny-split{display:grid; grid-template-columns:1fr 1fr; gap:0;}
@@ -1064,6 +1069,7 @@ function render(){
 
 // ---------- toasts: a reminder when a bid is due soon ----------
 function showToast(o){
+  if(ME && ME.role === 'builder') return;   // the Builder login gets no work notices
   let st = document.getElementById('toastStack'); if(!st){ st = document.createElement('div'); st.id = 'toastStack'; st.setAttribute('aria-live', 'polite'); document.body.appendChild(st); }
   const el = document.createElement('div'); el.className = 'toast'; el.setAttribute('role', 'status'); el.title = 'Click to dismiss';
   const kill = () => { el.classList.add('leaving'); setTimeout(() => el.remove(), 180); };

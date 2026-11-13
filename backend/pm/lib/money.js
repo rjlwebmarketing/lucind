@@ -139,8 +139,13 @@ function protectOpsEmail(next, cur, role) {
   const curMs = (cur && cur.moneySettings) || {};
   if (isPlain(next.moneySettings)) {
     const ms = Object.assign({}, next.moneySettings, { opsEmail: curMs.opsEmail || '', opsName: curMs.opsName || '' });
+    if (curMs.collections === undefined) delete ms.collections; else ms.collections = curMs.collections;   // Core Contacts: Owner / Builder only
     if (curMs.labor === undefined) delete ms.labor; else ms.labor = curMs.labor;
     next.moneySettings = ms;
+  }
+  if (isPlain(next.settings)) {   // Core Contacts (who internal email goes to) are Owner / Builder only
+    const curC = cur && cur.settings && cur.settings.contacts;
+    if (curC === undefined) delete next.settings.contacts; else next.settings.contacts = curC;
   }
   if (Array.isArray(next.people)) {
     const curById = new Map(((cur && cur.people) || []).filter(x => x && x.id !== undefined).map(x => [String(x.id), x]));

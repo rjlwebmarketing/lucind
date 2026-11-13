@@ -344,6 +344,13 @@ async function upgradeRoleTemplates(){
   await pool.query("UPDATE role_permissions SET level = 'write' WHERE role_key = 'owner' AND perm_key = 'admin.users' AND level = 'read'");
   await setSetting('tpl_owner_users_write', '1');
 }
+// v10.4: the Owner gets the new Core Contacts pane (who internal emails go to).
+async function upgradeTemplatesV104(){
+  if(await getSetting('tpl_v104_contacts', '') === '1') return;
+  await pool.query("DELETE FROM role_permissions WHERE role_key = 'owner' AND perm_key = 'admin.contacts'");
+  await pool.query('INSERT INTO role_permissions (role_key, perm_key, level) VALUES (?,?,?)', ['owner', 'admin.contacts', 'write']);
+  await setSetting('tpl_v104_contacts', '1');
+}
 // v5: the Estimator branch. The Owner gets the new Analytics pane; the Estimator may view (not manage) crew & subs and see the calendar.
 async function upgradeTemplatesV5(){
   if(await getSetting('tpl_v5_estimator', '') === '1') return;
@@ -418,6 +425,6 @@ async function ensureSchema(){
   try{ await pool.query('ALTER TABLE audit_log ADD COLUMN user_username VARCHAR(40) NULL'); }catch(e){ /* already there */ }
   try{ await require('./codes').backfillBidCodes(); }catch(e){ console.error('bid code backfill failed', e); }
   await migrateUsernames();
-  await seedRoles(); await upgradeRoleTemplates(); await upgradeTemplatesV5(); await upgradeTemplatesV10(); await bootstrapBuilder();
+  await seedRoles(); await upgradeRoleTemplates(); await upgradeTemplatesV5(); await upgradeTemplatesV10(); await upgradeTemplatesV104(); await bootstrapBuilder();
 }
 module.exports = { ensureSchema, getSetting, setSetting, USERNAME_RE, usernameFromEmail, freeUsername };

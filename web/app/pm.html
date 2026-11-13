@@ -74,6 +74,11 @@
   .mono{font-family:'Inter',sans-serif;}
   button{font-family:inherit;cursor:pointer;}
   input,select,textarea{font-family:inherit;font-size:14px;}
+  /* Field look, shared with the search bars: rounded, white, soft blue focus ring. Zero-specificity so compact inline editors keep their own sizing. */
+  :where(input:not([type=checkbox]):not([type=radio]):not([type=range]):not([type=file]):not([type=color]):not([type=button]):not([type=submit]):not([type=hidden]), select, textarea){background:#fff; border:1px solid var(--line); border-radius:10px; padding:9px 14px; color:var(--text); transition:border-color .15s, box-shadow .15s;}
+  :where(input:not([type=checkbox]):not([type=radio]):not([type=range]):not([type=file]), select, textarea):focus{outline:none; border-color:var(--accent); box-shadow:0 0 0 3px rgba(1,60,174,.14);}
+  :where(input, textarea)::placeholder{color:#8B9D9D;}
+
   a{color:inherit;}
 
   /* ---- App shell ---- */
@@ -104,6 +109,95 @@
   body.tool-mode .modal-back.open{inset:0; padding:0; background:var(--bg); align-items:flex-start; z-index:90; overflow-y:auto;}
   body.tool-mode .modal-back.open .modal{max-width:980px; width:100%; min-height:100%; margin:0 auto; border:none; border-radius:0; background:var(--bg); padding:26px 28px 140px;}
   body.tool-mode #modalBody [id^="closeTasks"], body.tool-mode #modalBody [id$="CloseBtn"], body.tool-mode #modalBody [id*="closeArch"]{display:none !important;}
+  /* System Architecture: a big clickable diagram with the selected piece's details beside it */
+  .arch-wide{max-width:1600px !important;} .le-wide{max-width:1280px !important;}
+  body.tool-mode .modal-back.open .modal.le-wide{max-width:1280px;}
+  body.tool-mode .modal-back.open .modal.arch-wide{max-width:1600px;}
+  .arch-grid{display:grid; grid-template-columns:minmax(0,1.7fr) minmax(320px,1fr); gap:22px; align-items:start;}
+  .arch-diagram{background:var(--panel); border:1px solid var(--line); border-radius:10px; padding:14px; position:sticky; top:12px;}
+  .arch-detail{background:var(--panel); border:1px solid var(--line); border-radius:10px; padding:18px 20px;}
+  .arch-node.clickable{cursor:pointer;} .arch-node.clickable:hover rect, .arch-node.clickable:focus rect{stroke:var(--accent); stroke-width:2.5;} .arch-node:focus{outline:none;}
+  .arch-node.sel rect{fill:var(--panel-2);}
+  .arch-conn{border-top:1px solid var(--line); margin-top:16px; padding-top:14px;} .arch-conn h5{margin:0 0 10px; font-size:12px; letter-spacing:.04em; text-transform:uppercase; color:var(--text-faint);}
+  .arch-vars{display:flex; flex-wrap:wrap; gap:6px;} .arch-vars code{background:var(--bg); border:1px solid var(--line); border-radius:6px; padding:3px 8px; font-size:12px;}
+  .arch-list{display:flex; flex-direction:column; gap:6px;}
+  .arch-chip{display:flex; justify-content:space-between; gap:10px; align-items:baseline; text-align:left; border:1px solid var(--line); background:var(--bg); border-radius:8px; padding:9px 12px; font-size:13.5px; font-weight:600; cursor:pointer; color:var(--text); font-family:inherit;}
+  .arch-chip small{font-weight:400; color:var(--text-faint);} .arch-chip:hover{border-color:var(--accent);}
+  @media(max-width:1000px){ .arch-grid{grid-template-columns:1fr;} .arch-diagram{position:static;} }
+  /* Loose Ends */
+  .le-tiles{display:grid; grid-template-columns:repeat(4,minmax(0,1fr)); gap:14px;}
+  .le-tile{display:flex; flex-direction:column; gap:4px; align-items:flex-start; text-align:left; background:var(--panel); border:1px solid var(--line); border-radius:10px; padding:16px 18px; cursor:pointer; font-family:inherit; color:var(--text);}
+  .le-tile b{font-size:28px; line-height:1.1;} .le-tile span{font-size:13px; color:var(--text-faint);} .le-tile:hover{border-color:var(--accent);} .le-tile.on{border-color:var(--accent); box-shadow:0 0 0 1px var(--accent) inset;}
+  .le-table{background:var(--panel); border:1px solid var(--line); border-radius:10px; overflow:hidden;}
+  .le-head,.le-row{display:grid; grid-template-columns:minmax(150px,1.1fr) 150px minmax(130px,.9fr) minmax(0,3fr); gap:18px; padding:14px 18px; align-items:start;}
+  .le-head{font-size:11.5px; letter-spacing:.05em; text-transform:uppercase; color:var(--text-faint); font-weight:600; border-bottom:1px solid var(--line);}
+  .le-row{border-bottom:1px solid var(--line-soft); cursor:pointer; font-size:13.5px; line-height:1.45;} .le-row:last-child{border-bottom:0;} .le-row:hover{background:var(--bg);}
+  .le-item{font-weight:700;} .le-where{color:var(--text-faint);} .le-next{white-space:pre-wrap;}
+  .le-pill{display:inline-block; font-size:12px; font-weight:600; padding:3px 11px; border-radius:999px; background:#fdf0b8; color:#6b5400; white-space:nowrap;}
+  .le-pill.le-1{background:#fdf0b8; color:#6b5400;} .le-pill.le-0{background:#fde3b0; color:#7a4a00;} .le-pill.le-2{background:#dbe8fb; color:#17407a;} .le-pill.le-3{background:#e6e6ee; color:#4a4a5c;} .le-pill.le-4{background:#d8f0dc; color:#1d5a2a;}
+  .le-edit{padding:16px 18px; background:var(--bg); border-bottom:1px solid var(--line-soft);} .le-edit-grid{display:grid; grid-template-columns:2fr 1fr 2fr; gap:12px;}
+  .ct-row{display:grid; grid-template-columns:minmax(170px,1.1fr) minmax(130px,1fr) minmax(170px,1.2fr) minmax(0,2.4fr); gap:16px; padding:14px 18px; align-items:start; border-bottom:1px solid var(--line-soft);} .ct-row:last-child{border-bottom:0;}
+  .ct-head{font-size:11.5px; letter-spacing:.05em; text-transform:uppercase; color:var(--text-faint); font-weight:600; border-bottom:1px solid var(--line); align-items:center;}
+  @media(max-width:860px){ .ct-row{grid-template-columns:1fr; gap:6px;} .ct-head{display:none;} }
+  /* Pathways: left to right, three coloured role bundles, scrolls sideways */
+  .pw-scroll{overflow-x:auto; padding:6px 2px 16px; scroll-snap-type:x proximity; border-radius:12px;} .pw-scroll:focus{outline:none;}
+  .pw-track{display:flex; align-items:stretch; width:max-content; gap:0;}
+  .pw-group{display:flex; flex-direction:column; border-radius:14px; padding:0 14px 14px; background:var(--gbg); border:2px solid var(--gc); scroll-snap-align:start;}
+  .pw-g-est{--gc:#013CAE; --gbg:#eef3fc;} .pw-g-pm{--gc:#1E7F7A; --gbg:#e9f5f4;} .pw-g-ar{--gc:#B7791F; --gbg:#fbf3e4;}
+  .pw-gh{display:flex; align-items:baseline; gap:10px; padding:12px 4px 12px;} .pw-gh b{font-size:19px; color:var(--gc);} .pw-gh span{font-size:13px; color:var(--text-faint);}
+  .pw-grow{display:flex; align-items:stretch; flex:1;}
+  .pw-stage,.pw-conn{background:var(--panel); border:1px solid var(--line); border-radius:12px; padding:16px 18px; width:330px; flex:0 0 auto; box-sizing:border-box;}
+  .pw-stage{border-top:4px solid var(--gc, var(--accent));} .pw-conn{background:#fff; border:1px dashed #8aa3d6; width:270px; padding:14px 16px;}
+  .pw-group > .pw-grow > .pw-conn{background:#f4f8ff;} .pw-track > .pw-conn{align-self:center; background:#eef3fc;}
+  .pw-top{display:flex; justify-content:space-between; gap:12px; align-items:flex-start;} .pw-top h4{margin:2px 0 0; font-size:18px; text-transform:none;}
+  .pw-who{font-size:11.5px; letter-spacing:.06em; text-transform:uppercase; color:var(--text-faint); font-weight:700;}
+  .pw-starts{margin:8px 0 6px; color:var(--text-faint); font-size:13px;} .pw-steps{margin:0 0 12px 18px; padding:0; font-size:13.5px; line-height:1.5;} .pw-steps li{margin-bottom:4px;}
+  .pw-lab{font-size:11px; letter-spacing:.05em; text-transform:uppercase; color:var(--text-faint); font-weight:600; margin:6px 0 6px;}
+  .pw-chip{display:inline-block; margin:0 5px 5px 0; padding:3px 10px; border-radius:999px; background:#eaf0f0; font-size:12px;} .pw-conn .pw-chip{background:#fff; border:1px solid #c9d8f3;}
+  .pw-conn-h{display:flex; justify-content:space-between; align-items:center; gap:10px;} .pw-conn-h b{font-size:15px; color:var(--accent);} .pw-rule{margin:6px 0 4px; font-size:13px;} .pw-stays{margin-top:4px; font-size:12px; color:var(--text-faint);}
+  .pw-arrow{width:34px; flex:0 0 34px; position:relative; align-self:center; height:20px;} .pw-arrow::before{content:""; position:absolute; left:2px; right:8px; top:9px; height:2px; background:#9fb0b0;} .pw-arrow::after{content:""; position:absolute; right:2px; top:4px; border:6px solid transparent; border-left-color:#9fb0b0; border-right:0;}
+
+  /* Progress Report: always a light "paper" page, printable as Letter landscape */
+  .rp{--panel:#fff; --panel-2:#eef3fc; --line:#d7e0e0; --text:#1d2427; --text-faint:#5c6f70; --accent:#013CAE; --blue:#013CAE; --teal:#1E7F7A; --amber:#B7791F; color:#1d2427; font-size:11.5px; line-height:1.45;}
+  .rp *{box-sizing:border-box;} .rp h1,.rp h2,.rp h3,.rp h4{text-transform:none;}
+  .rp-page{background:#fff; width:10.2in; max-width:100%; margin:0 auto 16px; padding:.35in .4in .5in; border:1px solid var(--line); border-radius:10px; position:relative; break-after:page; min-height:7.7in;}
+  .rp .hd{display:flex; align-items:center; gap:14px; border-bottom:2px solid #013CAE; padding-bottom:9px; margin-bottom:12px;} .rp .hd h1{margin:0; font-size:22px;} .rp .hd .sub{color:#5c6f70; font-size:12px;} .rp .hd .r{margin-left:auto; text-align:right; color:#5c6f70; font-size:10.5px;}
+  .rp .ft{position:absolute; left:.4in; right:.4in; bottom:.18in; display:flex; justify-content:space-between; color:#8b9d9d; font-size:9.5px;}
+  .rp h2{font-size:15px; margin:0 0 6px;} .rp .key{display:flex; gap:10px; align-items:center; flex-wrap:wrap; font-size:10.5px; color:#5c6f70; margin-bottom:10px;}
+  .rp .q{display:grid; grid-template-columns:1fr 1fr; gap:14px;} .rp .qc{border:1px solid var(--line); border-radius:12px; padding:12px 14px;} .rp .qc h2{color:#013CAE; font-size:14px;} .rp .qc .big{color:#5c6f70; font-size:12px; margin-bottom:8px;}
+  .rp-row{display:flex; align-items:center; gap:10px; padding:7px 0; border-top:1px solid #eef2f2;} .rp-row:first-of-type{border-top:0;} .rp-row>b{min-width:120px; font-size:12px;} .rp-row .t{flex:1; color:#5c6f70; font-size:11px;}
+  .rp-bar{display:flex; height:9px; border-radius:5px; overflow:hidden; background:#eef2f2; margin-bottom:3px;} .rp-bar i{display:block; height:100%;} .rp-b-live{background:#3ea35a;} .rp-b-next{background:#6a9be0;} .rp-b-partly{background:#e6c13c;} .rp-b-none{background:#d9a4a0;} .rp-barlab{font-size:10px; color:#5c6f70;}
+  .rp .score{display:grid; grid-template-columns:repeat(3,1fr); gap:12px; margin-top:12px;} .rp .sc{border-radius:12px; padding:11px 13px; border:2px solid var(--c); background:var(--bg);} .rp .sc.e{--c:#013CAE; --bg:#eef3fc;} .rp .sc.p{--c:#1E7F7A; --bg:#e9f5f4;} .rp .sc.a{--c:#B7791F; --bg:#fbf3e4;}
+  .rp .sc h3{margin:0 0 2px; font-size:15px; color:var(--c);} .rp .sc .v{font-weight:700; font-size:13px; margin-bottom:3px;} .rp .sc p{margin:0; color:#3e4f50;}
+  .rp .one{margin-top:12px; background:#eef3fc; border:1px solid #c9d8f3; border-radius:12px; padding:11px 15px; font-size:13px;} .rp .one b{color:#013CAE;} .rp .foot{margin-top:8px; font-size:10.5px; color:#5c6f70;}
+  .rp .flow{display:flex; align-items:stretch;} .rp .grp{border:2px solid var(--c); background:var(--bg); border-radius:14px; padding:0 9px 9px; display:flex; flex-direction:column;} .rp .grp.e{--c:#013CAE; --bg:#eef3fc;} .rp .grp.p{--c:#1E7F7A; --bg:#e9f5f4;} .rp .grp.a{--c:#B7791F; --bg:#fbf3e4;}
+  .rp .gh{padding:8px 3px 7px; font-weight:800; font-size:14px; color:var(--c);} .rp .gh span{font-weight:500; color:#5c6f70; font-size:11px; margin-left:6px;} .rp .gr{display:flex; flex:1; align-items:stretch;}
+  .rp .st{background:#fff; border:1px solid var(--line); border-top:4px solid #888; border-radius:10px; padding:9px 10px; width:2.0in; flex:0 0 2.0in;} .rp .grp.e .st{border-top-color:#013CAE;} .rp .grp.p .st{border-top-color:#1E7F7A;} .rp .grp.a .st{border-top-color:#B7791F;}
+  .rp .st h4{margin:0 0 4px; font-size:12px;} .rp .st ol{margin:0 0 6px 15px; padding:0; font-size:10px; line-height:1.35;} .rp .st li{margin-bottom:2px;}
+  .rp .lab{font-size:8.5px; letter-spacing:.05em; text-transform:uppercase; color:#5c6f70; font-weight:700; margin:4px 0 3px;} .rp .chip{display:inline-block; background:#eaf0f0; border-radius:999px; padding:1px 7px; margin:0 3px 3px 0; font-size:9.5px;}
+  .rp .cn{background:#fff; border:1.5px dashed #8aa3d6; border-radius:10px; padding:8px 9px; width:1.6in; flex:0 0 1.6in; align-self:center;} .rp .cn>b{font-size:11.5px; color:#013CAE; display:block; margin-bottom:3px;} .rp .cn .rule{font-size:9.5px; margin:4px 0;} .rp .cn .chip{background:#f4f8ff; border:1px solid #c9d8f3;} .rp .cn .stay{font-size:9px; color:#5c6f70; margin-top:3px;}
+  .rp .ar{width:.25in; flex:0 0 .25in; position:relative; align-self:center; height:14px;} .rp .ar:before{content:""; position:absolute; left:1px; right:6px; top:6px; height:2px; background:#9fb0b0;} .rp .ar:after{content:""; position:absolute; right:1px; top:1px; border:6px solid transparent; border-left-color:#9fb0b0; border-right:0;}
+  .rp .see{display:grid; grid-template-columns:repeat(4,1fr); gap:10px; margin-top:10px;} .rp .see div{border:1px solid var(--line); border-radius:9px; padding:7px 9px; font-size:10px;} .rp .see b{display:block; font-size:11px; margin-bottom:2px;}
+  .rp .two{display:grid; grid-template-columns:1fr 1fr; gap:14px;} .rp .br{border:2px solid var(--c); border-radius:12px; overflow:hidden;} .rp .br.e{--c:#013CAE;} .rp .br.p{--c:#1E7F7A;} .rp .br.a{--c:#B7791F;} .rp .br h2{margin:0; padding:7px 12px; background:var(--c); color:#fff; font-size:13.5px;}
+  .rp .it{display:grid; grid-template-columns:1.05in 1fr auto; gap:8px; align-items:start; padding:5px 12px; border-top:1px solid #eef2f2;} .rp .it b{font-size:11px;} .rp .it .d{color:#3e4f50; font-size:10px;} .rp .three-it{display:grid; grid-template-columns:repeat(3,1fr);} .rp .three-it .it{grid-template-columns:1fr auto; border-top:0;} .rp .three-it .it .d{grid-column:1 / 3;} .rp .it .pw-pill{justify-self:start; font-size:10px; padding:2px 8px;}
+  .rp .arch{display:grid; grid-template-columns:1.15fr 1fr; gap:16px;} .rp .arch-svg{background:#fff;} .rp .leg .li{display:grid; grid-template-columns:1.3in 1fr; gap:8px; padding:5px 0; border-top:1px solid #eef2f2; font-size:10px;} .rp .leg .li:first-child{border-top:0;} .rp .leg b{font-size:10.5px;}
+  .rp .three{display:grid; grid-template-columns:repeat(3,1fr); gap:12px;} .rp .col{border:1px solid var(--line); border-radius:12px; padding:11px 13px;} .rp .col h2{font-size:13.5px;} .rp .col .s{color:#5c6f70; font-size:10.5px; margin-bottom:6px;} .rp .col ul{margin:0; padding:0; list-style:none;} .rp .col li{padding:5px 0; border-top:1px solid #eef2f2; font-size:10px;} .rp .col li:first-child{border-top:0;} .rp .col li b{display:block; font-size:10.5px;} .rp .col.w{border-color:#e6c76a; background:#fffbea;} .rp .col.b{border-color:#b9cdf0; background:#f6f9ff;}
+  .rp-edit{cursor:pointer;} .rp-edit:hover{outline:2px solid #013CAE; outline-offset:1px;}
+  @media print{
+    @page{size:letter landscape; margin:.35in;}
+    html,body{height:auto !important; overflow:visible !important; background:#fff !important;}
+    body.tool-mode .modal-back.open{position:static !important; display:block !important; overflow:visible !important; background:#fff !important; padding:0 !important;}
+    body.tool-mode .modal-back.open .modal{max-width:none !important; width:auto !important; padding:0 !important; margin:0 !important; min-height:0 !important; background:#fff !important;}
+    body.tool-mode #app{display:none !important;}
+    .rp-noprint{display:none !important;} .rp-page{width:auto; margin:0; border:0; border-radius:0; padding:0 0 .3in; min-height:7.1in;} .rp .ft{left:0; right:0; bottom:0;}
+    .rp, .rp *{-webkit-print-color-adjust:exact; print-color-adjust:exact;} .rp-edit:hover{outline:none;}
+  }
+  .pw-pill{display:inline-block; font-size:12px; font-weight:600; padding:3px 11px; border-radius:999px; white-space:nowrap;} .pw-live{background:#d8f0dc; color:#1d5a2a;} .pw-part{background:#fdf0b8; color:#6b5400;} .pw-fut{background:#fff; color:#8a2a24; border:1px solid #d9a4a0;} .pw-next{background:#dbe8fb; color:#17407a;}
+  .pw-see{margin-top:18px;} .pw-see h4{margin:0 0 10px; font-size:16px; text-transform:none;} .pw-see-grid{display:grid; grid-template-columns:repeat(4,minmax(0,1fr)); gap:12px;}
+  .pw-see-grid>div{background:var(--panel); border:1px solid var(--line); border-radius:10px; padding:12px 14px; font-size:13px; line-height:1.45;} .pw-see-grid b{display:block; margin-bottom:4px; font-size:13.5px;}
+  @media(max-width:860px){ .pw-see-grid{grid-template-columns:1fr 1fr;} }
+  .le-empty{padding:22px; text-align:center; color:var(--text-faint);}
+  @media(max-width:860px){ .le-tiles{grid-template-columns:repeat(2,minmax(0,1fr));} .le-head{display:none;} .le-row{grid-template-columns:1fr; gap:6px;} .le-edit-grid{grid-template-columns:1fr;} }
   #toolReopen{display:none;text-align:center;padding:60px 20px}body.tool-mode.tool-closed #toolReopen{display:block}
   #sidebar{
     width: 220px;
@@ -399,10 +493,10 @@
   .field{margin-bottom:14px;}
   .field label{display:block; font-size:11.5px; color:var(--text-dim); margin-bottom:5px; font-weight:600; text-transform:uppercase; letter-spacing:.03em;}
   .field input, .field select, .field textarea{
-    width:100%; background:var(--bg); border:1px solid var(--line); color:var(--text);
-    padding:9px 10px; border-radius:var(--radius);
+    width:100%; background:#fff; border:1px solid var(--line); color:var(--text);
+    padding:10px 14px; border-radius:10px;
   }
-  .field input:focus, .field select:focus, .field textarea:focus{outline:none; border-color:var(--accent);}
+  .field input:focus, .field select:focus, .field textarea:focus{outline:none; border-color:var(--accent); box-shadow:0 0 0 3px rgba(1,60,174,.14);}
   .field textarea{resize:vertical; min-height:56px;}
   .row2{display:grid; grid-template-columns:1fr 1fr; gap:12px;}
   .mny-split{display:grid; grid-template-columns:1fr 1fr; gap:0;}
@@ -952,7 +1046,7 @@ h1,h2,h3,h4,h5,.pk-h b,.mp-h b,.es-aic summary{text-transform:capitalize}
       </div>
       <div id="presenceWidget" style="font-size:11px; color:var(--text-faint); margin-bottom:6px; line-height:1.4;"></div>
       <div id="storageNote">Loading…</div>
-      <button class="btn ghost small" id="devTasksBtn" style="padding:4px 0; margin-top:6px; color:var(--text-faint); display:none;" type="button">Dev Backlog</button><br>
+      <button class="btn ghost small" id="devTasksBtn" style="padding:4px 0; margin-top:6px; color:var(--text-faint); display:none;" type="button">Loose Ends</button><br>
       <button class="btn ghost small" id="requestsBtn" style="padding:4px 0; color:var(--text-faint); display:none;" type="button">Removal requests<span id="requestsBadge" style="display:none; margin-left:6px; background:var(--status-delayed); color:#fff; border-radius:9px; padding:0 6px; font-size:10px;"></span></button><br>
       <button class="btn ghost small" id="changeCodeBtn" style="padding:4px 0; color:var(--text-faint); display:none;" type="button">Access Codes</button><br>
       <button class="btn ghost small" id="settingsHubBtn" style="padding:4px 0; color:var(--text-faint); display:none;" type="button">Settings &amp; Connections</button><br>
@@ -974,8 +1068,8 @@ h1,h2,h3,h4,h5,.pk-h b,.mp-h b,.es-aic summary{text-transform:capitalize}
 
 <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
 <script src="/config.js"></script>
-<script src="/app/media.js?v=10.4.0"></script>
-<script src="/app/compliance.js?v=10.4.0"></script>
+<script src="/app/media.js?v=10.5.0"></script>
+<script src="/app/compliance.js?v=10.5.0"></script>
 <script>
 /* =========================================================
    DATA LAYER
@@ -1215,24 +1309,42 @@ let POLL_TIMER = null;
 // in place from the modal, same everything-in-DATA pattern as the rest
 // of the board.
 const ARCH_SLOTS = [
-  { key:'domain', title:'Domain' },
+  { key:'domain', title:'Front End' },
   { key:'github', title:'GitHub' },
-  { key:'railway', title:'Railway' },
+  { key:'railway', title:'Railway API' },
+  { key:'database', title:'Database + Files' },
   { key:'anthropic', title:'Anthropic API' },
+  { key:'email', title:'Email' },
   { key:'gmaps', title:'Google Maps API' },
-  { key:'drive', title:'Google Drive API' },
+  { key:'drive', title:'Google Drive' },
   { key:'workspace', title:'Google Workspace' }
 ];
-function seedArchitecture(){
+// Reviewed 2026-11-13 against the go. platform as it is actually built. Anything not confirmed from the code is marked "Confirm".
+const ARCH_WHY = {"domain": "Existing company hosting; the front end is only static files, so it is cheap and easy to update (upload and refresh) with no server to look after. It could move onto Railway later if we ever want one place for everything.", "github": "Railway redeploys automatically from it, and the full history lets us roll back a bad release. Nothing secret is stored in it.", "railway": "Runs the API and MySQL side by side with backups and one bill, and nobody has to maintain a server. It sits in the company's own workspace, so Lucas Industrial owns it.", "database": "Relational tables let the Estimator, PM and Pay Apps share one project / customer / contract record (see DATA-SPINE). Files sit on a volume instead because drawing sets run 200-300 MB each and do not belong in a database.", "anthropic": "Drafting a bid from an email and plan set is where the app saves the most time. Calling it from the server keeps the key secret and lets us choose the model and log usage.", "email": "Railway does not allow plain SMTP, so mail goes through an HTTPS email service. A verified company domain keeps password-reset email out of spam.", "gmaps": "Crew and sub recommendations depend on real drive distance and time, and the Map page needs real geocoding. A domain-restricted key is the normal Google Maps setup.", "drive": "The company already keeps job folders in Drive (1 Project Information ... 6 Contract Forms), so reading them saves retyping. The packet archive gives a second copy outside Railway.", "workspace": "The company's own identity: staff email and the domain. Running the Drive connection as an Internal app avoids Google's verification review."};
+function archSeedRows(){
   return [
-    { id: uid('arch'), diagramKey:'domain', name: 'pm.lucasindustrial.us', category: 'Hosting / DNS', purpose: 'The web address the board is actually opened at.', cost: 'Low, usually a flat annual registrar/DNS fee (confirm current provider/cost).', owner: '', notes: '' },
-    { id: uid('arch'), diagramKey:'github', name: 'GitHub', category: 'Source control', purpose: 'Holds the app\'s source code. Confirm whether it also serves the static page directly, or whether that\'s Railway\'s job.', cost: 'Free at this scale for a private repo.', owner: '', notes: '' },
-    { id: uid('arch'), diagramKey:'railway', name: 'Railway', category: 'Backend / hosting', purpose: 'Runs the backend service the app talks to for everything real — reading/writing the actual board data (projects, crew, schedule), separate from the frontend code itself.', cost: 'Paid, usage-based — scales with compute and any database storage.', owner: '', notes: '' },
-    { id: uid('arch'), diagramKey:'anthropic', name: 'Anthropic (Claude)', category: 'AI', purpose: 'Powers the assistant chat, Logistics AI, and every document/folder-name extraction feature. Calls are proxied through the Railway backend, not made directly from the browser, so the API key itself never sits in this file.', cost: 'Usage-based — scales with how much AI activity actually runs across the board (assistant messages, extraction calls, Logistics checks).', owner: '', notes: '' },
-    { id: uid('arch'), diagramKey:'gmaps', name: 'Google Maps Platform', category: 'Mapping', purpose: 'Powers the Map page, address autocomplete/geocoding for crew and project locations, and driving distance/time calculations.', cost: 'Usage-based, has a monthly free tier before charges start.', owner: '', notes: 'API key lives directly in the app (client-side) — this is safe for Maps specifically because Google restricts it by domain, unlike a secret.' },
-    { id: uid('arch'), diagramKey:'drive', name: 'Google Cloud (Drive API)', category: 'Integration', purpose: '"Check Drive Folders" (Projects page) uses this to read real folder and document data from Google Drive, read-only, on-demand only.', cost: 'The Drive API itself is free — no cost just for the Cloud project existing.', owner: 'rlucas@lucasindustrial.us — moved here after the OAuth Client ID was first created under rob@rjl-marketing by mistake (see backlog v13.6.2).', notes: 'Uses a per-session OAuth token only, no client secret stored anywhere in this app.' },
-    { id: uid('arch'), diagramKey:'workspace', name: 'lucasindustrial.us', category: 'Identity / admin', purpose: 'The company\'s email/domain — also what lets the Drive integration above run as an "Internal" app with no Google verification review required.', cost: 'Per-seat Workspace subscription (confirm current plan/cost).', owner: '', notes: '' }
-  ];
+    { diagramKey:'domain', name: 'go.lucasindustrial.us (SiteGround)', category: 'Front end / DNS', purpose: 'The web address everyone opens. SiteGround serves the static pages only (index.html, and the Estimator, PM and Builder screens under /app). No data lives here; every screen talks to the Railway API.', cost: 'SiteGround hosting plan plus the annual domain fee. Confirm current plan / cost.', notes: 'Updated by uploading files into public_html (File Manager). A hard refresh picks up a new build; the footer shows the version.' },
+    { diagramKey:'github', name: 'GitHub (rjlwebmarketing/lucind)', category: 'Source control', purpose: 'Holds the backend code. A commit to the repo makes Railway redeploy the API. It does NOT serve the front end (SiteGround does).', cost: 'Free at this scale.', notes: 'Repo sits under the rjlwebmarketing account on purpose for now; move to a company organization later. Commit once per release: Railway can crash on file-by-file commits, so judge by the newest deployment.' },
+    { diagramKey:'railway', name: 'Railway (Lucas Industrial workspace, Pro)', category: 'Backend / hosting', purpose: 'Runs the API (Node + Express) that does everything real: sign-in and roles, bids and estimates, the PM board, pay apps, files, Estimator AI calls, notifications and the audit log.', cost: 'Pro plan $20 a month including $20 of usage credit; overage is usage-based.', notes: 'Live API: lucind-production.up.railway.app. Confirm whether the planned goapi.lucasindustrial.us name is set up. Forklift app is a separate Railway project with its own database.' },
+    { diagramKey:'database', name: 'MySQL + Volume (on Railway)', category: 'Data', purpose: 'MySQL holds every record: people and roles, bids, estimates, catalog, contracts, the PM board, history. The Volume (/data, FILES_DIR=/data/files) holds uploaded files: drawings, PDFs, photos, sub documents.', cost: 'Usage-based inside the Railway plan; size the Volume at about 1 GB per active project.', notes: 'Volume backups are on (Railway). Point-in-time recovery is off (see backlog). The in-app backup (Settings & Connections > Backup) saves the database but NOT the uploaded files.' },
+    { diagramKey:'anthropic', name: 'Anthropic (Claude)', category: 'AI', purpose: 'Powers the Estimator AI (drafts bids from the email and plan set, reads contracts) and the PM Assistant / Logistics AI / document extraction. Always called from the Railway API, so the key (ANTHROPIC_API_KEY) never reaches a browser.', cost: 'Usage-based; scales with AI activity. Models set by AI_ESTIMATOR_MODEL / AI_CONTRACT_MODEL.', notes: '' },
+    { diagramKey:'email', name: 'Resend (email)', category: 'Email', purpose: 'Sends password-reset and invitation email from no-reply@lucasindustrial.us (MAIL_PROVIDER=resend, RESEND_API_KEY). Notices to subs and customers are still drafted by the app and sent by the person from their own email.', cost: 'Free tier covers this volume. Confirm plan.', notes: 'Confirm the domain shows Verified in Resend (DNS records at the registrar).' },
+    { diagramKey:'gmaps', name: 'Google Maps Platform', category: 'Mapping', purpose: 'Map page, address autocomplete and geocoding for crew and project locations, driving distance and time.', cost: 'Usage-based with a monthly free tier.', notes: 'The key is hard-coded in pm.html and is called straight from the browser. Safe only if restricted to go.lucasindustrial.us: make a new restricted key and set it in Settings & Connections (see backlog).' },
+    { diagramKey:'drive', name: 'Google Drive API', category: 'Integration', purpose: 'Two uses: (1) the server archives each packet to Drive (GOOGLE_OAUTH_CLIENT_ID / SECRET, DRIVE_TOKEN_KEY on Railway); (2) PM > "Check Drive Folders" reads real folder names read-only, on demand, from the browser with a per-session token.', cost: 'The Drive API itself is free.', notes: 'The OAuth client must live in the lucasindustrial.us Google Cloud organization (an earlier one was created under rjl-marketing by mistake). Confirm current owner account.' },
+    { diagramKey:'workspace', name: 'Google Workspace (lucasindustrial.us)', category: 'Identity / admin', purpose: 'Company email and domain; also lets the Drive connection run as an Internal app with no Google verification review.', cost: 'Per-seat subscription. Confirm plan / cost.', notes: '' }
+  ].map(r => Object.assign({ id: uid('arch'), owner: '', why: ARCH_WHY[r.diagramKey] || '' }, r));
+}
+function seedArchitecture(){ return archSeedRows(); }
+// One-time refresh of a board saved with the old (2026-10) architecture text. Rows are matched by diagram slot; an owner or note the Builder typed is kept.
+function refreshArchitecture(){
+  if(DATA.archRefreshed || !Array.isArray(DATA.architecture)) return false;
+  const oldNotes = new Set(['', 'API key lives directly in the app (client-side) — this is safe for Maps specifically because Google restricts it by domain, unlike a secret.', 'Uses a per-session OAuth token only, no client secret stored anywhere in this app.']);
+  const keep = DATA.architecture.filter(r => !r.diagramKey || !ARCH_SLOTS.some(sl => sl.key === r.diagramKey));
+  const old = new Map(DATA.architecture.filter(r => r.diagramKey).map(r => [r.diagramKey, r]));
+  const fresh = archSeedRows().map(n => { const o = old.get(n.diagramKey); if(!o) return n; if(o.owner && o.owner.trim() && !/moved here after the OAuth/.test(o.owner)) n.owner = o.owner; if(o.notes && !oldNotes.has(o.notes) && o.notes !== n.notes) n.notes = o.notes + (n.notes ? '\n' + n.notes : ''); n.id = o.id || n.id; return n; });
+  DATA.architecture = fresh.concat(keep);
+  DATA.archRefreshed = 1;
+  return true;
 }
 function seedDevHowTos(){
   return [
@@ -1253,13 +1365,8 @@ function seedDevHowTos(){
   ];
 }
 function seedDevTasks(){
-  // Tidied 2026-11-13: only open, still-wanted items. Finished work lives in the release notes, not here.
   return [
-    { id: uid('task'), text: "Add availability-based crew icons (available / assigned / unavailable) once designed — currently one fixed blue icon for everyone", done: false, date: isoDaysFromNow(0) },
-    { id: uid('task'), text: "BIG ONE — cause/effect of cascading schedule changes: right now every edit (status, dates, delays) is isolated. Once the assistant (or anyone) can touch dates, a single change to one project could ripple into others (shared crew, dependent trades, etc.) with no warning. Need to design how to detect and surface that impact to the user before it becomes a real risk — not solved yet, just flagged.", done: false, date: isoDaysFromNow(0) },
-    { id: uid('task'), text: "Expand assistant's allowed actions later (dates, new projects/people, etc.) once the narrow version has proven reliable — owner's call, not urgent.", done: false, date: isoDaysFromNow(0) },
-    { id: uid('task'), text: "Owner to work out a process with owner/manager team for what documentation is appropriate to upload into this module — not solved yet, flagged for that conversation.", done: false, date: isoDaysFromNow(0) },
-    ...LIVE_CHANGELOG.map(e => ({ id: uid('task'), key: e.key, text: e.text, done: false, date: isoDaysFromNow(0) }))
+    ...LIVE_CHANGELOG.map(e => ({ id: uid('task'), key: e.key, title: e.title, status: e.status, where: e.where, next: e.next, text: e.title + ' \u2014 ' + e.next, done: false, date: isoDaysFromNow(0) }))
   ];
 }
 
@@ -1321,7 +1428,7 @@ async function loadData(){
   // order; anything else (rows added/removed/reordered) is left alone
   // rather than risk mislabeling someone's actual edits.
   if(DATA.architecture.length===7 && DATA.architecture.every(r=>!r.diagramKey)){
-    DATA.architecture.forEach((r,i) => { if(ARCH_SLOTS[i]) r.diagramKey = ARCH_SLOTS[i].key; });
+    DATA.architecture.forEach((r,i) => { const k = ['domain','github','railway','anthropic','gmaps','drive','workspace'][i]; if(k) r.diagramKey = k; });   // the original 7-row order
   }
   if(ROLE === 'builder' && (!DATA.devTasks || !DATA.devTasks.length)) DATA.devTasks = seedDevTasks();
   if(!DATA.devTasks) DATA.devTasks = [];
@@ -1334,6 +1441,7 @@ async function loadData(){
     DATA.settings.latestKnownVersion = APP_VERSION;
     needsSave = true;
   }
+  if(ROLE === 'builder' && refreshArchitecture()) needsSave = true;
   if(ROLE === 'builder' && tidyDevBacklog()) needsSave = true;
   if(ROLE === 'builder' && syncLiveChangelog()) needsSave = true;
   LOADED_REVISION = DATA.revision;
@@ -1361,20 +1469,36 @@ function tidyDevBacklog(){
 // an empty backlog). Matched by key, so this adds each entry once and never
 // rewrites an existing one.
 const LIVE_CHANGELOG = [
-  { key: 'todo-security-2026-11', done: false, text: "SECURITY \u2014 what is left. Sign-in is now server-side (codes never reach the page) and Railway Pro backups are on, so the old audit is closed. Still open: (1) the Google Maps key is hard-coded in pm.html \u2014 make a new key restricted to go.lucasindustrial.us, remove the old one from the source, set the new one only in Settings & Connections; (2) passwords set by the Builder can be short \u2014 tighten before wider use; (3) confirm every save endpoint checks the role (PM cannot change bids, wages or Temp For Hire)." },
-  { key: 'todo-email-send', done: false, text: "Send email from the app instead of copy / mailto (assignment notices, compliance notices, 'cut a check', share links). Needs one decision: Resend + DNS for lucasindustrial.us, or a Gmail connection." },
-  { key: 'todo-backup-restore', done: false, text: "Backups: a Restore tool (today a restore means sending the backup file to the builder), scheduled automatic backups to Google Drive, and a 'last backup' warning on the Builder dashboard if it is older than 7 days. Also a maintenance banner before a deploy." },
-  { key: 'todo-driver-upload', done: false, text: "Driver upload by private link (phone, no login) for bills of lading and delivery photos. Today the PM / Owner / Builder upload them for the driver." },
-  { key: 'todo-popups', done: false, text: "Turn the remaining pop-ups into in-pane pages (about 40, e.g. duplicate scanner, requests, profile submissions), and the Pay App review / settings dialogs that replace the project page while open." },
-  { key: 'todo-sow-next', done: false, text: "Scope of Work, next steps: AI-drafted tasks (needs real examples from Rob), per-scope tasks for partial awards, PM-added tasks, what happens when the Estimator revises after hand-off (no sync today), per-task notes / photos, task progress on Dispatch and the dashboard." },
-  { key: 'todo-money-stage2', done: false, text: "MONEY \u2014 NEXT STAGES (from the 2026-10 planning answers). STAGE 2: sub proposals. One link sent to ALL subs on file with the project details (scope, city/state, dates \u2014 NOT the GC/customer name or our pricing); each sub submits a proposal; the module's AI reads it and captures + stores the numbers; the project always shows the primary sub, a BACKUP sub and the backup's price (the data model for primary/backup deals already exists in v17.0.0, so a proposal just becomes a deal with source='proposal'). Needs: a copy of the actual proposal form the user sends to subs (user to supply), and reuse of the existing one-time hashed-token link pattern (routes/intake.js). STAGE 3: cash overview across projects, finer reporting, accounting hand-off if ever wanted. ALSO OPEN: send the 'cut a check' e-mail straight from the app instead of opening the e-mail app (needs the Gmail connection decision); lengthen the PM access code; decide whether the Owner wants a badge/alert when the PM changes a money value (the change archive already records every change, but nothing alerts yet); more customer billing-window rules as they are learned (Money > Billing windows)." },
-  { key: 'todo-pitr-2026-10', done: false, text: "FOR CONSIDERATION LATER — Railway MySQL point-in-time recovery (PITR). Checked 2026-10-10: Railway volume backups are on (a backup exists, next one scheduled automatically), but PITR is off. Volume backups restore the database to the moment of each backup; PITR would restore to any recent minute (continuous backups + binlog archiving; costs extra; MySQL service redeploys once when enabled). Not needed now: the app's own restore points cover employee mistakes within minutes, and the volume backup covers database loss. Revisit when the board holds data we couldn't afford to lose a day of. Also to check: open Edit schedule on the Backups tab and make sure volume backups run daily, not weekly." },
+  {"key": "todo-security-2026-11", "title": "Security: what is left", "status": "To Build", "where": "Settings & Connections, Roles & Templates, every save", "next": "Sign-in is server-side and Railway Pro backups are on, so the old audit is closed. Still open: (1) the Google Maps key is hard-coded in pm.html: make a new key restricted to go.lucasindustrial.us, remove the old one, set the new one only in Settings & Connections; (2) passwords set by the Builder can be short: tighten before wider use; (3) confirm every save checks the role (PM cannot change bids, wages or Temp For Hire)."},
+  {"key": "todo-email-send", "title": "Send email from the app", "status": "Waiting On", "where": "Assignment notices, compliance notices, 'cut a check', share links", "next": "Today the app drafts the email and the person opens it in their own email program. Needs one decision: Resend + DNS for lucasindustrial.us, or a Gmail connection."},
+  {"key": "todo-backup-restore", "title": "Backups: restore, schedule, reminder", "status": "To Build", "where": "Settings & Connections > Backup, Builder dashboard", "next": "A Restore tool (today a restore means sending the backup file to the builder), scheduled automatic backups to Google Drive, a \"last backup\" warning if older than 7 days, and a maintenance banner before a deploy."},
+  {"key": "todo-driver-upload", "title": "Driver upload by private link", "status": "To Build", "where": "Project > Overview & Files", "next": "A phone link with no login so drivers can add bills of lading and delivery photos. Today the PM, Owner or Builder uploads them for the driver."},
+  {"key": "todo-popups", "title": "Remaining pop-ups to pages", "status": "To Build", "where": "Duplicate scanner, requests, profile submissions, Pay App review / settings", "next": "About 40 dialogs still pop up. Turn them into in-pane pages the same way as the person, project and Builder screens. Pay App dialogs opened inside the project's Pay Apps tab replace the project page while open."},
+  {"key": "todo-sow-next", "title": "Scope of Work: next steps", "status": "Future / Ideas", "where": "Estimator > Scope of Work, Project > Scope of Work", "next": "AI-drafted tasks (needs real examples from Rob), per-scope tasks for partial awards, PM-added tasks, what happens when the Estimator revises after hand-off (no sync today), per-task notes and photos, task progress on Dispatch and the dashboard."},
+  {"key": "todo-money-stage2", "title": "Pay Apps: next stages", "status": "Waiting On", "where": "Proposals, Pay Apps", "next": "Stage 2: one link to ALL subs with project details (not the GC name or our pricing); each sub submits a proposal, the AI reads and stores the numbers, and the project shows the primary sub plus a backup and the backup's price. Needs a copy of the proposal form you send to subs. Stage 3: cash overview across projects, finer reporting. Also: alert when the PM changes a money value, lengthen the PM access code, more customer billing-window rules as learned."},
+  {"key": "todo-pitr-2026-10", "title": "Railway point-in-time recovery", "status": "Future / Ideas", "where": "Railway > MySQL > Backups", "next": "Checked 2026-10-10: volume backups are on, point-in-time recovery is off (extra cost, one redeploy). Not needed now; revisit when the data is something we cannot lose a day of. Also open Edit Schedule on the Backups tab and make sure volume backups run daily, not weekly."},
+  {"key": "todo-arch-confirm", "title": "Confirm the System Architecture details", "status": "To Check", "where": "Builder > System Architecture", "next": "Cards marked Confirm: API domain (lucind-production vs goapi.), Resend verified and plan, which Google account owns the Drive OAuth client, SiteGround and Workspace costs, and whether the old pm.lucasindustrial.us site is still live."},
+  {"key": "todo-tax-rate", "title": "Tax rates and the tax database", "status": "Waiting On", "where": "Estimator > Estimate", "next": "Baxter 2118 / 2136 use 9.75%, 2168 uses 7.875%; Nashville 2188 shows two tax lines. Need the rule for which jurisdiction applies and which lines are taxable."},
+  {"key": "todo-mobilization", "title": "Mobilization pricing rule", "status": "Waiting On", "where": "Estimator AI, General block", "next": "Mike's rule for pricing mobilization from distance: base plus per mile, trucks, number of mobilizations."},
+  {"key": "todo-catalog-prices", "title": "Catalog prices", "status": "Waiting On", "where": "Estimator > Catalog, Estimator AI", "next": "None of the real 2188 items are priced in the catalog (primer, scissor lifts, boom lift, crane service, dektites, roof patch kits, curb install). Enter them, or upload past estimates to the bid as Submitted Estimates."},
+  {"key": "todo-crew-icons", "match": "Add availability-based crew icons", "title": "Availability crew icons", "status": "Future / Ideas", "where": "Map, Crew & Subs", "next": "Design three icons (available / assigned / unavailable) to replace the one blue icon everyone has now."},
+  {"key": "todo-cascade", "match": "BIG ONE", "title": "Cascading schedule changes (the big one)", "status": "To Build", "where": "Dispatch, project dates, Assistant", "next": "Every edit is isolated today. Once anyone (or the Assistant) can touch dates, one change could ripple into other projects through shared crew or dependent trades with no warning. Design how to detect that impact and show it before the change is saved."},
+  {"key": "todo-assistant-actions", "match": "Expand assistant's allowed actions", "title": "Expand the Assistant's actions", "status": "Future / Ideas", "where": "Assistant bar", "next": "Dates, new projects and people, once the narrow version has proven reliable. Mike's call; not urgent."},
+  {"key": "todo-doc-process", "match": "Owner to work out a process", "title": "What documents belong in the app", "status": "Waiting On", "where": "Files panels (bids, projects, subs)", "next": "Mike and the managers decide which documentation is appropriate to upload, then we turn that into the recommended-file lists."},
 ];
+const LE_STATUSES = ['To Check', 'Waiting On', 'To Build', 'Future / Ideas', 'Done'];
+// Loose Ends items: {title, status, where, next}. Older items only have text + done; leStatus / leTitle read those too.
+const leStatus = t => t.status === 'Waiting On Lucas' ? 'Waiting On' : (t.status || (t.done ? 'Done' : 'To Build'));
+const leTitle = t => t.title || t.text || '';
 function syncLiveChangelog(){
   let changed = false;
   LIVE_CHANGELOG.forEach(e => {
-    if(!DATA.devTasks.some(t => t.key === e.key)){
-      DATA.devTasks.push({ id: uid('task'), key: e.key, text: e.text, done: e.done !== false, date: isoDaysFromNow(0) });
+    let t = DATA.devTasks.find(x => x.key === e.key) || (e.match && DATA.devTasks.find(x => !x.key && (x.text || '').startsWith(e.match)));
+    if(!t){
+      DATA.devTasks.push({ id: uid('task'), key: e.key, title: e.title, status: e.status, where: e.where, next: e.next, text: e.title + ' — ' + e.next, done: false, date: isoDaysFromNow(0) });
+      changed = true;
+    } else if(!t.status){
+      Object.assign(t, { key: e.key, title: e.title, where: e.where, next: e.next, text: e.title + ' — ' + e.next, status: t.done ? 'Done' : e.status });
       changed = true;
     }
   });
@@ -3298,6 +3422,8 @@ function removeToastEl(el, remember){
 function clearToastGroup(group){ document.querySelectorAll('.toast[data-group="' + group + '"]').forEach(el => removeToastEl(el, false)); }
 // opts: { group, key, text, goLabel, onGo, sticky, chime }
 function showToast(opts){
+  if(ROLE === 'builder') return;   // the Builder login configures the system and does no PM / Estimator work, so it gets no work notices
+  try{ if(new URLSearchParams(location.search).get('tool')) return; }catch(e){}   // Builder / Admin tool screens show no work notices; the PM and Estimator screens still do
   const key = opts.key || opts.text;
   if(TOAST.dismissed.has(key)) return;
   const st = toastStack();
@@ -6215,6 +6341,226 @@ async function archiveApi(path, method, body){
 // The app stays a PM tool: when the work is done, the person who chases the money gets an email and a one-page PDF,
 // and manages it from there. The recipient is set by the Builder (later maybe the Owner).
 function collectionsContact(){ const c = (DATA.moneySettings && DATA.moneySettings.collections) || {}; return { name: String(c.name || '').trim(), email: String(c.email || '').trim() }; }
+// Pathways (Builder): one plain-language picture of how a project moves from Estimator to PM to Pay Apps to collections, and what information travels with it.
+const PATHWAY_STAGES = [
+  { key: 'est', grp: 'est', who: 'Estimator', title: 'Win The Job', status: 'live', starts: 'A customer sends a bid request (an email and a plan set).',
+    steps: ['Start a bid: paste the email, drop the plans. The Estimator AI drafts about 80% of the estimate.', 'The Estimator prices it, splits it into scopes, and builds the Scope of Work (the list of tasks).', 'Submit to the customer. The bid is Won, Lost or timed out.', 'After a win the customer sends the contract; the Estimator records retainage, PO number and terms.'],
+    makes: ['Customer & contacts', 'Job details (place, dates)', 'Plans & files', 'Priced estimate', 'Scope of Work', 'Contract terms'] },
+  { key: 'hand', grp: '', connector: true, title: 'Hand-Off', status: 'live', rule: 'Needs a Won bid and a completed Scope of Work. The contract itself can arrive later.',
+    carries: ['Customer & contacts', 'Job details', 'Plans & files', 'Contract amount (locked)', 'Scope of Work tasks'], stays: 'Stays behind: the bid, our costs and margin, wages. The PM never sees them.' },
+  { key: 'pm', grp: 'pm', who: 'Project Manager', title: 'Build The Job', status: 'live', starts: 'The project appears on the PM board.',
+    steps: ['Dispatch: pick the crew or sub for each job and phase. Licenses and insurance are checked first.', 'Ask subs for proposals; pick a primary sub and a backup.', 'Track progress: each Scope of Work task moves 0 / 25 / 50 / 75 / 100%.', 'Add change orders when the customer changes the work. Photos, bills of lading and delivery pictures go in Files.'],
+    makes: ['Crew & sub assignments', 'Sub prices & proposals', 'Progress % per task', 'Change orders', 'Job photos & paperwork'] },
+  { key: 'bill', grp: 'pm', connector: true, title: 'Ready To Bill', status: 'partly', rule: 'Progress and approved change orders set what can be billed this period.',
+    carries: ['% complete (from the Scope of Work)', 'Approved change orders', 'Sub costs'], stays: 'Not built yet: retainage is not yet subtracted in pay-app amounts.' },
+  { key: 'pay', grp: 'pm', who: 'Project Manager', title: 'Bill The Customer, Pay The Subs', status: 'partly', starts: 'A billing window opens for the customer / GC.',
+    steps: ['Pay app: the contract lines, % complete and change orders for this period, billed to the customer / GC.', 'Retainage is held back and tracked on the project.', 'Pay each sub: the "cut a check" email goes to the Payables contact.', 'Customer billing windows (for example Sam\'s Club) remind the PM when to bill.'],
+    makes: ['Pay apps', 'Retainage held', 'Sub payments'] },
+  { key: 'close', grp: 'pm', connector: true, title: 'Close Out', status: 'live', rule: 'The PM marks the project finished.',
+    carries: ['Final pay app', 'Everything on the project, saved as a packet'], stays: 'The packet is filed in Google Drive (needs the Drive connection).' },
+  { key: 'collect', grp: '', connector: true, title: 'Hand-Off To AR / AP', status: 'live', rule: 'The PM hands the closed project over; the app drafts the email.',
+    carries: ['Closed project packet', 'Retainage still owed', 'Customer / GC contacts'], stays: 'Today this is an email draft to the Collections contact (Builder > Core Contacts).' },
+  { key: 'ar', grp: 'ar', who: 'AR / AP', title: 'Collect Retainage', status: 'none', starts: 'A closed project with retainage still owed to us.',
+    steps: ['Receive the hand-off from the PM.', 'Follow up with the customer / GC on the retainage owed (not built yet: planned AR / AP area).', 'Record when it is paid and close the item (not built yet).'],
+    makes: ['Retainage follow-up (future)', 'Retainage received (future)'] }
+];
+const PATHWAY_GROUPS = { est: { label: 'Estimator', sub: 'Win the job', cls: 'pw-g-est' }, pm: { label: 'Project Manager', sub: 'Build, bill and pay', cls: 'pw-g-pm' }, ar: { label: 'AR / AP', sub: 'Collect retainage', cls: 'pw-g-ar' } };
+// ---- Progress statuses (shared by Pathways and the Progress Report). The code carries a default; the Builder can change any of them on the report page and the change is saved on the board. ----
+const PROG_ORDER = ['live', 'next', 'partly', 'none'];
+const PROG_LABEL = { live: 'Working', next: 'Ready Next Release', partly: 'Partly', none: 'Not Built' };
+const PROG_CLS = { live: 'pw-live', next: 'pw-next', partly: 'pw-part', none: 'pw-fut' };
+function progStatus(key, dflt){ const o = (DATA.progressStatus || {})[key]; const v = PROG_ORDER.includes(o) ? o : dflt; return v === 'mixed' ? 'partly' : (v === 'future' ? 'none' : v); }
+const progPillHTML = (key, dflt, editable) => { const st = progStatus(key, dflt); return `<span class="pw-pill ${PROG_CLS[st]}${editable ? ' rp-edit' : ''}" ${editable ? `data-prog="${key}" data-dflt="${dflt}" title="Click to change" role="button" tabindex="0"` : ''}>${PROG_LABEL[st]}</span>`; };
+// What each role can do (Progress Report, page 3). Branch: est / pm / ar.
+const PROGRESS_ITEMS = [
+  { key: 'e.create', br: 'est', t: 'Create a bid', d: 'Paste the customer\'s email, add the plan set; the AI drafts the estimate.', s: 'live' },
+  { key: 'e.price', br: 'est', t: 'Price it', d: 'Edit lines, split into scopes, tax per scope. Catalog prices and tax rules are still open.', s: 'partly' },
+  { key: 'e.sow', br: 'est', t: 'Task list', d: 'The Scope of Work: itemized tasks the PM will later track.', s: 'next' },
+  { key: 'e.send', br: 'est', t: 'Send', d: 'Prints or saves as a clean PDF and the bid is marked Submitted. Emailing it from the app is not built.', s: 'partly' },
+  { key: 'e.track', br: 'est', t: 'Track', d: 'Draft, Bidding, Won, Lost; to-dos; due-date reminders; totals and win rate; copy a lost bid to revise it.', s: 'live' },
+  { key: 'e.contract', br: 'est', t: 'Contract', d: 'After a win, record retainage, PO and terms. The AI can suggest them from the contract file.', s: 'live' },
+  { key: 'e.hand', br: 'est', t: 'Hand off', d: 'One button sends a won bid to the PM.', s: 'live' },
+  { key: 'p.receive', br: 'pm', t: 'Receive', d: 'The project appears with customer, dates, files and the locked contract.', s: 'live' },
+  { key: 'p.staff', br: 'pm', t: 'Staff', d: 'Dispatch ranks crews and subs by distance and grade; Logistics AI flags conflicts.', s: 'live' },
+  { key: 'p.licenses', br: 'pm', t: 'Licenses', d: 'Subs must be licensed in the job\'s state; insurance certificates warn at 30 and 10 days.', s: 'next' },
+  { key: 'p.proposals', br: 'pm', t: 'Sub proposals', d: 'One link to subs, a main sub and a backup. The AI reading the numbers is not built.', s: 'partly' },
+  { key: 'p.progress', br: 'pm', t: 'Progress', d: 'Each task 0 to 100%; the job\'s % complete feeds the pay app.', s: 'next' },
+  { key: 'p.changes', br: 'pm', t: 'Changes', d: 'Change orders sit beside the locked original contract.', s: 'live' },
+  { key: 'p.files', br: 'pm', t: 'Files', d: 'Plans, photos, bills of lading. Phone upload for drivers is not built.', s: 'partly' },
+  { key: 'p.bill', br: 'pm', t: 'Bill customer / GC', d: 'Pay apps from the contract, % complete and changes. Retainage math is still to finish.', s: 'partly' },
+  { key: 'p.paysubs', br: 'pm', t: 'Pay the subs', d: 'Each sub\'s payment, with the "cut a check" email drafted to Payables.', s: 'live' },
+  { key: 'p.close', br: 'pm', t: 'Close out', d: 'Marks the job finished and files the whole project packet in Google Drive.', s: 'live' },
+  { key: 'a.receive', br: 'ar', t: 'Receive hand-off', d: 'The PM hands the closed project over; the app drafts the email to the Collections contact.', s: 'live' },
+  { key: 'a.follow', br: 'ar', t: 'Follow up on retainage', d: 'Track what each customer / GC still owes and who is chasing it.', s: 'none' },
+  { key: 'a.paid', br: 'ar', t: 'Record payment', d: 'Mark retainage received and close the item.', s: 'none' }
+];
+const PROGRESS_BRANCHES = {
+  est: { name: 'Estimator', goal: 'Win The Job', blurb: 'Start a bid from an email and plan set, finish the estimate, submit it, and follow it as Draft, Bidding, Won or Lost.', cls: 'e' },
+  pm: { name: 'Project Manager', goal: 'Build, Bill And Pay', blurb: 'A won job arrives with everything from the bid. The PM staffs it, tracks progress, handles changes, bills the customer / GC, pays the subs and closes it out.', cls: 'p' },
+  ar: { name: 'AR / AP', goal: 'Collect Retainage', blurb: 'Receives closed projects from the PM and follows up on the retainage still owed.', cls: 'a' }
+};
+function openPathwaysPage(){
+  if(!BUILDER_MODE) return;
+  const body = document.getElementById('modalBody');
+  const pill = (st, key) => progPillHTML(key, st, false);
+  const chips = a => a.map(x => `<span class="pw-chip">${esc(x)}</span>`).join('');
+  const card = st => st.connector
+    ? `<div class="pw-conn"><div class="pw-conn-h"><b>${esc(st.title)}</b>${pill(st.status, st.key)}</div><div class="pw-rule">${esc(st.rule)}</div>
+        <div class="pw-lab">What travels forward</div><div>${chips(st.carries)}</div><div class="pw-stays">${esc(st.stays)}</div></div>`
+    : `<div class="pw-stage"><div class="pw-top"><div><div class="pw-who">${esc(st.who)}</div><h4>${esc(st.title)}</h4></div>${pill(st.status, st.key)}</div>
+        <div class="pw-starts">${esc(st.starts)}</div>
+        <ol class="pw-steps">${st.steps.map(x => `<li>${esc(x)}</li>`).join('')}</ol>
+        <div class="pw-lab">Information created here</div><div>${chips(st.makes)}</div></div>`;
+  // Walk the stages in order; consecutive stages of one role share a coloured bundle.
+  const A = '<div class="pw-arrow" aria-hidden="true"></div>';
+  const top = []; let cur = null;
+  PATHWAY_STAGES.forEach(st => {
+    if(st.grp){
+      if(!cur || cur.grp !== st.grp){ cur = { grp: st.grp, items: [] }; top.push(cur); }
+      cur.items.push(card(st));
+    } else { cur = null; top.push({ html: card(st) }); }
+  });
+  const track = top.map(t => t.html || `<div class="pw-group ${PATHWAY_GROUPS[t.grp].cls}"><div class="pw-gh"><b>${esc(PATHWAY_GROUPS[t.grp].label)}</b><span>${esc(PATHWAY_GROUPS[t.grp].sub)}</span></div><div class="pw-grow">${t.items.join(A)}</div></div>`).join(A);
+  body.innerHTML = `
+    <div style="display:flex; align-items:center; gap:12px; flex-wrap:wrap; margin-bottom:6px;"><h3 style="margin:0; font-size:24px;">Pathways</h3>
+      ${PROG_ORDER.map(k => `<span class="pw-pill ${PROG_CLS[k]}">${PROG_LABEL[k]}</span>`).join('')}
+      <span style="margin-left:auto; display:flex; gap:8px;"><button class="btn ghost" id="pwLeft" type="button" aria-label="Scroll left">&#8592;</button><button class="btn ghost" id="pwRight" type="button" aria-label="Scroll right">&#8594;</button></span></div>
+    <div class="hint" style="margin:0 0 12px;">A project moves left to right: Estimator, then Project Manager, then AR / AP. Each coloured band is one role; blue dashed cards are the hand-over between stages and show what information travels. Scroll sideways or use the arrows.</div>
+    <div class="pw-scroll" id="pwScroll" tabindex="0"><div class="pw-track">${track}</div></div>
+    <div class="pw-see"><h4>Who Sees What</h4><div class="pw-see-grid">
+      <div><b>Estimator</b>Bids, estimates, costs and margin, and the contract until hand-off. Crew and subs are view-only.</div>
+      <div><b>Project Manager</b>The won project, the locked contract, crew and subs, pay apps. Never bids, wages or Temp For Hire costs.</div>
+      <div><b>Subs</b>Only the scope and their own price. Never the contract price, the customer or the contacts.</div>
+      <div><b>Owner &amp; Builder</b>Everything, with every change recorded: who, when and why. Nothing is ever deleted.</div></div></div>`;
+  const sc = document.getElementById('pwScroll');
+  const by = d => sc.scrollBy({ left: d * Math.max(300, sc.clientWidth * 0.8), behavior: 'smooth' });
+  document.getElementById('pwLeft').onclick = () => by(-1); document.getElementById('pwRight').onclick = () => by(1);
+  sc.onkeydown = e => { if(e.key === 'ArrowRight'){ e.preventDefault(); by(0.4); } if(e.key === 'ArrowLeft'){ e.preventDefault(); by(-0.4); } };
+  openModal();
+  const mm = document.querySelector('#modalBack .modal'); if(mm) mm.classList.add('le-wide');
+}
+// Progress Report (Builder): the owner-facing summary, built from live data every time it opens. Print / Save As PDF from the browser.
+function openProgressReportPage(){
+  if(!BUILDER_MODE) return;
+  const body = document.getElementById('modalBody');
+  if(!DATA.progressStatus || typeof DATA.progressStatus !== 'object') DATA.progressStatus = {};
+  const items = PROGRESS_ITEMS.map(i => Object.assign({}, i, { st: progStatus(i.key, i.s) }));
+  const pill = (key, dflt) => progPillHTML(key, dflt, true);
+  const WGT = { live: 1, next: 0.75, partly: 0.5, none: 0 };
+  const verdict = list => { const sc = list.reduce((a, i) => a + WGT[i.st], 0) / (list.length || 1); const allLive = list.every(i => i.st === 'live'); return allLive ? ['Yes', 'live'] : sc >= 0.8 ? ['Mostly Yes', 'live'] : sc >= 0.45 ? ['Partly', 'partly'] : ['Early', 'none']; };
+  const counts = list => PROG_ORDER.map(k => list.filter(i => i.st === k).length);
+  const vpill = v => `<span class="pw-pill ${PROG_CLS[v[1]]}">${v[0]}</span>`;
+  const bar = list => { const c = counts(list), t = list.length || 1; return `<div class="rp-bar">${PROG_ORDER.map((k, n) => c[n] ? `<i class="rp-b-${k}" style="width:${c[n] / t * 100}%"></i>` : '').join('')}</div><div class="rp-barlab">${c[0]} of ${list.length} working${c[1] ? ', ' + c[1] + ' ready next release' : ''}${c[2] ? ', ' + c[2] + ' partly' : ''}${c[3] ? ', ' + c[3] + ' not built' : ''}</div>`; };
+  const by = k => items.filter(i => i.br === k);
+  const stage = k => PATHWAY_STAGES.find(x => x.key === k);
+  const hstat = k => progStatus(k, stage(k).status);
+  const handRow = (label, key, text) => { const st = hstat(key); return `<div class="rp-row"><b>${label}</b>${pill(key, stage(key).status)}<span class="t">${text}</span></div>`; };
+  const tasks = (DATA.devTasks || []).filter(t => leStatus(t) !== 'Done');
+  const colOf = { 'Waiting On': 'w', 'To Check': 'b', 'To Build': 'b', 'Future / Ideas': 'l' };
+  const short = (x, n) => { x = String(x || '').trim(); const f = x.split(/(?<=[.!?])\s/)[0]; if(f.length <= n) return f; const c = f.slice(0, n); return c.slice(0, c.lastIndexOf(' ')) + '…'; };
+  const li = t => `<li><b>${esc(leTitle(t))}</b>${esc(short(t.next, 170))}</li>`;
+  const list = k => tasks.filter(t => colOf[leStatus(t)] === k).map(li).join('') || '<li><b>Nothing here</b></li>';
+  const rows = (DATA.architecture || []).filter(r => r.diagramKey);
+  const today = new Date().toLocaleDateString('en-US', { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' });
+  const note = esc(DATA.progressNote || '');
+  const A = '<div class="ar"></div>';
+  const chips = a => a.map(x => `<span class="chip">${esc(x)}</span>`).join('');
+  const st2 = (k) => { const x = stage(k); return x.connector
+    ? `<div class="cn"><b>${esc(x.title)}</b>${pill(k, x.status)}<div class="rule">${esc(x.rule)}</div><div class="lab">Travels forward</div>${chips(x.carries)}<div class="stay">${esc(x.stays)}</div></div>`
+    : `<div class="st"><h4>${esc(x.title)} ${pill(k, x.status)}</h4><ol>${x.steps.map(y => `<li>${esc(y)}</li>`).join('')}</ol><div class="lab">Information created</div>${chips(x.makes)}</div>`; };
+  const grp = (cls, label, sub, keys) => `<div class="grp ${cls}"><div class="gh">${label}<span>${sub}</span></div><div class="gr">${keys.map(st2).join(A)}</div></div>`;
+  const itemRows = k => by(k).map(i => `<div class="it"><b>${esc(i.t)}</b><span class="d">${esc(i.d)}</span>${pill(i.key, i.s)}</div>`).join('');
+  const br = (k, ttl) => `<div class="br ${PROGRESS_BRANCHES[k].cls}"><h2>${ttl}</h2>${itemRows(k)}</div>`;
+  const hd = (t, sub, n) => `<div class="hd"><div><h1>${t}</h1><div class="sub">${sub}</div></div><div class="r">Lucas Industrial go.<br>${esc(today)}</div></div>`;
+  const ft = n => `<div class="ft"><span>Lucas Industrial, LLC · go.lucasindustrial.us · built from the live Builder data</span><span>${n}</span></div>`;
+  const e = by('est'), p = by('pm'), a = by('ar');
+  const bcard = k => { const b = PROGRESS_BRANCHES[k], l = by(k); return `<div class="sc ${b.cls}"><h3>${b.name}</h3><div class="v">${b.goal}</div><p>${esc(b.blurb)}</p></div>`; };
+  body.innerHTML = `
+    <div class="rp-noprint" style="display:flex; align-items:center; gap:12px; flex-wrap:wrap; margin-bottom:6px;"><h3 style="margin:0; font-size:24px;">Progress Report</h3>
+      <span class="hint" style="margin:0;">Built fresh from the app each time you open it. Click any status label to change it; it is saved.</span>
+      <span style="margin-left:auto; display:flex; gap:8px;"><button class="btn primary" id="rpPrint" type="button">Print / Save As PDF</button></span></div>
+    <div class="rp-noprint hint" style="margin:0 0 8px;">In the print window choose "Save as PDF", paper Letter, Landscape, and turn on Background graphics so the colors print.</div>
+    <div class="rp-noprint" style="margin:0 0 12px;"><label style="font-size:11px; text-transform:uppercase; letter-spacing:.04em; color:var(--text-faint);">Your note to the owner (printed on page 1)</label><textarea id="rpNote" rows="2" style="width:100%; box-sizing:border-box;" placeholder="One or two sentences for the owner">${note}</textarea></div>
+    <div class="rp">
+    <section class="rp-page">${hd('Where We Are', 'Progress report: can each branch do its job, and does information carry across?')}
+      <div class="key"><b>How to read the colors:</b> ${PROG_ORDER.map(k => `<span class="pw-pill ${PROG_CLS[k]}">${PROG_LABEL[k]}</span>`).join(' ')}</div>
+      <div class="q">
+        <div class="qc"><h2>1. Can each branch do its job?</h2><div class="big">The goal for now: an Estimator can create, send and track bids, and a PM can run the projects handed to them.</div>
+          ${['est', 'pm', 'ar'].map(k => `<div class="rp-row"><b>${PROGRESS_BRANCHES[k].name}</b>${vpill(verdict(by(k)))}<span class="t">${bar(by(k))}</span></div>`).join('')}</div>
+        <div class="qc"><h2>2. Does information carry across?</h2><div class="big">Nobody should retype a customer, a price or a date as a job moves along.</div>
+          ${handRow('Estimator → PM', 'hand', 'Customer, dates, files, locked contract and task list move over; our costs and margin stay behind.')}
+          ${handRow('Inside the PM', 'bill', 'Progress and approved changes decide what can be billed. Retainage math is the open piece.')}
+          ${handRow('PM → AR / AP', 'collect', 'A closed project is handed over with an email draft. Retainage follow-up itself is not built.')}</div>
+      </div>
+      <div class="score">${['est', 'pm', 'ar'].map(bcard).join('')}</div>
+      ${note ? `<div class="one"><b>Note:</b> ${note.replace(/\n/g, '<br>')}</div>` : ''}
+      ${ft('')}</section>
+    <section class="rp-page">${hd('The Pathway Of A Project', 'Left to right: what each role does and what information travels to the next one')}
+      <div class="flow">${grp('e', 'Estimator', 'Win the job', ['est'])}${A}${st2('hand')}${A}${grp('p', 'Project Manager', 'Build, bill and pay', ['pm', 'bill', 'pay', 'close'])}</div>
+      <div class="flow" style="margin-top:10px;">${st2('collect')}${A}${grp('a', 'AR / AP', 'Collect retainage', ['ar'])}</div>
+      <div class="see"><div><b>Estimator sees</b>Bids, estimates, costs and margin, the contract until hand-off. Crew and subs view-only.</div><div><b>Project Manager sees</b>The won project, locked contract, crew, subs, pay apps. Never bids, wages or Temp For Hire costs.</div><div><b>Subs see</b>Only the scope and their own price. Never the contract price, customer or contacts.</div><div><b>Owner &amp; Builder see</b>Everything. Every change is recorded: who, when and why. Nothing is deleted.</div></div>
+      ${ft('')}</section>
+    <section class="rp-page">${hd('What Each Role Can Do Today', 'The two jobs we are proving first: bids in, projects run')}
+      <div class="two">${br('est', 'Estimator: create, send, track bids')}${br('pm', 'Project Manager: run handed-off projects')}</div>
+      <div class="br a" style="margin-top:8px;"><h2>AR / AP: collect retainage</h2><div class="three-it">${itemRows('ar')}</div></div>
+      <div class="foot">"Ready Next Release" means built and tested in our preview but not confirmed on the live site yet.</div>
+      ${ft('')}</section>
+    <section class="rp-page">${hd('How The System Is Put Together', 'The pieces behind the screens, in plain words (from System Architecture)')}
+      <div class="arch"><div class="arch-svg">${architectureDiagramSVG(DATA.architecture || [], null)}</div>
+        <div class="leg">${rows.map(r => `<div class="li"><b>${esc((r.name || '').split(' (')[0])}</b><span>${esc(short(r.purpose, 140))}</span></div>`).join('')}</div></div>
+      <div class="one" style="margin-top:8px;"><b>The safety net:</b> nothing is ever deleted. Every change records who made it, when and why. The server keeps automatic backups, and we download our own copy before every update.</div>
+      ${ft('')}</section>
+    <section class="rp-page">${hd('Loose Ends', 'What is left, and who it is waiting on (from Loose Ends)')}
+      <div class="three"><div class="col w"><h2>Waiting On You</h2><div class="s">Decisions or information we need</div><ul>${list('w')}</ul></div>
+        <div class="col b"><h2>We Are Building</h2><div class="s">To build and to check</div><ul>${list('b')}</ul></div>
+        <div class="col"><h2>Later</h2><div class="s">Good ideas, not blocking anything</div><ul>${list('l')}</ul></div></div>
+      ${ft('')}</section>
+    </div>`;
+  document.getElementById('rpPrint').onclick = () => window.print();
+  document.getElementById('rpNote').onchange = ev => { DATA.progressNote = ev.target.value.trim(); saveData(); openProgressReportPage(); };
+  const cycle = el => { const k = el.dataset.prog, cur = progStatus(k, el.dataset.dflt); DATA.progressStatus[k] = PROG_ORDER[(PROG_ORDER.indexOf(cur) + 1) % PROG_ORDER.length]; saveData(); const y = window.scrollY; openProgressReportPage(); };
+  body.querySelectorAll('[data-prog]').forEach(el => { el.onclick = () => cycle(el); el.onkeydown = ev => { if(ev.key === 'Enter' || ev.key === ' '){ ev.preventDefault(); cycle(el); } }; });
+  openModal();
+  const mm = document.querySelector('#modalBack .modal'); if(mm) mm.classList.add('le-wide');
+}
+// Core Contacts (Builder + Owner): who each internal message or email goes to, in one place.
+function openContactsPage(){
+  if(!(BUILDER_MODE || OWNER_MODE)) return;
+  ensureMoneySettings(DATA);
+  if(!DATA.settings.contacts || typeof DATA.settings.contacts !== 'object') DATA.settings.contacts = {};
+  const ct = DATA.settings.contacts, ms = DATA.moneySettings, body = document.getElementById('modalBody');
+  const ROWS = [
+    { key: 'collections', title: 'Collections Hand-Off', used: 'When a PM hands a finished project to Collections, the email draft goes to this person. Change it here if that employee leaves.',
+      get: () => ({ name: (ms.collections || {}).name || '', email: (ms.collections || {}).email || '' }), set: v => { ms.collections = v; } },
+    { key: 'ops', title: 'Payables ("Cut A Check")', used: 'The "cut a check" email for paying a sub (Pay Apps > Subcontractors) goes to this person.',
+      get: () => ({ name: ms.opsName || '', email: ms.opsEmail || '' }), set: v => { ms.opsName = v.name; ms.opsEmail = v.email; } },
+    { key: 'retainage', title: 'Retainage Follow-Up', used: 'Who follows up on retainage owed to us. Reserved for the AR / AP area, which is not built yet; nothing sends to this person today.',
+      get: () => ct.retainage || { name: '', email: '' }, set: v => { ct.retainage = v; } },
+    { key: 'service', title: 'Customer Replies (Service Address)', used: 'The reply-to address on notices the app drafts for subs (for example certificate-of-insurance requests). Blank uses Service@LucasIndustrial.us.',
+      get: () => ct.service || { name: '', email: '' }, set: v => { ct.service = v; } }
+  ];
+  body.innerHTML = `
+    <div style="display:flex; align-items:center; gap:12px; flex-wrap:wrap; margin-bottom:6px;"><h3 style="margin:0; font-size:24px;">Core Contacts</h3>
+      <span class="hint" style="margin:0;">Who each internal message or email goes to. The app drafts these; the person sends them from their own email.</span>
+      <span style="margin-left:auto; display:flex; gap:8px; align-items:center;"><span class="hint" id="ctMsg" style="margin:0;"></span><button class="btn primary" id="ctSave" type="button">Save Changes</button></span></div>
+    <div class="le-table" style="margin-top:14px;">
+      <div class="ct-head ct-row"><div>Message</div><div>Name</div><div>Email</div><div>What It Is Used For</div></div>
+      ${ROWS.map(r => { const v = r.get(); return `<div class="ct-row">
+        <div class="le-item">${esc(r.title)}</div>
+        <div><input data-ct="${r.key}" data-f="name" value="${esc(v.name || '')}" placeholder="Name" style="width:100%; box-sizing:border-box;"></div>
+        <div><input data-ct="${r.key}" data-f="email" type="email" value="${esc(v.email || '')}" placeholder="name@lucasindustrial.us" style="width:100%; box-sizing:border-box;"></div>
+        <div class="le-where">${esc(r.used)}</div></div>`; }).join('')}
+      <div class="ct-row"><div class="le-item">System Emails (Sign-In, Password Reset)</div><div class="le-where" style="grid-column:2 / 4;">no-reply@lucasindustrial.us, sent by Resend</div><div class="le-where">Set in Railway (MAIL_FROM), not here. See Builder &gt; System Architecture &gt; Email.</div></div>
+    </div>`;
+  document.getElementById('ctSave').onclick = async () => {
+    const val = (k, f) => { const e = body.querySelector(`[data-ct="${k}"][data-f="${f}"]`); return e ? e.value.trim() : ''; };
+    for(const r of ROWS){ const em = val(r.key, 'email'); if(em && !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(em)){ await customAlert('The email for "' + r.title + '" does not look right.'); return; } }
+    ROWS.forEach(r => r.set({ name: val(r.key, 'name'), email: val(r.key, 'email') }));
+    saveData(); const m = document.getElementById('ctMsg'); if(m){ m.textContent = 'Saved'; m.style.color = cssVar('--ok'); }
+  };
+  openModal();
+  const mm = document.querySelector('#modalBack .modal'); if(mm) mm.classList.add('le-wide');
+}
 function openCollectionsContactModal(){
   if(!BUILDER_MODE) return;
   ensureMoneySettings(DATA);
@@ -10236,7 +10582,7 @@ function openDevTasksModal(){
   }
   function tabsHTML(){
     return `<div class="cal-mode-toggle" style="margin-bottom:14px;">
-      <button class="cal-mode-btn ${devModalTab==='backlog'?'active':''}" id="devTabBacklog" type="button">Backlog</button>
+      <button class="cal-mode-btn ${devModalTab==='backlog'?'active':''}" id="devTabBacklog" type="button">Loose Ends</button>
       <button class="cal-mode-btn ${devModalTab==='howto'?'active':''}" id="devTabHowTo" type="button">How-To Guides</button>
     </div>`;
   }
@@ -10244,50 +10590,68 @@ function openDevTasksModal(){
     document.getElementById('devTabBacklog').onclick = () => { devModalTab='backlog'; paint(); };
     document.getElementById('devTabHowTo').onclick = () => { devModalTab='howto'; paint(); };
   }
+  let leFilter = 'open', leEdit = null;     // filter: 'open' (everything not Done) | a status | 'all'; leEdit: task id, 'new', or null
+  function leRow(t){
+    const st = leStatus(t);
+    return `<div class="le-row" data-le-open="${t.id}" tabindex="0" role="button">
+      <div class="le-item">${esc(leTitle(t))}</div>
+      <div><span class="le-pill le-${LE_STATUSES.indexOf(st)}">${esc(st)}</span></div>
+      <div class="le-where">${esc(t.where || '')}</div>
+      <div class="le-next">${esc(t.next || (t.title ? '' : ''))}${t.shotId ? ` <button class="btn ghost small" data-view-shot="${t.shotId}" type="button">Screenshot</button>` : ''}</div>
+    </div>`;
+  }
+  function leForm(t){
+    const isNew = !t.id;
+    return `<div class="le-edit">
+      <div class="le-edit-grid">
+        <div class="field"><label>Item</label><input id="leTitle" value="${esc(leTitle(t))}" placeholder="Short name"></div>
+        <div class="field"><label>Status</label><select id="leStatus">${LE_STATUSES.map(x => `<option ${x === leStatus(t) ? 'selected' : ''}>${esc(x)}</option>`).join('')}</select></div>
+        <div class="field"><label>Where It Plugs In</label><input id="leWhere" value="${esc(t.where || '')}" placeholder="Screen or feature it touches"></div>
+      </div>
+      <div class="field"><label>Next Step / Live Check</label><textarea id="leNext" rows="4" placeholder="What has to happen next, and who is waiting on whom">${esc(t.next || '')}</textarea></div>
+      <div style="display:flex; gap:8px; align-items:center; flex-wrap:wrap;"><button class="btn primary" id="leSave" type="button">${isNew ? 'Add' : 'Save'}</button><button class="btn ghost" id="leCancel" type="button">Cancel</button>${isNew ? '' : '<button class="btn ghost small" id="leDelete" type="button" style="margin-left:auto;">Delete</button>'}</div>
+    </div>`;
+  }
   function paintBacklog(){
-    const pending = DATA.devTasks.filter(t=>!t.done);
-    const done = DATA.devTasks.filter(t=>t.done);
+    const all = DATA.devTasks, cnt = k => all.filter(t => leStatus(t) === k).length;
+    const tiles = [['Waiting On', 'Waiting On'], ['To Build', 'To Build'], ['Future / Ideas', 'Future / Ideas'], ['Done', 'Done']];
+    const toCheck = cnt('To Check');
+    const shown = all.filter(t => leFilter === 'all' ? true : leFilter === 'open' ? leStatus(t) !== 'Done' : leStatus(t) === leFilter);
+    // To Check first, then the order the Builder keeps them in
+    const order = { 'To Check': 0, 'Waiting On': 1, 'To Build': 2, 'Future / Ideas': 3, 'Done': 4 };
+    shown.sort((x, y) => (order[leStatus(x)] - order[leStatus(y)]));
     body.innerHTML = `
-      ${headHTML('Development backlog')}
-      <div class="hint" style="margin-bottom:14px;">Tracks what's built and what's still pending on this tool — lives with the board, so it's here whenever you come back.</div>
+      <div style="display:flex; align-items:center; gap:12px; flex-wrap:wrap; margin-bottom:6px;"><h3 style="margin:0; font-size:24px;">Loose Ends</h3><button class="btn" id="leAdd" type="button" style="margin-left:auto;">+ Add Loose End</button></div>
       ${tabsHTML()}
-      <div style="font-size:11.5px; color:var(--text-faint); text-transform:uppercase; letter-spacing:.04em; margin-bottom:6px;">Pending</div>
-      <div id="pendingList">${pending.length ? pending.map(t=>taskRow(t)).join('') : '<div class="hint">Nothing pending.</div>'}</div>
-      <div style="display:flex; gap:8px; margin:10px 0 16px;">
-        <input id="newTaskInput" placeholder="Add a task…" style="flex:1;">
-        <button class="btn small" id="addTaskBtn" type="button">Add</button>
+      <div class="le-tiles">
+        ${tiles.map(([k, label]) => `<button type="button" class="le-tile ${leFilter === k ? 'on' : ''}" data-le-filter="${k}"><b>${cnt(k)}</b><span>${esc(label)}</span></button>`).join('')}
       </div>
-      <div style="display:flex; align-items:center; justify-content:space-between; gap:8px; margin-bottom:6px;">
-        <button id="toggleDoneBtn" type="button" style="background:none; border:0; padding:0; cursor:pointer; font-size:11.5px; color:var(--text-faint); text-transform:uppercase; letter-spacing:.04em;">${doneOpen ? '▾' : '▸'} Done (${done.length})</button>
-        ${done.length ? '<button class="btn ghost small" id="clearDoneBtn" type="button">Clear all done</button>' : ''}
-      </div>
-      <div id="doneList" style="display:${doneOpen ? 'block' : 'none'};">${done.length ? done.map(t=>taskRow(t)).join('') : '<div class="hint">Nothing completed yet.</div>'}</div>
-      <div class="modal-actions"><span></span><div class="right"><button class="btn ghost" id="closeTasksBtn" type="button">Close</button></div></div>
-    `;
-    wireTabs(); wireTopClose();
-    document.getElementById('toggleDoneBtn').onclick = () => { doneOpen = !doneOpen; paint(); };
-    const clearBtn = document.getElementById('clearDoneBtn');
-    if(clearBtn) clearBtn.onclick = async () => {
-      if(!await customConfirm(`Delete all ${done.length} completed task${done.length===1?'':'s'} from the backlog? This cannot be undone (the server keeps a restore point).`)) return;
-      DATA.devTasks = DATA.devTasks.filter(t => !t.done);
-      saveData(); paint();
+      <div class="hint" style="margin:10px 0 10px;">${leFilter === 'open' ? 'Showing everything not done' : leFilter === 'all' ? 'Showing everything' : 'Showing: ' + esc(leFilter)}${toCheck ? ` · ${toCheck} to check` : ''} · <a href="#" id="leShowAll" style="color:var(--accent);">${leFilter === 'open' ? 'Show all' : 'Show open'}</a>. Click a row to edit it.</div>
+      <div class="le-table">
+        <div class="le-head"><div>Item</div><div>Status</div><div>Where It Plugs In</div><div>Next Step / Live Check</div></div>
+        ${leEdit === 'new' ? leForm({}) : ''}
+        ${shown.length ? shown.map(t => leEdit === t.id ? leForm(t) : leRow(t)).join('') : '<div class="le-empty">Nothing here.</div>'}
+      </div>`;
+    wireTabs();
+    const el = id => document.getElementById(id);
+    body.querySelectorAll('[data-le-filter]').forEach(b => b.onclick = () => { leFilter = leFilter === b.dataset.leFilter ? 'open' : b.dataset.leFilter; leEdit = null; paint(); });
+    el('leShowAll').onclick = ev => { ev.preventDefault(); leFilter = leFilter === 'open' ? 'all' : 'open'; leEdit = null; paint(); };
+    el('leAdd').onclick = () => { leEdit = 'new'; paint(); const f = el('leTitle'); if(f) f.focus(); };
+    body.querySelectorAll('[data-le-open]').forEach(r => { const go = ev => { if(ev.target.closest('[data-view-shot]')) return; leEdit = r.dataset.leOpen; paint(); }; r.onclick = go; r.onkeydown = ev => { if(ev.key === 'Enter') go(ev); }; });
+    body.querySelectorAll('[data-view-shot]').forEach(btn => btn.onclick = ev => { ev.stopPropagation(); viewSuggestionShot(btn.dataset.viewShot); });
+    if(el('leCancel')) el('leCancel').onclick = () => { leEdit = null; paint(); };
+    if(el('leSave')) el('leSave').onclick = () => {
+      const title = el('leTitle').value.trim(); if(!title){ el('leTitle').focus(); return; }
+      const f = { title, status: el('leStatus').value, where: el('leWhere').value.trim(), next: el('leNext').value.trim() };
+      f.done = f.status === 'Done'; f.text = f.title + (f.next ? ' — ' + f.next : '');
+      if(leEdit === 'new') DATA.devTasks.push(Object.assign({ id: uid('task'), date: isoDaysFromNow(0) }, f));
+      else { const t = DATA.devTasks.find(x => x.id === leEdit); if(t) Object.assign(t, f); }
+      leEdit = null; saveData(); paint();
     };
-    document.querySelectorAll('[data-toggle-task]').forEach(cb => cb.onchange = () => {
-      const t = DATA.devTasks.find(x=>x.id===cb.dataset.toggleTask);
-      if(t){ t.done = cb.checked; saveData(); }
-      paint();
-    });
-    document.querySelectorAll('[data-view-shot]').forEach(btn => btn.onclick = () => viewSuggestionShot(btn.dataset.viewShot));
-    document.querySelectorAll('[data-rm-task]').forEach(btn => btn.onclick = () => {
-      DATA.devTasks = DATA.devTasks.filter(x=>x.id!==btn.dataset.rmTask);
-      saveData(); paint();
-    });
-    document.getElementById('addTaskBtn').onclick = () => {
-      const v = document.getElementById('newTaskInput').value.trim();
-      if(v){ DATA.devTasks.push({id:uid('task'), text:v, done:false, date:isoDaysFromNow(0)}); saveData(); }
-      paint();
+    if(el('leDelete')) el('leDelete').onclick = async () => {
+      if(!await customConfirm('Delete this loose end? The server keeps a restore point.')) return;
+      DATA.devTasks = DATA.devTasks.filter(x => x.id !== leEdit); leEdit = null; saveData(); paint();
     };
-    document.getElementById('closeTasksBtn').onclick = closeModal;
   }
   function paintHowTos(){
     body.innerHTML = `
@@ -10340,6 +10704,7 @@ function openDevTasksModal(){
   }
   paint();
   openModal();
+  const mm = document.querySelector('#modalBack .modal'); if(mm) mm.classList.add('le-wide');
 }
 
 function exportBoardData(){
@@ -11523,110 +11888,142 @@ function wrapSvgText(text, maxChars, maxLines){
   }
   return lines;
 }
-function architectureDiagramSVG(rows){
-  const findName = (key, fallback) => { const r = (rows||[]).find(x=>x.diagramKey===key); return (r && r.name.trim()) ? r.name.trim() : fallback; };
-  const box = (x,y,w,h,title,sub,fill) => {
+function architectureDiagramSVG(rows, selKey){
+  const findName = (key, fallback) => { const r = (rows||[]).find(x=>x.diagramKey===key); return (r && r.name.trim()) ? r.name.trim().split(' (')[0] : fallback; };
+  const box = (x,y,w,h,title,sub,fill,key) => {
     const titleLines = wrapSvgText(title, Math.max(10, Math.floor(w/7.2)), 2);
     const subLines = sub ? wrapSvgText(sub, Math.max(10, Math.floor(w/6.2)), 1) : [];
     const lineH = 14;
     const blockH = titleLines.length*lineH + (subLines.length ? lineH : 0);
     let startY = y + h/2 - blockH/2 + lineH*0.7;
-    let svg = `<rect x="${x}" y="${y}" width="${w}" height="${h}" rx="8" fill="${fill||'var(--panel)'}" stroke="var(--line)" stroke-width="1.5"/>`;
+    const on = key && key === selKey;
+    let svg = `<g class="arch-node${key ? ' clickable' : ''}${on ? ' sel' : ''}" ${key ? `data-arch-key="${key}" tabindex="0" role="button" aria-label="${esc(title)}"` : ''}><rect x="${x}" y="${y}" width="${w}" height="${h}" rx="8" fill="${fill||'var(--panel)'}" stroke="${on ? 'var(--accent)' : 'var(--line)'}" stroke-width="${on ? 3 : 1.5}"/>`;
     titleLines.forEach((line,i) => {
       svg += `<text x="${x+w/2}" y="${startY+i*lineH}" text-anchor="middle" font-size="12.5" font-weight="700" fill="var(--text)">${esc(line)}</text>`;
     });
     if(subLines.length){
       svg += `<text x="${x+w/2}" y="${startY+titleLines.length*lineH}" text-anchor="middle" font-size="10" fill="var(--text-faint)">${esc(subLines[0])}</text>`;
     }
-    return svg;
+    return svg + '</g>';
   };
   const arrow = (x1,y1,x2,y2,label) => `
     <line x1="${x1}" y1="${y1}" x2="${x2}" y2="${y2}" stroke="var(--text-faint)" stroke-width="1.5" marker-end="url(#archArrow)"/>
-    ${label?`<text x="${(x1+x2)/2}" y="${(y1+y2)/2-6}" text-anchor="middle" font-size="10" fill="var(--text-faint)">${esc(label)}</text>`:''}
+    ${label?(x1===x2 ? `<text x="${x1+8}" y="${(y1+y2)/2+3}" text-anchor="start" font-size="10" fill="var(--text-faint)">${esc(label)}</text>` : `<text x="${(x1+x2)/2}" y="${(y1+y2)/2-6}" text-anchor="middle" font-size="10" fill="var(--text-faint)">${esc(label)}</text>`):''}
   `;
   return `
-  <svg viewBox="0 0 740 440" style="width:100%; height:auto; max-height:420px;" xmlns="http://www.w3.org/2000/svg">
+  <svg viewBox="0 0 740 430" style="width:100%; height:auto; display:block;" xmlns="http://www.w3.org/2000/svg">
     <defs>
       <marker id="archArrow" markerWidth="8" markerHeight="8" refX="6" refY="3" orient="auto"><path d="M0,0 L6,3 L0,6 Z" fill="var(--text-faint)"/></marker>
     </defs>
-    ${box(300,10,140,48,'You / your team','browser')}
-    ${arrow(370,58,370,92)}
-    ${box(260,92,220,50,'Domain', findName('domain','—'))}
-    ${arrow(370,142,370,176)}
-    ${box(230,176,280,56,'Railway', findName('railway','—'),"var(--accent)22")}
-    ${arrow(230,196,130,196,'deploys from')}
-    ${box(20,170,130,56,'GitHub', findName('github','—'))}
-    ${arrow(300,232,150,290)}
-    ${arrow(370,232,370,290)}
-    ${arrow(440,232,600,290)}
-    ${box(60,290,190,58,'Anthropic API', findName('anthropic','—') + ' — proxied through Railway')}
-    ${box(280,290,190,58,'Google Maps API', findName('gmaps','—') + ' — direct from browser')}
-    ${box(500,290,220,58,'Google Drive API', findName('drive','—') + ' — direct, on-demand only')}
-    ${arrow(610,348,610,382)}
-    ${box(500,382,220,42,'Google Workspace', findName('workspace','—'))}
+    ${box(300,8,140,44,'You / your team','browser')}
+    ${arrow(370,52,370,80)}
+    ${box(240,80,260,52,'Front end', findName('domain','—'), null, 'domain')}
+    ${arrow(500,106,560,106,'map calls')}
+    ${box(560,80,170,52,'Google Maps API', findName('gmaps','—'), null, 'gmaps')}
+    ${arrow(370,132,370,166,'every screen calls the API')}
+    ${box(230,166,280,56,'Railway API', findName('railway','—'),'var(--panel-2)','railway')}
+    ${arrow(150,194,230,194)}
+    ${box(10,168,140,52,'GitHub', findName('github','—'), null, 'github')}
+    ${arrow(300,222,80,262)}
+    ${arrow(340,222,225,262)}
+    ${arrow(400,222,372,262)}
+    ${arrow(440,222,520,262)}
+    ${box(10,262,140,60,'Database + Files', findName('database','—'), null, 'database')}
+    ${box(155,262,140,60,'Anthropic API', findName('anthropic','—'), null, 'anthropic')}
+    ${box(302,262,140,60,'Email', findName('email','—'), null, 'email')}
+    ${box(450,262,140,60,'Google Drive', findName('drive','—'), null, 'drive')}
+    ${arrow(372,322,372,358)}
+    ${arrow(520,322,520,358)}
+    ${box(302,358,288,50,'Google Workspace', findName('workspace','—'), null, 'workspace')}
   </svg>`;
 }
-function openArchitectureModal(){
+function openArchitectureModal(selectKey){
   if(!BUILDER_MODE) return;
   const body = document.getElementById('modalBody');
   let rows = JSON.parse(JSON.stringify(DATA.architecture||[]));
-  function fieldLabel(text){
-    return `<label style="font-size:10px; text-transform:uppercase; letter-spacing:.04em; color:var(--text-faint); display:block; margin-bottom:2px;">${text}</label>`;
+  let sel = null;          // id of the selected component (null = nothing picked yet)
+  { const f = selectKey && rows.find(r => r.diagramKey === selectKey); if(f) sel = f.id; }
+  let editing = false, note = '';
+  const lab = t => `<label style="font-size:10px; text-transform:uppercase; letter-spacing:.04em; color:var(--text-faint); display:block; margin-bottom:2px;">${t}</label>`;
+  const fld = (r, k, label, tag, ph) => `<div style="margin-bottom:10px;">${lab(label)}${tag === 'textarea' ? `<textarea data-arch-field="${k}" rows="4" placeholder="${ph||''}" style="width:100%; box-sizing:border-box;">${esc(r[k]||'')}</textarea>` : `<input data-arch-field="${k}" value="${esc(r[k]||'')}" placeholder="${ph||''}" style="width:100%; box-sizing:border-box;">`}</div>`;
+  const para = (label, text) => text && String(text).trim() ? `<div style="margin-bottom:14px;">${lab(label)}<div style="font-size:13.5px; line-height:1.5; white-space:pre-wrap;">${esc(text)}</div></div>` : '';
+  const current = () => rows.find(r => r.id === sel);
+  // Settings that used to live on the PM Settings screen now sit with the piece they belong to.
+  const VARS = {
+    railway: ['PORT', 'APP_URL', 'PUBLIC_API_URL', 'ALLOWED_ORIGINS', 'BUILDER_USERNAME / BUILDER_EMAIL (first Builder)'],
+    database: ['DATABASE_URL (MYSQL_URL)', 'FILES_DIR (the Volume path)', 'MEDIA_MAX_MB'],
+    anthropic: ['ANTHROPIC_API_KEY', 'AI_ESTIMATOR_MODEL', 'AI_CONTRACT_MODEL', 'AI_ALLOWED_MODELS'],
+    email: ['MAIL_PROVIDER', 'RESEND_API_KEY', 'MAIL_FROM'],
+    drive: ['GOOGLE_OAUTH_CLIENT_ID', 'GOOGLE_OAUTH_CLIENT_SECRET', 'DRIVE_TOKEN_KEY']
+  };
+  function connHTML(r){
+    const k = r.diagramKey, st = DATA.settings || {};
+    let h = '';
+    if(k === 'gmaps') h += `<div class="arch-conn"><h5>Connection</h5>
+      <div class="field"><label>Google Maps API key</label><input id="cnMapsKey" value="${esc(st.googleMapsApiKey || '')}" placeholder="AIza..."></div>
+      <div class="hint">Once set, the Map page shows a real Google Map (Terrain). The key is embedded in the page, which is normal for Maps as long as it is restricted to go.lucasindustrial.us in Google Cloud. Leave it blank and save to fall back to the built-in map.</div>
+      <button class="btn primary small" id="cnMapsSave" type="button">Save Connection</button> <span class="hint" id="cnMsg"></span></div>`;
+    if(k === 'drive') h += `<div class="arch-conn"><h5>Connection: Check Drive Folders (read-only, on demand)</h5>
+      <div class="field"><label>OAuth Client ID</label><input id="cnDriveId" value="${esc(st.driveClientId || '')}" placeholder="xxxxx.apps.googleusercontent.com"></div>
+      <div class="hint">From Google Cloud Console, APIs & Services, Credentials. Safe to keep in the page: it only identifies the app to Google. It must belong to the lucasindustrial.us Google Cloud organization.</div>
+      <div class="field" style="margin-top:10px;"><label>Folder to watch</label><input id="cnDriveFolder" value="${esc(st.driveParentFolderId || '')}" placeholder="Paste the folder's Drive URL, or just its ID"></div>
+      <div class="hint">The parent folder with one subfolder per job (for example Active Jobs). Check Drive Folders lists what is directly inside it.</div>
+      <button class="btn primary small" id="cnDriveSave" type="button">Save Connection</button> <span class="hint" id="cnMsg"></span></div>
+      <div class="arch-conn"><h5>Connection: Closing Packet Archive</h5><div id="arcDriveBox"><div class="hint" style="margin:0;">Checking...</div></div></div>`;
+    if(VARS[k]) h += `<div class="arch-conn"><h5>Set In Railway Variables (names only, never typed here)</h5><div class="arch-vars">${VARS[k].map(v => `<code>${esc(v)}</code>`).join('')}</div></div>`;
+    return h;
   }
-  function rowHTML(r, i){
-    return `<div style="border:1px solid var(--line); border-radius:8px; padding:10px 12px; margin-bottom:10px;">
-      <div class="row2" style="margin-bottom:8px;">
-        <div>${fieldLabel('Name / vendor')}<input data-arch-field="name" data-arch-idx="${i}" value="${esc(r.name)}" placeholder="Component name" style="font-weight:700; width:100%; box-sizing:border-box;"></div>
-        <div>${fieldLabel('Category')}<input data-arch-field="category" data-arch-idx="${i}" value="${esc(r.category||'')}" placeholder="Category" style="width:100%; box-sizing:border-box;"></div>
-      </div>
-      <div style="margin-bottom:8px;">${fieldLabel('Purpose')}<textarea data-arch-field="purpose" data-arch-idx="${i}" rows="3" placeholder="What it's for" style="width:100%; box-sizing:border-box;">${esc(r.purpose||'')}</textarea></div>
-      <div class="row2" style="margin-bottom:8px;">
-        <div>${fieldLabel('Cost')}<input data-arch-field="cost" data-arch-idx="${i}" value="${esc(r.cost||'')}" placeholder="Rough cost" style="width:100%; box-sizing:border-box;"></div>
-        <div>${fieldLabel('Owner / account')}<input data-arch-field="owner" data-arch-idx="${i}" value="${esc(r.owner||'')}" placeholder="e.g. name@email.com" style="width:100%; box-sizing:border-box;"></div>
-      </div>
-      <div>${fieldLabel('Notes')}<textarea data-arch-field="notes" data-arch-idx="${i}" rows="3" placeholder="Credential access, quirks, anything worth remembering" style="width:100%; box-sizing:border-box;">${esc(r.notes||'')}</textarea></div>
-      <div style="text-align:right; margin-top:6px;"><button class="btn ghost small" data-arch-remove="${i}" type="button">Remove</button></div>
-    </div>`;
+  function detailHTML(){
+    const r = current();
+    if(!r){
+      return `<div class="arch-detail"><h4 style="margin:0 0 6px; font-size:16px;">Pick a piece of the system</h4>
+        <div class="hint" style="margin-bottom:12px;">Click any box in the diagram, or a name below, to see what it does, why we use it, what it costs and who owns the account.</div>
+        <div class="arch-list">${rows.map(x => `<button type="button" class="arch-chip" data-arch-pick="${x.id}">${esc(x.name || 'Untitled')}<small>${esc(x.category || '')}</small></button>`).join('')}</div>
+        <button class="btn ghost small" id="archAddBtn" type="button" style="margin-top:12px;">+ Add component</button></div>`;
+    }
+    if(editing){
+      return `<div class="arch-detail"><h4 style="margin:0 0 10px; font-size:16px; text-transform:none;">Edit ${esc(r.name || 'component')}</h4>
+        ${fld(r,'name','Name / vendor','input','Component name')}${fld(r,'category','Category','input','Category')}
+        ${fld(r,'purpose','What it does','textarea',"What it's for")}${fld(r,'why','Why we use it','textarea','The reasoning, and what we would switch to')}
+        ${fld(r,'cost','Cost','input','Rough cost')}${fld(r,'owner','Owner / account','input','e.g. name@email.com')}
+        ${fld(r,'notes','Notes','textarea','Credential access, quirks, anything worth remembering')}
+        <div style="display:flex; gap:8px; flex-wrap:wrap; align-items:center;"><button class="btn primary" id="archDoneBtn" type="button">Done</button><button class="btn ghost small" id="archRemoveBtn" type="button" style="margin-left:auto;">Remove This Component</button></div></div>`;
+    }
+    return `<div class="arch-detail"><div style="display:flex; align-items:flex-start; gap:10px; margin-bottom:12px;"><div style="flex:1;"><h4 style="margin:0; font-size:18px; text-transform:none;">${esc(r.name || 'Untitled')}</h4><div class="hint" style="margin:2px 0 0;">${esc(r.category || '')}</div></div>
+        <button class="btn ghost small" id="archEditBtn" type="button">Edit</button></div>
+      ${para('What it does', r.purpose)}${para('Why we use it', r.why)}${para('Cost', r.cost)}${para('Owner / account', r.owner)}${para('Notes', r.notes)}
+      ${connHTML(r)}
+      <button class="btn ghost small" id="archBackBtn" type="button">All Components</button></div>`;
   }
-  function paint(savedNote){
+  function paint(){
     body.innerHTML = `
-      <h3>System Architecture</h3>
-      <div style="background:var(--bg); border:1px solid var(--line); border-radius:8px; padding:10px; margin-bottom:18px;">${architectureDiagramSVG(rows)}</div>
-      <div id="archRows">${rows.map(rowHTML).join('')}</div>
-      <button class="btn ghost small" id="archAddBtn" type="button" style="margin-bottom:16px;">+ Add component</button>
-      ${savedNote ? `<div class="hint" style="color:${cssVar('--ok')}; margin-bottom:10px;">${savedNote}</div>` : ''}
-      <div class="modal-actions">
-        <span></span>
-        <div class="right">
-          <button class="btn ghost" id="archCloseBtn" type="button">Close</button>
-          <button class="btn primary" id="archSaveBtn" type="button">Save</button>
-        </div>
-      </div>
-    `;
-    // "input" (not "change") so every keystroke lands in the working copy
-    // immediately — nothing depends on the field losing focus before Save
-    // reads it, which is exactly the kind of timing gap that's silently
-    // lost an edit elsewhere in this app before.
-    document.querySelectorAll('[data-arch-field]').forEach(el => el.addEventListener('input', () => {
-      rows[+el.dataset.archIdx][el.dataset.archField] = el.value;
-    }));
-    document.querySelectorAll('[data-arch-remove]').forEach(btn => btn.onclick = () => {
-      rows.splice(+btn.dataset.archRemove, 1);
-      paint();
-    });
-    document.getElementById('archAddBtn').onclick = () => {
-      rows.push({ id: uid('arch'), diagramKey:'', name:'', category:'', purpose:'', cost:'', owner:'', notes:'' });
-      paint();
-    };
-    document.getElementById('archCloseBtn').onclick = closeModal;
-    document.getElementById('archSaveBtn').onclick = () => {
-      DATA.architecture = rows.filter(r => r.name.trim());
-      saveData();
-      paint('Saved — the diagram above reflects what\'s currently in the fields below.');
-    };
+      <div style="display:flex; align-items:center; gap:12px; margin-bottom:12px; flex-wrap:wrap;"><h3 style="margin:0;">System Architecture</h3><span class="hint" style="margin:0;">How the pieces fit together. Click a box for details.</span>
+        <span style="margin-left:auto; display:flex; gap:8px; align-items:center;">${note ? `<span class="hint" style="color:${cssVar('--ok')}; margin:0;">${note}</span>` : ''}<button class="btn primary" id="archSaveBtn" type="button">Save Changes</button></span></div>
+      <div class="arch-grid">
+        <div class="arch-diagram">${architectureDiagramSVG(rows, current() && current().diagramKey)}</div>
+        <div id="archPanel">${detailHTML()}</div>
+      </div>`;
+    note = '';
+    const pick = id => { sel = id; editing = false; paint(); };
+    body.querySelectorAll('[data-arch-key]').forEach(g => { const go = () => { const r = rows.find(x => x.diagramKey === g.dataset.archKey); if(r) pick(r.id); }; g.onclick = go; g.onkeydown = e => { if(e.key === 'Enter' || e.key === ' '){ e.preventDefault(); go(); } }; });
+    body.querySelectorAll('[data-arch-pick]').forEach(b => b.onclick = () => pick(b.dataset.archPick));
+    // "input" (not "change") so every keystroke lands in the working copy: nothing depends on the field losing focus before Save reads it.
+    body.querySelectorAll('[data-arch-field]').forEach(el => el.addEventListener('input', () => { const r = current(); if(r) r[el.dataset.archField] = el.value; }));
+    const on = (id, fn) => { const e = document.getElementById(id); if(e) e.onclick = fn; };
+    const cm = t => { const e = document.getElementById('cnMsg'); if(e){ e.textContent = t; e.style.color = cssVar('--ok'); } };
+    on('cnMapsSave', () => { DATA.settings.googleMapsApiKey = document.getElementById('cnMapsKey').value.trim(); saveData(); cm('Saved'); });
+    on('cnDriveSave', () => { DATA.settings.driveClientId = document.getElementById('cnDriveId').value.trim(); DATA.settings.driveParentFolderId = extractDriveFolderId(document.getElementById('cnDriveFolder').value); saveData(); cm('Saved'); });
+    if(document.getElementById('arcDriveBox')) paintArchiveDriveBox();
+    on('archEditBtn', () => { editing = true; paint(); });
+    on('archDoneBtn', () => { editing = false; paint(); });
+    on('archBackBtn', () => { sel = null; paint(); });
+    on('archRemoveBtn', () => { rows = rows.filter(r => r.id !== sel); sel = null; editing = false; paint(); });
+    on('archAddBtn', () => { const r = { id: uid('arch'), diagramKey:'', name:'', category:'', purpose:'', why:'', cost:'', owner:'', notes:'' }; rows.push(r); sel = r.id; editing = true; paint(); });
+    on('archSaveBtn', () => { DATA.architecture = rows.filter(r => (r.name || '').trim()); rows = JSON.parse(JSON.stringify(DATA.architecture)); if(!current()) sel = null; saveData(); note = 'Saved'; paint(); });
   }
   paint();
   openModal();
+  const mm = document.querySelector('#modalBack .modal'); if(mm) mm.classList.add('arch-wide');
 }
 function openAutomationsModal(){
   if(!BUILDER_MODE) return;
@@ -11834,7 +12231,7 @@ function initGoogleMapMini(){
 }
 function wireGmapsKeyEditBtn(){
   const btn = document.getElementById('gmapsKeyEditBtn');
-  if(btn) btn.onclick = openGmapsKeyModal;
+  if(btn) btn.onclick = () => openArchitectureModal('gmaps');
 }
 
 function wireMap(){
@@ -13144,7 +13541,7 @@ function openMobileNav(){
   }
 })();
 // The global menu opens one of the old footer tools directly: app/pm.html?tool=devTasks etc. Only that tool's window is shown.
-const TOOL_OPENERS = { devTasks: () => openDevTasksModal(), architecture: () => openArchitectureModal(), data: () => openDataTransferModal(), settings: () => openSettingsHub('rules'), requests: () => openRequestsModal() };
+const TOOL_OPENERS = { devTasks: () => openDevTasksModal(), architecture: () => openArchitectureModal(), data: () => openDataTransferModal(), settings: () => openSettingsHub('rules'), contacts: () => openContactsPage(), pathways: () => openPathwaysPage(), report: () => openProgressReportPage(), requests: () => openRequestsModal() };
 let TOOL_NAME = null; try{ TOOL_NAME = new URLSearchParams(location.search).get('tool'); }catch(e){}
 // The Estimator's Crew & Subs is this very screen, view-only: ?only=people shows just the Crew & Subs page and, unless the person has write access
 // to it, switches on view-only mode: every field is locked and every add / change / pause / delete control is hidden. People and Assignments still open.
@@ -13165,6 +13562,8 @@ function applyReadOnly(){
 const EMBEDDED = (window.top !== window);
 function gotoView(v){ if(!v || !Array.isArray(NAV) || !NAV.some(n => n.id === v)) return; try{ closeModal(); }catch(e){} VIEW = v; render(); }
 window.addEventListener('message', e => { if(e.origin === location.origin && e.data && e.data.type === 'goto' && GATE_PASSED) gotoView(e.data.view); });
+// The Builder shell switches between its tool screens by message instead of reloading this page.
+window.addEventListener('message', e => { if(e.origin === location.origin && e.data && e.data.type === 'tool' && TOOL_NAME && TOOL_OPENERS[e.data.tool]){ TOOL_NAME = e.data.tool; document.body.classList.remove('tool-closed'); try{ TOOL_OPENERS[e.data.tool](); }catch(err){ console.error(err); } } });
 function runOnlyView(){
   try{ const v = new URLSearchParams(location.search).get('view'); if(v) gotoView(v); }catch(e){}
   if(ONLY_VIEW !== 'people') return;
@@ -13612,11 +14011,7 @@ function openDuplicateScannerModal(kind){
 }
 // ---- Settings & Connections: one pane for the Builder's setup screens (each tab is the existing screen, with a tab row on top) ----
 const SETTINGS_TABS = [
-  { key: 'rules', label: 'House Rules', open: () => openHouseRulesModal() },
-  { key: 'maps', label: 'Google Maps', open: () => openGmapsKeyModal() },
-  { key: 'drive', label: 'Google Drive', open: () => openDriveConnectionModal() },
-  { key: 'collections', label: 'Collections Contact', open: () => openCollectionsContactModal() },
-  { key: 'automations', label: 'Automations', open: () => openAutomationsModal() }
+  { key: 'rules', label: 'House Rules', open: () => openHouseRulesModal() }
 ];
 async function openSettingsHub(tab){
   if(!BUILDER_MODE) return;
@@ -13625,6 +14020,7 @@ async function openSettingsHub(tab){
   const body = document.getElementById('modalBody'); if(!body) return;
   body.querySelectorAll('.settings-tabs').forEach(e => e.remove());
   const bar = document.createElement('div'); bar.className = 'settings-tabs';
+  if(SETTINGS_TABS.length < 2) return;
   bar.innerHTML = `<h3 style="margin:0 0 8px;">Settings &amp; Connections</h3><div class="pill-row" style="margin-bottom:14px;">${SETTINGS_TABS.map(x => `<button class="pill ${x.key === t.key ? 'on' : ''}" data-stab="${x.key}" type="button">${esc(x.label)}</button>`).join('')}</div>`;
   body.insertBefore(bar, body.firstChild);
   bar.onclick = ev => { const b = ev.target.closest('[data-stab]'); if(b && b.dataset.stab !== t.key) openSettingsHub(b.dataset.stab); };
@@ -13635,6 +14031,7 @@ function openModal(offcanvas){
   back.classList.toggle('offcanvas', offcanvas === true);
   back.classList.toggle('fullpage', offcanvas === 'full' || offcanvas === 'page'); back.classList.toggle('narrow', offcanvas === 'page');   // 'full' = wide page in the content pane, 'page' = the same pane with a centred, readable column
   back.classList.add('open');
+  const wideM = back.querySelector('.modal'); if(wideM) wideM.classList.remove('arch-wide', 'le-wide');
   syncSuggestPill();
   // The backdrop (and, in offcanvas mode, the panel itself) is the actual
   // scrolling element — it's the same DOM node reused for every modal, so
@@ -13651,7 +14048,7 @@ function openModal(offcanvas){
 // the message filled in (or they copy it). The text comes from Compliance.coiNotice, listing every job the COI will not cover.
 function openCoiNoticeDialog(person){
   if(!window.Compliance) return;
-  const n = Compliance.coiNotice(person, { jobs: Compliance.affectedJobs(person, DATA), sender: GO_USER && GO_USER.name, company: 'Lucas Industrial, LLC', replyTo: 'Service@LucasIndustrial.us' });
+  const n = Compliance.coiNotice(person, { jobs: Compliance.affectedJobs(person, DATA), sender: GO_USER && GO_USER.name, company: 'Lucas Industrial, LLC', replyTo: ((DATA.settings.contacts || {}).service || {}).email || 'Service@LucasIndustrial.us' });
   const ov = document.createElement('div'); ov.style.cssText = 'position:fixed;inset:0;background:rgba(10,12,14,.6);z-index:100001;display:flex;align-items:flex-start;justify-content:center;padding:5vh 12px;overflow:auto';
   ov.innerHTML = `<div style="background:var(--panel,#fff);color:var(--text,#222);border-radius:10px;max-width:640px;width:100%;padding:20px 22px" role="dialog">
     <h3 style="margin:0 0 4px">Email Notice To ${esc(person.name || 'This Sub')}</h3>

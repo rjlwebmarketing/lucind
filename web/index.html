@@ -1,6 +1,6 @@
 <!doctype html>
 <html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
-<meta name="app-build" content="10.4.0"><title>Lucas Industrial | Platform</title><link rel="icon" type="image/png" href="/logo.png"><link rel="apple-touch-icon" href="/logo.png">
+<meta name="app-build" content="10.5.0"><title>Lucas Industrial | Platform</title><link rel="icon" type="image/png" href="/logo.png"><link rel="apple-touch-icon" href="/logo.png">
 <style>
 @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap');
 :root{
@@ -10,12 +10,12 @@
   --acc:var(--brand-blue);--accd:#012d85;--bad:#D32F2F;--ok:#1E8449;--radius:10px
 }
 *{box-sizing:border-box}body{margin:0;font:14px/1.45 'Inter',system-ui,-apple-system,Segoe UI,Roboto,sans-serif;background:var(--bg);color:var(--ink)}
-button,input,select{font:inherit}
+button,input,select,textarea{font:inherit}
 a{color:var(--acc)}a:hover{color:var(--accd)}
 .btn{background:var(--acc);color:#fff;border:1px solid var(--acc);border-radius:var(--radius);padding:9px 16px;font-weight:600;cursor:pointer}.btn:hover{filter:brightness(1.1)}
 .btn.sec{background:var(--panel-2);color:var(--ink);border:1px solid var(--line)}.btn.bad{background:var(--bad);border-color:var(--bad)}.btn.sm{padding:5px 10px;font-size:12px}
-input,select{border:1px solid var(--line);border-radius:var(--radius);padding:9px 11px;width:100%;background:#fff;color:var(--ink)}
-input:focus,select:focus{outline:2px solid var(--brand-yellow);border-color:var(--acc)}
+input,select,textarea{border:1px solid var(--line);border-radius:var(--radius);padding:10px 14px;width:100%;background:#fff;color:var(--ink);transition:border-color .15s,box-shadow .15s}
+input:focus,select:focus,textarea:focus{outline:none;border-color:var(--acc);box-shadow:0 0 0 3px rgba(1,60,174,.14)}
 label{display:block;font-size:12px;color:var(--mut);margin:10px 0 3px;font-weight:500}
 .center{max-width:360px;margin:12vh auto;padding:0 20px;text-align:center}
 .center .logo{width:64px;height:64px;object-fit:contain;display:block;margin:0 auto 14px}
@@ -222,13 +222,24 @@ const DESC = { estimator: 'Estimates, customers and the price book', pm: 'Projec
 // Where a menu item goes: Project Manager opens the whole embedded app; the others open their first permitted screen.
 const FRAMED = { pm: '/app/pm.html?v=' + BUILD, estimator: '/app/estimator.html?v=' + BUILD };   // branches that open as a whole app
 // Screens that are one of the PM app's own tool windows, opened on their own from the Builder / Admin menus.
-const TOOLS = { 'builder.pmsettings': 'settings', 'builder.devtools': 'devTasks', 'builder.architecture': 'architecture', 'builder.data': 'data', 'admin.requests': 'requests' };
+const TOOLS = { 'builder.pmsettings': 'settings', 'builder.devtools': 'devTasks', 'builder.architecture': 'architecture', 'builder.pathways': 'pathways', 'builder.report': 'report', 'builder.data': 'data', 'admin.requests': 'requests', 'admin.contacts': 'contacts' };
 const menuHref = m => FRAMED[m.key] ? U(m.key) : U(firstPane(m));
 const menuOf = path => FRAMED[path] ? path : (path.split('.')[0] === 'estimator' ? 'estimator' : path.split('.')[0] === 'sensitive' ? 'admin' : path.split('.')[0]);
 function shell(path){
   // Short links such as #/admin or #/builder resolve to the first screen this person may open.
   // An address that is not a screen this person has (typo, old link, no access) goes home.
   if(path !== 'home' && !FRAMED[path] && !menuItem(path) && allLabel(path) === path){ navTo('/home', true); return; }
+  // Moving between Builder / Admin tool screens keeps the same frame and just tells it which screen to show (no reload, no new notices).
+  if(TOOLS[path]){
+    const fr = document.getElementById('appFrame'), mainEl = document.getElementById('main');
+    if(fr && mainEl && mainEl.contains(fr) && /[?&]tool=/.test(fr.getAttribute('src') || '') && fr.contentWindow){
+      try{
+        fr.contentWindow.postMessage({ type: 'tool', tool: TOOLS[path] }, location.origin);
+        document.querySelectorAll('.side a').forEach(a => a.classList.toggle('on', a.getAttribute('href') === U(path)));
+        fr.title = allLabel(path); return;
+      }catch(e){}
+    }
+  }
   const mi = menuItem(path);
   if(mi && !FRAMED[path]){ navTo(menuHref(mi), true); return; }
   const cur = menuOf(path), curItem = menuItem(cur);
