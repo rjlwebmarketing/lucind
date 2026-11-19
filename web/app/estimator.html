@@ -892,14 +892,6 @@
   .nb-opt:hover,.nb-opt:focus-visible{border-color:var(--accent,#013CAE)}.nb-opt b{display:block;font-size:15px;margin:6px 0 4px}.nb-opt span{font-size:12.5px;color:var(--text-dim)}.nb-opt .ic{font-size:26px}
   .nb-dz{border-style:dashed;border-width:2px}.nb-dz.over{border-color:var(--accent,#013CAE);background:#013CAE12}.nb-sub{margin-top:10px;font-size:12px}.nb-msg{margin-top:8px;min-height:15px;font-size:12px}
   .nb-drop{margin:0 16px 16px;padding:26px 14px;border:2px dashed var(--line);border-radius:12px;text-align:center;font-size:13px;color:var(--text-dim)}.nb-drop.over{border-color:var(--accent,#013CAE);background:#013CAE10}
-  .nb-wrap{display:flex;overflow:auto;min-height:0}.nb-main{flex:1;min-width:0}.nb-side{width:230px;flex:0 0 230px;border-left:1px solid var(--line);padding:18px 16px;box-sizing:border-box}
-  .nb-side-t{font-weight:700;font-size:14px;line-height:1.25;margin-bottom:4px}.nb-side-s{font-size:12px;color:var(--text-faint,#8a8f98);margin-bottom:12px}
-  .nb-ext{display:flex;align-items:center;gap:10px;width:100%;justify-content:flex-start;text-align:left;padding:10px 12px;border:2px solid var(--line);border-radius:12px;background:var(--surface,#fff);color:var(--text);font:inherit;font-weight:600;cursor:pointer}.nb-ext:hover{border-color:#013CAE;background:#eef3fc}.nb-ext-i{font-size:20px}
-  .ex-hint{font-size:12.5px;color:var(--text-faint,#8a8f98);margin:0 0 12px}.ex-step{display:flex;gap:12px;padding:12px 0;border-top:1px solid var(--line)}.ex-n{flex:0 0 26px;height:26px;border-radius:50%;background:#013CAE;color:#fff;font-weight:700;display:flex;align-items:center;justify-content:center;font-size:13px}
-  .ex-b{flex:1;min-width:0}.ex-s{font-size:12.5px;color:var(--text-faint,#6b7580);margin:3px 0 6px}.ex-row{display:flex;align-items:center;gap:12px;flex-wrap:wrap;margin:6px 0}.ex-ck{display:flex;align-items:center;gap:6px;font-size:13px;cursor:pointer}.ex-lock{opacity:.45;pointer-events:none}
-  .ex-mark{cursor:grab;text-decoration:none}
-  .ex-card{display:grid;gap:4px;margin:8px 0;padding:10px 12px;border:1px solid var(--line);border-radius:10px;background:#f6f9ff}.ex-card div{display:flex;gap:10px;font-size:12.5px}.ex-card span{flex:0 0 110px;color:var(--text-faint,#6b7580)}.ex-card b{color:var(--text,#1d2427)}.ex-note{margin-top:12px;padding:10px 12px;border-radius:10px;background:#fffbea;border:1px solid #e6c76a;font-size:12.5px}
-  @media(max-width:700px){.nb-wrap{flex-direction:column}.nb-side{width:auto;flex:0 0 auto;border-left:0;border-top:1px solid var(--line)}}
   @media(max-width:560px){.nb-opts{grid-template-columns:1fr}}
   .ho-card{background:var(--surface,#fff);border:1px solid var(--line);border-left:4px solid var(--accent);border-radius:12px;padding:14px 16px;margin-bottom:14px;display:flex;gap:18px;align-items:center;flex-wrap:wrap}
   .ho-card.done{border-left-color:#1E8449}.ho-card h4{font-size:14px;margin:0 0 4px}.ho-card .ho-txt{flex:1;min-width:240px;font-size:13px;color:var(--text-dim)}
@@ -1041,7 +1033,6 @@ async function boot(){
   $('#mobileNavToggle').onclick = () => { $('#sidebar').classList.toggle('mobile-open'); $('#mobileNavBackdrop').classList.toggle('open'); };
   $('#mobileNavBackdrop').onclick = closeNav;
   await refresh(true);
-  const pend = bcTakePending(); if(pend && canWrite()) bcInviteDialog(pend);   // a bid request sent from BuildingConnected
 }
 const closeNav = () => { $('#sidebar').classList.remove('mobile-open'); $('#mobileNavBackdrop').classList.remove('open'); };
 async function refresh(first){
@@ -1478,7 +1469,7 @@ function bidNameFromFiles(files){
   return raw.replace(/[_]+/g, ' ').replace(/\s+/g, ' ').trim().slice(0, 120) || 'New bid';
 }
 // What an Estimator usually has before bidding (Rob/Mike): ONE essential file, the original plan set (most of the bid's details come from it),
-// then whatever else exists. The GC's email is pasted in the left box; files go in the right box. Estimator AI starts only when BOTH are there.
+// then whatever else exists. The GC's email is pasted in the left box; files go in the right box. Estimator AI starts as soon as files are in; the email is optional (an invite or overview page saved as a PDF works as a file).
 const BID_START_FILES = [
   { name: 'Original Plan Set', icon: '<path d="M4 20V6l8-3 8 3v14M4 20h16M9 20v-6h6v6"/>', main: true },
   { name: 'Addenda / CCDs', icon: '<path d="M7 3h8l4 4v14H7zM14 3v5h5M12 11v6M9 14h6"/>' },
@@ -1492,94 +1483,6 @@ function datesFromEmail(t){
   const m = /construction\s+dates?\s*(?:are|is|:)?\s*(\d{1,2}\/\d{1,2}\/\d{2,4})\s*(?:-|–|—|to|through)\s*(\d{1,2}\/\d{1,2}\/\d{2,4})/i.exec(t || '');
   return m ? { startDate: D(m[1]), endDate: D(m[2]) } : {};
 }
-// ---------- BuildingConnected invite: the text of an invite page (pasted by a person, or read by Claude in the person's own Chrome) becomes bid fields ----------
-// Recognised by its labels (Date Invited, Trade Name(s), Project dates). Nothing is sent to BuildingConnected and nothing is guessed: a field that is not on the page stays blank.
-const BC_MONTHS = { jan: 1, feb: 2, mar: 3, apr: 4, may: 5, jun: 6, jul: 7, aug: 8, sep: 9, oct: 10, nov: 11, dec: 12 };
-function parseBC(text){
-  const t = String(text || ''); if(!/Date Invited/i.test(t) || !/(Trade Name|Project dates|Project Name)/i.test(t)) return null;
-  const L = t.split(/\r?\n/).map(x => x.trim());
-  const lastIdx = label => { for(let k = L.length - 1; k >= 0; k--) if(L[k].toLowerCase() === label.toLowerCase()) return k; return -1; };
-  const after = (label, take) => { const i = lastIdx(label); if(i < 0) return ''; const out = []; for(let j = i + 1; j < L.length && out.length < (take || 1); j++){ if(L[j] && L[j] !== '--') out.push(L[j]); else if(L[j] === '--' && !out.length) return ''; } return out.join(' '); };
-  const D = x => { const m = /([A-Za-z]{3})[a-z]*\.?\s+(\d{1,2}),\s*(\d{4})/.exec(x || ''); if(!m || !BC_MONTHS[m[1].toLowerCase()]) return ''; return m[3] + '-' + String(BC_MONTHS[m[1].toLowerCase()]).padStart(2, '0') + '-' + String(+m[2]).padStart(2, '0'); };
-  const name = after('Project Name');
-  if(!name) return null;
-  const dueRaw = after('Date Due'), invited = after('Date Invited'), loc = after('Location');
-  let ci = -1; for(let k = 0; k < L.length; k++) if(L[k].toLowerCase() === 'client' && L.slice(k + 1, k + 15).some(x => /@/.test(x))) ci = k;   // the Client block that has a contact (the board's column heading has none)
-  let customer = '', contact = '', phone = '', email = '';
-  if(ci >= 0){ const seg = L.slice(ci + 1, ci + 14).filter(Boolean); customer = seg[0] || ''; const ce = seg.find(x => /@/.test(x)); if(ce){ const m = /([+\d][\d\s().\-+ext]{6,})\s*\|\s*(\S+@\S+)/.exec(ce); if(m){ phone = m[1].trim(); email = m[2]; } else { const em = /\S+@\S+/.exec(ce); email = em ? em[0] : ''; } const ni = seg.indexOf(ce) - 1; contact = (seg[ni] && !/^[A-Z]{1,3}$/.test(seg[ni]) ? seg[ni] : (seg[ni - 1] || '')); } }
-  // "9334 Dayton Pike, Soddy-Daisy, TN 37379, United States of America"
-  let address = '', city = '', state = '';
-  if(loc){ const parts = loc.split(',').map(x => x.trim()).filter(x => x && !/^united states/i.test(x)); const sz = parts.length ? /^([A-Za-z]{2})\b\s*\d{0,5}/.exec(parts[parts.length - 1]) : null; if(sz && parts.length >= 3){ state = sz[1].toUpperCase(); city = parts[parts.length - 2]; address = parts.slice(0, parts.length - 2).join(', '); } else { address = parts.join(', '); } }
-  const infoI = lastIdx('Project Information'); let info = '';
-  if(infoI >= 0){ const out = []; for(let j = infoI + 1; j < L.length; j++){ if(/^(Show More|Trade Specific Instructions|Related organizations)$/i.test(L[j])) break; out.push(L[j]); } info = out.join('\n').replace(/\n{3,}/g, '\n\n').trim(); }
-  const url = (/https?:\/\/app\.buildingconnected\.com\/\S+/i.exec(t) || [''])[0];
-  const cutoff = after('Date Due');
-  const notes = ['From a BuildingConnected invite' + (invited ? ' (invited ' + invited + ')' : '') + (url ? '\nInvite link: ' + url : ''),
-    customer ? 'Customer: ' + customer : '', contact || phone || email ? 'Contact: ' + [contact, phone, email].filter(Boolean).join(' | ') : '',
-    dueRaw ? 'Due: ' + dueRaw : '', info ? 'Invite instructions:\n' + info : ''].filter(Boolean).join('\n');
-  return { name: name.slice(0, 200), view: { Project: name, Customer: customer, Contact: [contact, phone, email].filter(Boolean).join(' | '), Location: loc, 'Bid due': dueRaw, 'Expected start': after('Expected Start'), 'Expected finish': after('Expected Finish') }, summary: name + (dueRaw ? ' · due ' + dueRaw : ''), fields: { customer, address, city, state, bidDue: D(dueRaw), startDate: D(after('Expected Start')), endDate: D(after('Expected Finish')), notes } };
-}
-// ---------- External bid platforms: a guided workflow per website. Today: BuildingConnected, through a bookmark button the worker adds once. ----------
-// The bookmark button runs on the worker's own BuildingConnected invite page, reads that page, and opens the ERP with it. The ERP shows what it received
-// (so the worker sees it is the right bid) and creates the project and bid with one click. Nothing is clicked, sent or downloaded on BuildingConnected.
-const BC_ORIGIN = 'https://go.lucasindustrial.us';
-const BC_BOOKMARKLET = "javascript:(function(){var u=location.href,t=document.body.innerText,O='" + BC_ORIGIN + "',w=window.open(O+'/estimator','lucasErp'),n=0,ok=0;if(!w){alert('Please allow pop-ups for BuildingConnected, then click the button again.');return}window.addEventListener('message',function(e){if(e.origin===O&&e.data&&e.data.type==='bc-ack')ok=1});var iv=setInterval(function(){if(ok||++n>120){clearInterval(iv);return}try{w.postMessage({source:'lucas-bookmark',type:'bc-invite',text:t,url:u},O)}catch(x){}},500)})()";
-const EXT_PLATFORMS = [
-  { key: 'bc', name: 'BuildingConnected', icon: '🏗', site: 'BuildingConnected', parse: parseBC }
-];
-// Creates the bid from the text of an invite page (the text is also filed in the bid, so nothing is lost).
-async function bcCreate(text, url){
-  const body = url && !/Invite link:/i.test(text) ? text + '\nInvite link: ' + url : text;
-  const bc = parseBC(body); if(!bc) throw new Error('not_an_invite');
-  if(BIDS.some(b => (b.name || '').trim().toLowerCase() === bc.name.trim().toLowerCase()) && !confirm('A bid named "' + bc.name + '" already exists. Create another one anyway?')) return null;
-  const ef = new File([body], 'BuildingConnected invite ' + iso(new Date()) + '.txt', { type: 'text/plain' }); ef.__email = true;
-  const r = await api('POST', '/bids', Object.assign({ name: bc.name }, Object.fromEntries(Object.entries(bc.fields).filter(([, v]) => v))));
-  PENDING_FILES = [ef]; AI_AFTER = null; await refresh(); openBid(r.bid.id); BID_TAB = 'overview'; render(); return r.bid;
-}
-const bcCard = o => '<div class="ex-card">' + Object.entries(o).filter(([, v]) => v).map(([k, v]) => '<div><span>' + esc(k) + '</span><b>' + esc(v) + '</b></div>').join('') + '</div>';
-// What the bookmark button hands over (kept in sessionStorage by the sign-in page until this app is ready, then forwarded here).
-function bcTakePending(){ try{ const raw = sessionStorage.getItem('lucasBcInvite'); if(!raw) return null; const o = JSON.parse(raw); return o && o.text && Date.now() - (o.at || 0) < 30 * 60000 ? o : null; }catch(e){ return null; } }
-function bcClearPending(){ try{ sessionStorage.removeItem('lucasBcInvite'); }catch(e){} }
-let BC_OPEN = false;
-function bcInviteDialog(inv){
-  if(BC_OPEN || !inv || !inv.text) return; BC_OPEN = true;
-  const back = document.createElement('div'); back.className = 'pk-back'; const close = () => { BC_OPEN = false; back.remove(); };
-  const pr = parseBC(inv.text);
-  back.innerHTML = `<div class="pk" role="dialog" aria-label="Bid request from BuildingConnected" style="width:min(560px,100%)"><div class="pk-h"><b>Bid Request From BuildingConnected</b><span style="flex:1"></span><button class="btn small ghost" id="bcX" type="button">Close</button></div>
-    <div style="padding:6px 18px 18px;overflow:auto">${pr ? `<div class="ex-s" style="margin:6px 0">Is this the bid request you meant?</div>${bcCard(pr.view)}
-      <button class="btn primary" id="bcGo" type="button" style="width:100%">Create Project &amp; Bid</button><div id="bcMsg" class="nb-msg" style="text-align:center"></div>
-      <div class="ex-note">We cannot automatically pull in large files. Download them from BuildingConnected and upload them to the project after it is created.</div>`
-      : `<div style="color:#b3261e;margin:10px 0">That page was not a BuildingConnected bid request. Open the bid request on BuildingConnected (its Overview tab) and click the button again.</div>`}</div></div>`;
-  document.body.appendChild(back);
-  back.querySelector('#bcX').onclick = () => { bcClearPending(); close(); };
-  const go = back.querySelector('#bcGo');
-  if(go) go.onclick = async () => { const m = back.querySelector('#bcMsg'); m.textContent = 'Creating…'; go.disabled = true;
-    try{ const bid = await bcCreate(inv.text, inv.url); if(bid){ bcClearPending(); close(); } else { m.textContent = ''; go.disabled = false; } }
-    catch(e){ m.textContent = 'Could not create the bid (' + e.message + ').'; go.disabled = false; } };
-}
-window.addEventListener('message', e => { const d = e.data; if(!d || d.type !== 'bcInvite' || !d.payload) return; if(e.source !== window.parent && e.source !== window) return; bcInviteDialog(d.payload); });
-function extWorkflow(back, x, close){
-  const wrap = back.querySelector('#nbWrap'); let pasteCur = null;
-  wrap.innerHTML = `<div style="padding:16px 22px 18px;width:100%"><div style="display:flex;align-items:center;gap:10px;margin-bottom:10px"><button class="btn small ghost" id="exBack" type="button">← Back To New Bid</button><b style="font-size:16px">${esc(x.name)}</b></div>
-    <div class="ex-step"><div class="ex-n">1</div><div class="ex-b"><b>Add the button to your browser (one time)</b><div class="ex-s">Drag this button up to your bookmarks bar. Do not click it here.</div>
-      <div class="ex-row"><a class="btn primary ex-mark" id="exMark" draggable="true" title="Drag me to your bookmarks bar">☆ Send To Lucas ERP</a><span class="ex-s">Can't see the bookmarks bar? Press Ctrl+Shift+B.</span></div></div></div>
-    <div class="ex-step"><div class="ex-n">2</div><div class="ex-b"><b>Each bid request</b><div class="ex-s">Open the bid request on ${esc(x.site)}, then click <b>Send To Lucas ERP</b> in your bookmarks bar. The ERP opens with the bid ready to create.</div>
-      <div class="ex-s">Tip: sign in here with "Keep me signed in" ticked so it never asks you to sign in again.</div></div></div>
-    <details style="margin-top:6px"><summary class="ex-s" style="cursor:pointer">Or paste the invite page yourself</summary>
-      <div class="ex-s">Copy the whole invite page (Ctrl+A, then Ctrl+C) and paste it here.</div>
-      <textarea id="exText" rows="3" placeholder="Paste the invite page here…" aria-label="The invite page" style="width:100%;box-sizing:border-box;font:inherit;font-size:12.5px;padding:8px 10px;border:1px solid var(--line);border-radius:8px;resize:none"></textarea>
-      <div id="exView" class="ex-s"></div>
-      <button class="btn" id="exGo" type="button" disabled>Create Project &amp; Bid From This Info</button> <span id="exMsg2" class="ex-s"></span></details>
-    <div class="ex-note">We cannot automatically pull in large files. Download them from ${esc(x.site)} and upload them to the project after it is created.</div></div>`;
-  const q = sel => wrap.querySelector(sel);
-  const mk = q('#exMark'); mk.setAttribute('href', BC_BOOKMARKLET); mk.onclick = e => { e.preventDefault(); alert('Drag this button up to your bookmarks bar instead of clicking it.'); };
-  q('#exBack').onclick = e => { e.preventDefault(); close(); newBidDialog(); };
-  q('#exText').oninput = () => { pasteCur = x.parse(q('#exText').value); const raw = q('#exText').value.trim();
-    q('#exView').innerHTML = pasteCur ? bcCard(pasteCur.view) + '<div style="color:var(--ok,#1E8449);font-weight:600">✓ This is the bid the app will create.</div>' : (raw ? '<span style="color:#b3261e">This does not look like a ' + esc(x.site) + ' invite page. Open the invite and copy the whole page.</span>' : '');
-    q('#exGo').disabled = !pasteCur; };
-  q('#exGo').onclick = async () => { const m = q('#exMsg2'); if(!pasteCur) return; m.textContent = 'Creating…'; q('#exGo').disabled = true;
-    try{ const bid = await bcCreate(q('#exText').value, ''); if(bid) close(); else { m.textContent = ''; q('#exGo').disabled = false; } }catch(e){ m.textContent = 'Could not create the bid (' + e.message + ').'; q('#exGo').disabled = false; } };
-}
 function newBidDialog(){
   const back = document.createElement('div'); back.className = 'pk-back'; const close = () => back.remove();
   let staged = [];
@@ -1589,42 +1492,32 @@ function newBidDialog(){
     if(email.trim()){ const ef = new File([email], 'GC email ' + iso(new Date()) + '.txt', { type: 'text/plain' }); ef.__email = true; files.push(ef); }   // filed last so the plan set names the bid
     if(!files.length) return;
     m.textContent = 'Creating the bid…'; q('#nbGo').disabled = true; q('#nbPartial').disabled = true;
-    const bc = parseBC(email);
-    if(bc && BIDS.some(x => (x.name || '').trim().toLowerCase() === bc.name.trim().toLowerCase()) && !confirm('A bid named "' + bc.name + '" already exists. Create another one anyway?')){ m.textContent = ''; draw(); return; }
-    try{ const r = await api('POST', '/bids', Object.assign({ name: bc ? bc.name : bidNameFromFiles(files) }, datesFromEmail(email), bc ? Object.fromEntries(Object.entries(bc.fields).filter(([, v]) => v)) : {})); PENDING_FILES = files; AI_AFTER = withAi ? r.bid.id : null; close(); await refresh(); openBid(r.bid.id); BID_TAB = 'overview'; render(); }
+    try{ const r = await api('POST', '/bids', Object.assign({ name: bidNameFromFiles(files) }, datesFromEmail(email))); PENDING_FILES = files; AI_AFTER = withAi ? r.bid.id : null; close(); await refresh(); openBid(r.bid.id); BID_TAB = 'overview'; render(); }
     catch(e){ m.textContent = 'Could not create the bid (' + e.message + ').'; draw(); }
   };
-  back.innerHTML = `<div class="pk" role="dialog" aria-label="New bid" style="width:min(900px,100%);max-width:900px"><div class="pk-h"><b>New bid</b><span style="flex:1"></span><button class="btn small ghost" id="nbX" type="button">Close</button></div>
-    <div class="nb-wrap" id="nbWrap"><div class="nb-main">
+  back.innerHTML = `<div class="pk" role="dialog" aria-label="New bid" style="max-width:600px"><div class="pk-h"><b>New bid</b><span style="flex:1"></span><button class="btn small ghost" id="nbX" type="button">Close</button></div>
     <div class="nb-opts">
-      <div class="nb-opt nb-em" style="cursor:default;text-align:left;padding:12px"><b style="margin:0 0 6px;font-size:14px;text-align:center">1 · Paste The GC's Email Or BuildingConnected Invite</b>
-        <textarea id="nbEmail" placeholder="Paste the email from the customer, or the text of a BuildingConnected invite…" aria-label="The GC's email" style="width:100%;box-sizing:border-box;height:128px;padding:8px 10px;border:1px solid var(--line);border-radius:8px;font:inherit;font-size:12.5px;resize:none;background:var(--surface,#fff);color:var(--text)"></textarea>
+      <div class="nb-opt nb-em" style="cursor:default;text-align:left;padding:12px"><b style="margin:0 0 6px;font-size:14px;text-align:center">1 · Paste the GC's email (optional)</b>
+        <textarea id="nbEmail" placeholder="Copy the email from the customer and paste it here…" aria-label="The GC's email" style="width:100%;box-sizing:border-box;height:128px;padding:8px 10px;border:1px solid var(--line);border-radius:8px;font:inherit;font-size:12.5px;resize:none;background:var(--surface,#fff);color:var(--text)"></textarea>
         <div id="nbEmSt" class="nb-st"></div></div>
       <div class="nb-opt nb-dz" id="nbZone" tabindex="0" role="button" aria-label="Drop files here, or press Enter to choose files" style="padding:12px"><b style="font-size:14px">2 · Drop the files</b>
-        <div class="ic" style="font-size:24px">⇪</div><span>Plans, addenda, specs, RFIs. Files or whole folders.</span>
+        <div class="ic" style="font-size:24px">⇪</div><span>Plans, addenda, specs, RFIs, and the bid overview page saved as a PDF. Files or whole folders.</span>
         <div class="nb-sub">or <a href="#" id="nbPick">choose files</a> · <a href="#" id="nbPickDir">choose a folder</a></div><div id="nbFlSt" class="nb-st"></div></div></div>
     <div style="padding:0 16px"><button class="btn primary" id="nbGo" type="button" style="width:100%" disabled>Create Bid And Start Estimator AI</button>
       <div id="nbMsg" class="nb-msg" style="text-align:center"></div></div>
     <div class="nb-rec"><div class="nb-rec-t">Recommended Files For Bid Creation</div><div class="nb-rec-r">${BID_START_FILES.map(f => `<div class="nb-rec-i${f.main ? ' main' : ''}"><span class="nb-rec-c"><svg viewBox="0 0 24 24" width="22" height="22" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">${f.icon}</svg></span><span class="nb-rec-n">${esc(f.name)}</span></div>`).join('')}</div></div>
     <div style="padding:2px 16px 14px;text-align:center;font-size:12px;color:var(--text-faint,#8a8f98)"><button class="btn small ghost" id="nbManual" type="button">Build manually</button> <button class="btn small ghost" id="nbPartial" type="button" hidden>Create the bid without Estimator AI</button></div>
-    </div>
-    <div class="nb-side"><div class="nb-side-t">Common External Bid Platforms</div><div class="nb-side-s">Bring an invite in from another website.</div>
-      ${EXT_PLATFORMS.map(x => `<button class="btn nb-ext" type="button" data-ext="${x.key}"><span class="nb-ext-i">${x.icon}</span><span>${esc(x.name)}</span></button>`).join('')}</div></div>
     <input type="file" id="nbF" multiple hidden><input type="file" id="nbD" webkitdirectory hidden></div>`;
   const draw = () => {
     const hasE = !!q('#nbEmail').value.trim(), hasF = staged.length > 0;
-    const bc = parseBC(q('#nbEmail').value);
-    q('#nbEmSt').innerHTML = bc ? '<span style="color:var(--ok,#1E8449)">✓ BuildingConnected invite: ' + esc(bc.summary) + '</span>' : hasE ? '<span style="color:var(--ok,#1E8449)">✓ Email pasted</span>' : '<span>Not pasted yet</span>';
+    q('#nbEmSt').innerHTML = hasE ? '<span style="color:var(--ok,#1E8449)">✓ Email pasted</span>' : '<span>Not pasted yet</span>';
     q('#nbFlSt').innerHTML = hasF ? '<span style="color:var(--ok,#1E8449)">✓ ' + staged.length + ' file' + (staged.length === 1 ? '' : 's') + ' ready</span> <a href="#" id="nbClr">clear</a><div style="font-size:11px;color:var(--text-dim);margin-top:2px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">' + esc(staged.map(f => f.name).join(', ')) + '</div>' : '<span>No files yet</span>';
     const c = q('#nbClr'); if(c) c.onclick = e => { e.preventDefault(); e.stopPropagation(); staged = []; draw(); };
-    q('#nbGo').disabled = !(hasE && hasF);
-    q('#nbPartial').hidden = !(hasE || hasF) || (hasE && hasF);
-    q('#nbPartial').className = bc && !hasF ? 'btn primary' : 'btn small ghost';
-    q('#nbPartial').textContent = bc && !hasF ? 'Create Bid From The Invite (Add Files Later)' : 'Create the bid without Estimator AI';
-    q('#nbMsg').textContent = hasE && hasF ? '' : (bc && !hasF ? 'The invite fills in the customer, dates and place. Add the plans and specs in the bid\'s Files, then press Draft From Documents.' : (hasE || hasF ? 'Estimator AI starts once both the email and the files are in.' : ''));
+    q('#nbGo').disabled = !hasF;
+    q('#nbPartial').hidden = !hasE || hasF;
+    q('#nbMsg').textContent = hasF ? '' : (hasE ? 'Add the files so Estimator AI can start. Or create the bid without it.' : 'Drop the files (and the bid overview page, if you printed it) to start Estimator AI.');
   };
   const add = fs => { fs.forEach(f => { if(!staged.some(x => x.name === f.name && x.size === f.size && x.webkitRelativePath === f.webkitRelativePath)) staged.push(f); }); draw(); };
-  back.querySelectorAll('[data-ext]').forEach(bt => bt.onclick = () => { const x = EXT_PLATFORMS.find(e => e.key === bt.dataset.ext); if(x) extWorkflow(back, x, close); });
   q('#nbX').onclick = close; back.onclick = e => { if(e.target === back) close(); };
   q('#nbManual').onclick = () => { close(); openBid(); };
   q('#nbEmail').oninput = draw; q('#nbGo').onclick = () => create(true); q('#nbPartial').onclick = () => create(false);

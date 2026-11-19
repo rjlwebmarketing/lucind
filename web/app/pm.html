@@ -112,6 +112,14 @@
   /* System Architecture: a big clickable diagram with the selected piece's details beside it */
   .arch-wide{max-width:1600px !important;} .le-wide{max-width:1280px !important;}
   body.tool-mode .modal-back.open .modal.le-wide{max-width:1280px;}
+  .pw-pill.sec-fix{background:#fde0d6; color:#8a2a10;} .pw-pill.sec-decide{background:#e4dcf5; color:#4a2f8a;} .sec-edit-pill{cursor:pointer;}
+  .sec-tiles{display:grid; grid-template-columns:repeat(5,minmax(0,1fr)); gap:10px; margin-top:12px;} .sec-tile{display:flex; flex-direction:column; gap:2px; text-align:left; padding:12px 14px; border:1px solid var(--line); border-radius:10px; background:var(--surface,#fff); font:inherit; color:var(--text); cursor:pointer;} .sec-tile.sec-live{cursor:default;}
+  .sec-tile b{font-size:26px; line-height:1.1;} .sec-tile span{font-size:12.5px; color:var(--text-dim);} .sec-tile.on{outline:2px solid var(--accent,#2a5bd7);} .sec-tile.ok b{color:#1d5a2a;} .sec-tile.fix b{color:#b3361a;} .sec-tile.next b{color:#2a4a8a;} .sec-tile.decide b{color:#5b3aa8;}
+  .sec-card{border:1px solid var(--line); border-radius:12px; background:var(--surface,#fff); margin-bottom:14px; overflow:hidden;} .sec-gh{display:flex; align-items:baseline; gap:12px; flex-wrap:wrap; padding:11px 16px; border-bottom:1px solid var(--line);} .sec-gh b{font-size:15px;} .sec-gh span{font-size:12.5px; color:var(--text-dim);}
+  .sec-row{display:grid; grid-template-columns:1fr auto; gap:14px; align-items:start; padding:10px 16px; border-top:1px solid var(--line);} .sec-gh + .sec-row{border-top:none;} .sec-main{cursor:pointer; min-width:0;} .sec-t{font-weight:600; font-size:14px;} .sec-d{font-size:12.5px; color:var(--text-dim); margin-top:2px; max-width:900px;}
+  .sec-found{font-size:12.5px; margin-top:4px;} .sec-f-pass{color:#1d5a2a;} .sec-f-fail{color:#b3361a;} .sec-f-warn{color:#8a6a00;} .sec-note{font-size:12.5px; margin-top:4px; padding:4px 8px; background:#f3f6f6; border-radius:6px; display:inline-block;} .sec-edit{margin-top:6px;}
+  .sec-pills{display:flex; gap:6px; align-items:center; flex-wrap:wrap; justify-content:flex-end;} .sec-chk{font-size:12px; font-weight:600; padding:3px 10px; border-radius:999px; border:1px solid currentColor; white-space:nowrap;} .sec-chk.sec-pass{color:#1d5a2a;} .sec-chk.sec-fail{color:#b3361a;} .sec-chk.sec-warn{color:#8a6a00;} .sec-chk.sec-none{color:var(--text-faint,#8a8f98);}
+  @media(max-width:760px){ .sec-tiles{grid-template-columns:repeat(2,minmax(0,1fr));} .sec-row{grid-template-columns:1fr;} .sec-pills{justify-content:flex-start;} }
   body.tool-mode .modal-back.open .modal.arch-wide{max-width:1600px;}
   .arch-grid{display:grid; grid-template-columns:minmax(0,1.7fr) minmax(320px,1fr); gap:22px; align-items:start;}
   .arch-diagram{background:var(--panel); border:1px solid var(--line); border-radius:10px; padding:14px; position:sticky; top:12px;}
@@ -1469,7 +1477,7 @@ function tidyDevBacklog(){
 // an empty backlog). Matched by key, so this adds each entry once and never
 // rewrites an existing one.
 const LIVE_CHANGELOG = [
-  {"key": "todo-security-2026-11", "title": "Security: what is left", "status": "To Build", "where": "Settings & Connections, Roles & Templates, every save", "next": "Sign-in is server-side and Railway Pro backups are on, so the old audit is closed. Still open: (1) the Google Maps key is hard-coded in pm.html: make a new key restricted to go.lucasindustrial.us, remove the old one, set the new one only in Settings & Connections; (2) passwords set by the Builder can be short: tighten before wider use; (3) confirm every save checks the role (PM cannot change bids, wages or Temp For Hire)."},
+  {"key": "todo-security-2026-11", "title": "Security: what is left", "status": "To Build", "where": "Settings & Connections, Roles & Templates, every save", "next": "Now tracked on the Builder > Security page (statuses, live check, notes). Older notes: sign-in is server-side and Railway Pro backups are on, so the old audit is closed. Still open: (1) the Google Maps key is hard-coded in pm.html: make a new key restricted to go.lucasindustrial.us, remove the old one, set the new one only in Settings & Connections; (2) passwords set by the Builder can be short: tighten before wider use; (3) confirm every save checks the role (PM cannot change bids, wages or Temp For Hire)."},
   {"key": "todo-email-send", "title": "Send email from the app", "status": "Waiting On", "where": "Assignment notices, compliance notices, 'cut a check', share links", "next": "Today the app drafts the email and the person opens it in their own email program. Needs one decision: Resend + DNS for lucasindustrial.us, or a Gmail connection."},
   {"key": "todo-backup-restore", "title": "Backups: restore, schedule, reminder", "status": "To Build", "where": "Settings & Connections > Backup, Builder dashboard", "next": "A Restore tool (today a restore means sending the backup file to the builder), scheduled automatic backups to Google Drive, a \"last backup\" warning if older than 7 days, and a maintenance banner before a deploy."},
   {"key": "todo-driver-upload", "title": "Driver upload by private link", "status": "To Build", "where": "Project > Overview & Files", "next": "A phone link with no login so drivers can add bills of lading and delivery photos. Today the PM, Owner or Builder uploads them for the driver."},
@@ -6521,6 +6529,122 @@ function openProgressReportPage(){
   const cycle = el => { const k = el.dataset.prog, cur = progStatus(k, el.dataset.dflt); DATA.progressStatus[k] = PROG_ORDER[(PROG_ORDER.indexOf(cur) + 1) % PROG_ORDER.length]; saveData(); const y = window.scrollY; openProgressReportPage(); };
   body.querySelectorAll('[data-prog]').forEach(el => { el.onclick = () => cycle(el); el.onkeydown = ev => { if(ev.key === 'Enter' || ev.key === ' '){ ev.preventDefault(); cycle(el); } }; });
   openModal();
+  const mm = document.querySelector('#modalBack .modal'); if(mm) mm.classList.add('le-wide');
+}
+// ---------- Security (Builder): what keeps go. safe, in plain words ----------
+// Status of each item is written from what the server and front end really do. The Builder can click a status to change it and add a note (saved on the board).
+// "Run security check" tests the live site from this browser (nothing is changed). Items with a check show Pass / Fail / Not run beside the status.
+const SEC_ST = { ok: ['In Place', 'pw-live'], next: ['Planned', 'pw-next'], fix: ['Needs Fix', 'sec-fix'], decide: ['Your Decision', 'sec-decide'] };
+const SEC_ORDER = ['ok', 'fix', 'next', 'decide'];
+const SEC_GROUPS = [
+  { g: 'Front Door', sub: 'The address people type and what the browser is told about it' },
+  { g: 'Sign-In And Access', sub: 'Who can get in, and what each person can touch' },
+  { g: 'Files And Sharing', sub: 'Plans, photos and documents, inside and outside the company' },
+  { g: 'Keys, Connections And Outside Services', sub: 'The accounts and keys the app depends on' },
+  { g: 'Records And Accountability', sub: 'Knowing who did what, and undoing it' },
+  { g: 'Backups, Monitoring And Recovery', sub: 'Getting back up when something breaks' },
+  { g: 'AI Features And Outside Eyes', sub: 'Every AI in go. (Estimator AI, PM Assistant, Logistics AI, document reading), what leaves the building, and who reviews us' }
+];
+const SEC_ITEMS = [
+  { k: 'https', g: 0, t: 'Encrypted connection (HTTPS)', d: 'go.lucasindustrial.us loads only over HTTPS, so what people type cannot be read on the way.', s: 'ok', chk: 'https' },
+  { k: 'headers', g: 0, t: 'Browser safety rules on the site (security headers)', d: 'Tell the browser to refuse being framed by another site, to stop guessing file types, and to load scripts only from approved places (CSP). Added in the SiteGround .htaccess, no code change.', s: 'next', chk: 'headers' },
+  { k: 'hosts', g: 0, t: 'The page loads only from approved sites', d: 'Every outside address the app pulls from is on our list (Google Fonts, Google Maps, our own API).', s: 'ok', chk: 'hosts' },
+  { k: 'shield', g: 0, t: 'Firewall and bot shield (SiteGround or Cloudflare)', d: 'A shield in front of the site that blocks floods and known bad visitors. SiteGround has one included; Cloudflare is a free step up.', s: 'decide' },
+  { k: 'anon', g: 0, t: 'The API answers only our own site and turns away anyone not signed in', d: 'The Railway API accepts browser requests only from go.lucasindustrial.us, and every screen and board save needs a signed-in person. An anonymous request gets a refusal.', s: 'ok', chk: 'anon' },
+  { k: 'pw-hash', g: 1, t: 'Passwords stored as fingerprints, never readable', d: 'Passwords are scrambled with scrypt before saving. Nobody, including us, can read one back.', s: 'ok' },
+  { k: 'lockout', g: 1, t: 'Lock-out after wrong guesses, and a limit on sign-in tries', d: 'Too many wrong passwords locks that account for a while, and one address cannot hammer the sign-in screen.', s: 'ok' },
+  { k: 'session', g: 1, t: 'Sign-ins expire', d: 'Signed out after 8 hours of no use (30 days with "Keep me signed in", never longer than that). Session keys are stored as fingerprints too.', s: 'ok' },
+  { k: 'pw-rules', g: 1, t: 'Password rules apply to everyone, including ones the Builder sets', d: 'At least 10 characters and no common passwords. A new password must be changed at first sign-in. Confirm the Builder\'s "set a password" screen applies the same rules.', s: 'fix' },
+  { k: 'roles', g: 1, t: 'Every screen and save checks the person\'s role on the server', d: 'Hiding a button is not security. The server decides. Still to confirm on every save: a PM cannot change bids, wages or Temp For Hire.', s: 'fix' },
+  { k: 'mfa', g: 1, t: 'Staff sign in with their Google Workspace accounts (two-step)', d: 'A "Sign in with Google" button that accepts only @lucasindustrial.us accounts. Workspace enforces two-step verification and password rules, and suspending someone in Google shuts the door in one place. The go. roles and permissions stay as they are, and one Builder password login stays as a back door.', s: 'decide' },
+  { k: 'offboard', g: 1, t: 'A written step for when someone leaves', d: 'Turn off their go. account, end their sessions, change anything they knew. One checklist in the owner\'s hands. (Today suspending a Google account does not end a go. session that is already open, so this step matters until Google sign-in is in.)', s: 'next' },
+  { k: 'file-serve', g: 2, t: 'Files are served safely and capped in size', d: 'Uploaded files open with a rule that stops them running as web pages, the browser may not guess their type, and each upload is capped (5 GB by default) so one file cannot fill the storage.', s: 'ok' },
+  { k: 'share', g: 2, t: 'Share links: random, expire, can have a passcode, can be cancelled', d: 'Links last 1 to 30 days, can require a passcode, every open is logged, and a link can be revoked at any time.', s: 'ok' },
+  { k: 'file-scan', g: 2, t: 'Uploaded files scanned for viruses', d: 'Files from outside (a GC\'s plans, a sub\'s insurance certificate) are checked before staff open them.', s: 'next' },
+  { k: 'public', g: 2, t: 'Public pages are limited', d: 'Sub invites and proposal links are rate-limited per address, and nothing a sub types touches the board until staff confirm it.', s: 'ok' },
+  { k: 'secrets', g: 3, t: 'No passwords or keys inside the page', d: 'Secret keys live only in Railway variables (Anthropic, Resend, database). The Google Maps key is the one left in the page code: make a new key restricted to go.lucasindustrial.us, then remove the old one.', s: 'fix', chk: 'secrets' },
+  { k: 'dns', g: 3, t: 'Email comes only from us (SPF, DKIM and DMARC on lucasindustrial.us)', d: 'System email goes out through Resend from no-reply@lucasindustrial.us. These email records stop other people sending mail that looks like ours, and keep ours out of spam.', s: 'next' },
+  { k: 'drive', g: 3, t: 'Google Drive connection uses our company account only', d: 'Closing packets are archived with the company Google account, not a personal one. Confirm the owner account (Loose End).', s: 'decide' },
+  { k: 'deps', g: 3, t: 'Automatic checks for outdated or leaked code (GitHub)', d: 'Turn on GitHub\'s Dependabot and secret scanning for the repo. Free, and it emails us.', s: 'next' },
+  { k: 'audit', g: 4, t: 'Activity log and change history with undo', d: 'Sign-ins, lock-outs, shares and changes record the person, the time and the address. The board keeps recent copies, so a bad edit can be rolled back.', s: 'ok' },
+  { k: 'audit-view', g: 4, t: 'A screen to read the activity log', d: 'The log is recorded, but it can only be read in the database today. Add a Builder page with a filter by person, date and action.', s: 'next' },
+  { k: 'backup', g: 5, t: 'Backups', d: 'Railway Pro keeps automatic database backups, and the Builder can download a copy of the board from the app.', s: 'ok' },
+  { k: 'restore', g: 5, t: 'Restore tool, schedule and a "last backup" warning', d: 'Today a restore means sending the backup file to the Builder. Add one-click restore, a schedule, and a warning if the last backup is over 7 days old.', s: 'next' },
+  { k: 'alerts', g: 5, t: 'Error and uptime alerts', d: 'An email or text when go. or the API goes down (for example Better Stack or Sentry, both have free levels).', s: 'next' },
+  { k: 'plan', g: 5, t: 'One-page plan for a security incident', d: 'Who we call, what we turn off first, who tells the owner. Written before we need it.', s: 'next' },
+  { k: 'ai-proxy', g: 6, t: 'Every AI call goes through our server, with limits', d: 'The Anthropic key lives only in Railway. The PM Assistant, Logistics AI and document reading go through one server route that needs a signed-in person, allows only approved models, caps the request size and has an hourly limit per role (400 for Owner and PM, 600 for Builder). Estimator AI and contract reading run on the server directly.', s: 'ok' },
+  { k: 'ai-cost', g: 6, t: 'Spending limit on the Anthropic account', d: 'One key serves every AI feature. Set a monthly cap and a usage alert in the Anthropic console so a bug or a stolen key cannot run up a bill.', s: 'decide' },
+  { k: 'ai-data-est', g: 6, t: 'What Estimator AI sends out', d: 'Plans, specs, the GC\'s email text and contracts from a bid go to Anthropic to draft the estimate and read contracts. Decide whether that is acceptable for every customer, and whether any GC contract or NDA forbids it. Also confirm our account terms mean Anthropic does not train on our content.', s: 'decide' },
+  { k: 'ai-data-pm', g: 6, t: 'What the PM Assistant and Logistics AI send out', d: 'They send board information: projects, dates, and the names, emails, phone numbers and quoted prices of crews and subs. Decide whether that is acceptable, and keep wages, pay rates, estimate costs and margins out of every AI request (confirm none are included).', s: 'decide' },
+  { k: 'ai-act', g: 6, t: 'AI suggests, a person approves', d: 'AI results are shown for review (Estimator AI drafts, contract details, assistant actions). Confirm no AI action saves or sends anything without a person looking at it first.', s: 'fix' },
+  { k: 'scan', g: 6, t: 'Automated security scan (OWASP ZAP, Mozilla Observatory)', d: 'A free scan of the live site that lists common weaknesses. Run it once the headers are in.', s: 'next' },
+  { k: 'pentest', g: 6, t: 'Outside review: penetration test and insurance', d: 'Later, once the app holds more customer money and data: a hired tester tries to break in. Today, ask the broker whether the cyber policy covers a breach of this app.', s: 'decide' }
+];
+function openSecurityPage(){
+  if(!BUILDER_MODE) return;
+  const body = document.getElementById('modalBody');
+  if(!DATA.securityStatus || typeof DATA.securityStatus !== 'object') DATA.securityStatus = {};
+  if(!DATA.securityNote || typeof DATA.securityNote !== 'object') DATA.securityNote = {};
+  let last = DATA.securityCheck && DATA.securityCheck.results ? DATA.securityCheck : null;   // { at, version, results: { key: { r: 'pass'|'fail'|'warn', t: 'what was found' } } }
+  const stOf = i => (DATA.securityStatus[i.k] && SEC_ST[DATA.securityStatus[i.k]]) ? DATA.securityStatus[i.k] : i.s;
+  let filter = '';
+  const ago = t => { const m = Math.max(0, Math.round((Date.now() - t) / 60000)); return m < 1 ? 'just now' : m < 60 ? m + ' min ago' : m < 1440 ? Math.round(m / 60) + ' hr ago' : Math.round(m / 1440) + ' days ago'; };
+  const chkPill = i => { if(!i.chk) return ''; const r = last && last.results[i.k]; return r ? `<span class="sec-chk sec-${r.r}">${r.r === 'pass' ? 'Pass' : r.r === 'fail' ? 'Fail' : 'Check'}</span>` : '<span class="sec-chk sec-none">Not run</span>'; };
+  const draw = () => {
+    const cnt = k => SEC_ITEMS.filter(i => stOf(i) === k).length;
+    const pass = last ? Object.values(last.results).filter(r => r.r === 'pass').length : 0, fail = last ? Object.values(last.results).filter(r => r.r === 'fail').length : 0;
+    const tile = (k, n, label, cls) => `<button type="button" class="sec-tile ${cls}${filter === k ? ' on' : ''}" data-filter="${k}"><b>${n}</b><span>${label}</span></button>`;
+    const shown = SEC_ITEMS.filter(i => !filter || stOf(i) === filter);
+    body.innerHTML = `
+      <div style="display:flex; align-items:center; gap:12px; flex-wrap:wrap; margin-bottom:6px;"><h3 style="margin:0; font-size:24px;">Security</h3>
+        <span class="hint" style="margin:0;">What keeps go. safe, in plain words. Click a status to change it, click a row to add a note. Saved on the board.</span>
+        <span style="margin-left:auto; display:flex; gap:8px; align-items:center;"><span class="hint" id="secMsg" style="margin:0;"></span><button class="btn" id="secCopy" type="button">Copy Report</button><button class="btn primary" id="secRun" type="button">Run Security Check</button></span></div>
+      <div class="sec-tiles">${tile('ok', cnt('ok'), 'In place', 'ok')}${tile('fix', cnt('fix'), 'Need fixing', 'fix')}${tile('next', cnt('next'), 'Planned', 'next')}${tile('decide', cnt('decide'), 'Need your decision', 'decide')}
+        <div class="sec-tile sec-live"><b>${last ? pass + ' / ' + (pass + fail + Object.values(last.results).filter(r => r.r === 'warn').length) : '–'}</b><span>live checks pass</span></div></div>
+      <div class="hint" style="margin:8px 0 14px;">${last ? 'Live checks last run ' + ago(last.at) + ' from this browser (app version ' + esc(last.version || '?') + '). The checks only read; they change nothing.' : 'Live checks have not been run yet. They test the real site from this browser and change nothing.'}${filter ? ' · <a href="#" id="secClear">Show everything</a>' : ''}</div>
+      ${SEC_GROUPS.map((G, gi) => { const rows = shown.filter(i => i.g === gi); if(!rows.length) return ''; return `<div class="sec-card"><div class="sec-gh"><b>${esc(G.g)}</b><span>${esc(G.sub)}</span></div>${rows.map(i => { const st = stOf(i), r = last && last.results[i.k], note = DATA.securityNote[i.k] || '';
+        return `<div class="sec-row" data-k="${i.k}"><div class="sec-main"><div class="sec-t">${esc(i.t)}</div><div class="sec-d">${esc(i.d)}</div>${r ? `<div class="sec-found sec-f-${r.r}">Found: ${esc(r.t)}</div>` : ''}${note ? `<div class="sec-note">Note: ${esc(note)}</div>` : ''}
+          <div class="sec-edit" hidden><input type="text" data-note="${i.k}" value="${esc(note)}" placeholder="A note for yourself: who, when, link…" style="width:100%; box-sizing:border-box;"></div></div>
+          <div class="sec-pills">${chkPill(i)}<span class="pw-pill ${SEC_ST[st][1]} sec-edit-pill" role="button" tabindex="0" data-st="${i.k}" title="Click to change">${SEC_ST[st][0]}</span></div></div>`; }).join('')}</div>`; }).join('') || '<div class="empty">Nothing in this list.</div>'}`;
+    body.querySelectorAll('[data-filter]').forEach(b => { b.onclick = () => { filter = filter === b.dataset.filter ? '' : b.dataset.filter; draw(); }; });
+    const clr = document.getElementById('secClear'); if(clr) clr.onclick = e => { e.preventDefault(); filter = ''; draw(); };
+    body.querySelectorAll('.sec-row').forEach(row => { row.querySelector('.sec-main').onclick = e => { if(e.target.tagName === 'INPUT') return; const ed = row.querySelector('.sec-edit'); ed.hidden = !ed.hidden; if(!ed.hidden) ed.querySelector('input').focus(); }; });
+    body.querySelectorAll('[data-note]').forEach(inp => { inp.onchange = () => { const v = inp.value.trim(); if(v) DATA.securityNote[inp.dataset.note] = v; else delete DATA.securityNote[inp.dataset.note]; saveData(); draw(); }; });
+    const cycle = el => { const it = SEC_ITEMS.find(x => x.k === el.dataset.st), cur = stOf(it); DATA.securityStatus[it.k] = SEC_ORDER[(SEC_ORDER.indexOf(cur) + 1) % SEC_ORDER.length]; saveData(); draw(); };
+    body.querySelectorAll('[data-st]').forEach(el => { el.onclick = e => { e.stopPropagation(); cycle(el); }; el.onkeydown = ev => { if(ev.key === 'Enter' || ev.key === ' '){ ev.preventDefault(); cycle(el); } }; });
+    document.getElementById('secRun').onclick = run;
+    document.getElementById('secCopy').onclick = copy;
+  };
+  const copy = async () => {
+    const lines = ['Security report, go.lucasindustrial.us, ' + new Date().toLocaleDateString('en-US') + (last ? ' (live checks ' + ago(last.at) + ')' : '')];
+    SEC_GROUPS.forEach((G, gi) => { lines.push('', G.g.toUpperCase()); SEC_ITEMS.filter(i => i.g === gi).forEach(i => { const r = last && last.results[i.k]; lines.push('- [' + SEC_ST[stOf(i)][0] + '] ' + i.t + (r ? ' (live check: ' + r.r + ', ' + r.t + ')' : '') + (DATA.securityNote[i.k] ? ' | Note: ' + DATA.securityNote[i.k] : '')); }); });
+    const m = document.getElementById('secMsg');
+    try{ await navigator.clipboard.writeText(lines.join('\n')); if(m){ m.textContent = 'Report copied'; m.style.color = cssVar('--ok'); } }catch(e){ if(m) m.textContent = 'Could not copy'; }
+  };
+  const run = async () => {
+    const btn = document.getElementById('secRun'), m = document.getElementById('secMsg'); btn.disabled = true; if(m){ m.textContent = 'Checking…'; m.style.color = ''; }
+    const R = {}, api = ((window.GO_CONFIG && GO_CONFIG.API) || '').replace(/\/$/, '');
+    const put = (k, r, t) => { R[k] = { r, t }; };
+    // 1. HTTPS
+    put('https', location.protocol === 'https:' ? 'pass' : 'fail', location.protocol === 'https:' ? 'This page is on HTTPS' : 'This page is on ' + location.protocol.replace(':', '') + ' (a live site must be https)');
+    // 2. Security headers on the front end (same origin)
+    try{ const r = await fetch(location.origin + '/?sec=' + Date.now(), { cache: 'no-store' }); const h = n => r.headers.get(n);
+      const miss = []; if(!h('content-security-policy')) miss.push('Content-Security-Policy'); if(!(h('x-frame-options') || /frame-ancestors/i.test(h('content-security-policy') || ''))) miss.push('X-Frame-Options'); if(!/nosniff/i.test(h('x-content-type-options') || '')) miss.push('X-Content-Type-Options'); if(!h('referrer-policy')) miss.push('Referrer-Policy');
+      put('headers', miss.length ? 'fail' : 'pass', miss.length ? 'Missing: ' + miss.join(', ') : 'All four are sent'); }catch(e){ put('headers', 'warn', 'Could not read the site headers (' + e.message + ')'); }
+    // 3. Outside addresses this page loaded from
+    try{ const ok = h => h === location.hostname || (api && h === new URL(api).hostname) || /(^|\.)(googleapis\.com|gstatic\.com|cloudflare\.com|google\.com|googleusercontent\.com)$/.test(h);
+      const hosts = [...new Set(performance.getEntriesByType('resource').map(e => { try{ return new URL(e.name).hostname; }catch(x){ return ''; } }).filter(Boolean))]; const odd = hosts.filter(h => !ok(h));
+      put('hosts', odd.length ? 'fail' : 'pass', odd.length ? 'Not on the list: ' + odd.join(', ') : hosts.length + ' addresses, all approved'); }catch(e){ put('hosts', 'warn', 'Could not list loaded addresses'); }
+    // 5. API refuses anonymous callers
+    try{ const r = await fetch(api + '/pm/api/data', { cache: 'no-store' }); put('anon', r.status === 401 || r.status === 403 ? 'pass' : 'fail', r.status === 401 || r.status === 403 ? 'Anonymous request refused (' + r.status + ')' : 'Anonymous request got status ' + r.status); }catch(e){ put('anon', 'warn', 'Could not reach the API (' + e.message + ')'); }
+    // 6. Keys in the page code (never prints the key itself)
+    try{ const t = await (await fetch(location.origin + '/app/pm.html?sec=' + Date.now(), { cache: 'no-store' })).text();
+      const found = []; [['Google API key', /AIza[0-9A-Za-z_\-]{35}/g], ['Anthropic key', /sk-ant-[A-Za-z0-9_\-]{20,}/g], ['Resend key', /\bre_[A-Za-z0-9]{20,}\b/g], ['private key block', /-----BEGIN [A-Z ]*PRIVATE KEY-----/g]].forEach(([n, re]) => { const c = (t.match(re) || []).length; if(c) found.push(c + ' ' + n + (c > 1 ? 's' : '')); });
+      put('secrets', found.length ? 'fail' : 'pass', found.length ? 'In the page code: ' + found.join(', ') + ' (not shown here)' : 'None found'); }catch(e){ put('secrets', 'warn', 'Could not read the page code'); }
+    DATA.securityCheck = { at: Date.now(), version: ((document.querySelector('meta[name=app-build]') || {}).content) || (window.parent && window.parent !== window ? (function(){ try{ return window.parent.document.querySelector('meta[name=app-build]').content; }catch(e){ return ''; } })() : ''), results: R };
+    last = DATA.securityCheck; saveData(); draw(); const mm = document.getElementById('secMsg'); if(mm){ mm.textContent = 'Checked just now'; mm.style.color = cssVar('--ok'); }
+  };
+  draw(); openModal();
   const mm = document.querySelector('#modalBack .modal'); if(mm) mm.classList.add('le-wide');
 }
 // Core Contacts (Builder + Owner): who each internal message or email goes to, in one place.
@@ -13541,7 +13665,7 @@ function openMobileNav(){
   }
 })();
 // The global menu opens one of the old footer tools directly: app/pm.html?tool=devTasks etc. Only that tool's window is shown.
-const TOOL_OPENERS = { devTasks: () => openDevTasksModal(), architecture: () => openArchitectureModal(), data: () => openDataTransferModal(), settings: () => openSettingsHub('rules'), contacts: () => openContactsPage(), pathways: () => openPathwaysPage(), report: () => openProgressReportPage(), requests: () => openRequestsModal() };
+const TOOL_OPENERS = { devTasks: () => openDevTasksModal(), architecture: () => openArchitectureModal(), data: () => openDataTransferModal(), settings: () => openSettingsHub('rules'), contacts: () => openContactsPage(), pathways: () => openPathwaysPage(), report: () => openProgressReportPage(), security: () => openSecurityPage(), requests: () => openRequestsModal() };
 let TOOL_NAME = null; try{ TOOL_NAME = new URLSearchParams(location.search).get('tool'); }catch(e){}
 // The Estimator's Crew & Subs is this very screen, view-only: ?only=people shows just the Crew & Subs page and, unless the person has write access
 // to it, switches on view-only mode: every field is locked and every add / change / pause / delete control is hidden. People and Assignments still open.

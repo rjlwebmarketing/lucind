@@ -48,6 +48,7 @@ const SECTIONS = [
     { key: 'builder.architecture', label: 'System Architecture' },
     { key: 'builder.pathways', label: 'Pathways' },
     { key: 'builder.report', label: 'Progress Report' },
+    { key: 'builder.security', label: 'Security' },
     { key: 'builder.data', label: 'Import / Export Data' } ] }
 ];
 // Cross-department panes: viewable from another branch (e.g. the Estimator's Map, Calendar and Crew & Subs) without opening this branch's own app.
