@@ -1,6 +1,6 @@
 <!doctype html>
 <html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
-<meta name="app-build" content="10.5.3"><title>Lucas Industrial | Platform</title><link rel="icon" type="image/png" href="/logo.png"><link rel="apple-touch-icon" href="/logo.png">
+<meta name="app-build" content="10.6.0"><title>Lucas Industrial | Platform</title><link rel="icon" type="image/png" href="/logo.png"><link rel="apple-touch-icon" href="/logo.png">
 <style>
 @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap');
 :root{
@@ -112,6 +112,15 @@ function setTitle(page){ document.title = 'Lucas Industrial | ' + (page || 'Plat
 function titleForPath(){ const seg = location.pathname.replace(/^\/+|\/+$/g, '').split('/'); const b = BRANCH_NAMES[seg[0]] || 'Platform';
   if(seg[0] === 'home' || !seg[0]) return 'Platform'; const sub = seg[1] ? seg[1].replace(/[-_]/g, ' ').replace(/\b\w/g, c => c.toUpperCase()) : ''; return sub ? b + ' · ' + sub : b; }
 window.addEventListener('message', e => { if(e.origin === location.origin && e.data && e.data.type === 'title' && e.data.page) setTitle(e.data.page); });
+// The "Send To Lucas ERP" bookmark button (run on a BuildingConnected bid request) opens this site and sends the page text. It is kept for this tab only,
+// the sender is told it arrived, and the Estimator offers to create the project and bid (after sign-in if needed).
+window.addEventListener('message', e => {
+  const d = e.data; if(e.origin !== 'https://app.buildingconnected.com' || !d || d.source !== 'lucas-bookmark' || d.type !== 'bc-invite' || typeof d.text !== 'string') return;
+  try{ sessionStorage.setItem('lucasBcInvite', JSON.stringify({ text: d.text.slice(0, 300000), url: String(d.url || '').slice(0, 500), at: Date.now() })); }catch(x){ return; }
+  try{ e.source.postMessage({ type: 'bc-ack' }, e.origin); }catch(x){}
+  if(ME && ME.menu){ const f = document.getElementById('appFrame'); if(f && parts().path === 'estimator' && f.contentWindow){ try{ f.contentWindow.postMessage({ type: 'bcInvite', payload: JSON.parse(sessionStorage.getItem('lucasBcInvite')) }, location.origin); }catch(x){} } else route(); }
+});
+const hasBcInvite = () => { try{ const o = JSON.parse(sessionStorage.getItem('lucasBcInvite') || 'null'); return !!(o && o.text && Date.now() - (o.at || 0) < 30 * 60000); }catch(e){ return false; } };
 async function route(){
   setTitle(titleForPath());
   const { path, q } = parts();
@@ -122,6 +131,8 @@ async function route(){
   if(ME.user.mustChangePassword) return viewChange();
   // The page is newer than the server: the server has not finished updating (or its update failed). Say so instead of showing empty menus.
   if(!ME.menu){ plain('<h1>Almost there</h1><div class="mut">This page is newer than the server it talks to. The server has not finished updating, or its update failed. In Railway, open the LucInd service, Deployments, and check that the latest deployment says Active. If it says Failed, open it and read the log.</div><p><button class="btn" onclick="location.reload()">Check again</button></p>'); return; }
+  // A bid request was just sent from BuildingConnected: go to the Estimator, which offers to create it.
+  if(hasBcInvite() && path !== 'estimator' && (ME.menu || []).some(m => m.key === 'estimator')){ navTo('/estimator', true); return; }
   // First landing after signing in: the branch of the person's first (primary) role, else the first menu item they have.
   if(path === 'login' || !path) { const m = ME.menu || [], pref = { estimator: 'estimator', pm: 'pm' }[ME.user.role], pick = m.find(x => x.key === pref) || m[0]; navTo(pick ? menuHref(pick) : '/home', true); return; }
   shell(path);
