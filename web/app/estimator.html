@@ -892,6 +892,14 @@
   .nb-opt:hover,.nb-opt:focus-visible{border-color:var(--accent,#013CAE)}.nb-opt b{display:block;font-size:15px;margin:6px 0 4px}.nb-opt span{font-size:12.5px;color:var(--text-dim)}.nb-opt .ic{font-size:26px}
   .nb-dz{border-style:dashed;border-width:2px}.nb-dz.over{border-color:var(--accent,#013CAE);background:#013CAE12}.nb-sub{margin-top:10px;font-size:12px}.nb-msg{margin-top:8px;min-height:15px;font-size:12px}
   .nb-drop{margin:0 16px 16px;padding:26px 14px;border:2px dashed var(--line);border-radius:12px;text-align:center;font-size:13px;color:var(--text-dim)}.nb-drop.over{border-color:var(--accent,#013CAE);background:#013CAE10}
+  .nb-wrap{display:flex;overflow:auto;min-height:0}.nb-main{flex:1;min-width:0}.nb-side{width:230px;flex:0 0 230px;border-left:1px solid var(--line);padding:18px 16px;box-sizing:border-box}
+  .nb-side-t{font-weight:700;font-size:14px;line-height:1.25;margin-bottom:4px}.nb-side-s{font-size:12px;color:var(--text-faint,#8a8f98);margin-bottom:12px}
+  .nb-ext{display:flex;align-items:center;gap:10px;width:100%;justify-content:flex-start;text-align:left;padding:10px 12px;border:2px solid var(--line);border-radius:12px;background:var(--surface,#fff);color:var(--text);font:inherit;font-weight:600;cursor:pointer}.nb-ext:hover{border-color:#013CAE;background:#eef3fc}.nb-ext-i{font-size:20px}
+  .ex-hint{font-size:12.5px;color:var(--text-faint,#8a8f98);margin:0 0 12px}.ex-step{display:flex;gap:12px;padding:12px 0;border-top:1px solid var(--line)}.ex-n{flex:0 0 26px;height:26px;border-radius:50%;background:#013CAE;color:#fff;font-weight:700;display:flex;align-items:center;justify-content:center;font-size:13px}
+  .ex-b{flex:1;min-width:0}.ex-s{font-size:12.5px;color:var(--text-faint,#6b7580);margin:3px 0 6px}.ex-row{display:flex;align-items:center;gap:12px;flex-wrap:wrap;margin:6px 0}.ex-ck{display:flex;align-items:center;gap:6px;font-size:13px;cursor:pointer}.ex-lock{opacity:.45;pointer-events:none}
+  .ex-bring{width:auto;padding-left:22px;padding-right:22px}@media(max-width:700px){.ex-bring{width:100%}}
+  .ex-card{display:grid;gap:4px;margin:8px 0;padding:10px 12px;border:1px solid var(--line);border-radius:10px;background:#f6f9ff}.ex-card div{display:flex;gap:10px;font-size:12.5px}.ex-card span{flex:0 0 110px;color:var(--text-faint,#6b7580)}.ex-card b{color:var(--text,#1d2427)}.ex-note{margin-top:12px;padding:10px 12px;border-radius:10px;background:#fffbea;border:1px solid #e6c76a;font-size:12.5px}
+  @media(max-width:700px){.nb-wrap{flex-direction:column}.nb-side{width:auto;flex:0 0 auto;border-left:0;border-top:1px solid var(--line)}}
   @media(max-width:560px){.nb-opts{grid-template-columns:1fr}}
   .ho-card{background:var(--surface,#fff);border:1px solid var(--line);border-left:4px solid var(--accent);border-radius:12px;padding:14px 16px;margin-bottom:14px;display:flex;gap:18px;align-items:center;flex-wrap:wrap}
   .ho-card.done{border-left-color:#1E8449}.ho-card h4{font-size:14px;margin:0 0 4px}.ho-card .ho-txt{flex:1;min-width:240px;font-size:13px;color:var(--text-dim)}
@@ -1507,7 +1515,55 @@ function parseBC(text){
   const notes = ['From a BuildingConnected invite' + (invited ? ' (invited ' + invited + ')' : '') + (url ? '\nInvite link: ' + url : ''),
     customer ? 'Customer: ' + customer : '', contact || phone || email ? 'Contact: ' + [contact, phone, email].filter(Boolean).join(' | ') : '',
     dueRaw ? 'Due: ' + dueRaw : '', info ? 'Invite instructions:\n' + info : ''].filter(Boolean).join('\n');
-  return { name: name.slice(0, 200), summary: name + (dueRaw ? ' · due ' + dueRaw : ''), fields: { customer, address, city, state, bidDue: D(dueRaw), startDate: D(after('Expected Start')), endDate: D(after('Expected Finish')), notes } };
+  return { name: name.slice(0, 200), view: { Project: name, Customer: customer, Contact: [contact, phone, email].filter(Boolean).join(' | '), Location: loc, 'Bid due': dueRaw, 'Expected start': after('Expected Start'), 'Expected finish': after('Expected Finish') }, summary: name + (dueRaw ? ' · due ' + dueRaw : ''), fields: { customer, address, city, state, bidDue: D(dueRaw), startDate: D(after('Expected Start')), endDate: D(after('Expected Finish')), notes } };
+}
+// ---------- External bid platforms: a guided workflow per website. Today: BuildingConnected. ----------
+// A web page cannot see whether someone is signed in to another website, or whether a browser extension is on, so the person confirms those two.
+// "Bring In" opens Claude in a new tab with the whole request already written; the person only approves. The app then watches for the new bid and shows it for confirmation.
+// Fallback: paste the invite page and create from it here.
+const EXT_PLATFORMS = [
+  { key: 'bc', name: 'BuildingConnected', icon: '🏗', url: 'https://app.buildingconnected.com/opportunities', site: 'BuildingConnected', parse: parseBC, marker: /BuildingConnected invite/i,
+    prompt: 'Use Claude in Chrome. In my Chrome, find the BuildingConnected bid invite I have open (app.buildingconnected.com) and read its Overview page text and the names and sizes on its Files tab. Do not click Bidding or Decline, do not download anything, and do not enter any passwords. Then open the Lucas ERP Estimator in my Chrome (I am already signed in), go to Bids, press + New bid, paste the invite page text into the left box followed by a line "Invite link: " and the invite page URL, and press "Create Bid From The Invite (Add Files Later)". If it says a bid with that name already exists, stop and tell me. When done, tell me the project name that was created.' }
+];
+function extWorkflow(back, x, close){
+  const wrap = back.querySelector('#nbWrap'); const known = new Set(BIDS.map(b => b.id)); let cur = null, alive = true, found = null, t = null;
+  const stop = () => { alive = false; clearInterval(t); };
+  wrap.innerHTML = `<div style="padding:16px 22px 18px;width:100%"><div style="display:flex;align-items:center;gap:10px;margin-bottom:10px"><button class="btn small ghost" id="exBack" type="button">← Back To New Bid</button><b style="font-size:16px">${esc(x.name)}</b></div>
+    <div class="ex-step"><div class="ex-n">1</div><div class="ex-b"><b>Signed into ${esc(x.site)} and looking at the project</b><div class="ex-s">Open ${esc(x.site)} in this Chrome, sign in, and open the bid request you want to bring in.</div>
+      <div class="ex-row"><a class="btn small" href="${x.url}" target="_blank" rel="noopener">Open ${esc(x.site)}</a><label class="ex-ck"><input type="checkbox" id="exC1"> I am signed in and the bid request is open in the tab</label></div></div></div>
+    <div class="ex-step"><div class="ex-n">2</div><div class="ex-b"><b>Claude Chrome Extension is on</b><div class="ex-s">The Claude extension is installed and signed in, in the same Chrome as ${esc(x.site)}.</div>
+      <div class="ex-row"><label class="ex-ck"><input type="checkbox" id="exC2"> The extension is active</label></div></div></div>
+    <div id="exS3" class="ex-lock" style="padding:12px 0 0 38px;border-top:1px solid var(--line)">
+      <button class="btn primary ex-bring" id="exBring" type="button" disabled>Bring In This Bid Request</button>
+      <div id="exWait" class="ex-s"></div>
+      <details style="margin-top:6px"><summary class="ex-s" style="cursor:pointer">Or paste the invite page yourself</summary>
+        <div class="ex-s">Copy the whole invite page (Ctrl+A, then Ctrl+C) and paste it here.</div>
+        <textarea id="exText" rows="3" placeholder="Paste the invite page here…" aria-label="The invite page" style="width:100%;box-sizing:border-box;font:inherit;font-size:12.5px;padding:8px 10px;border:1px solid var(--line);border-radius:8px;resize:none"></textarea>
+        <div id="exView" class="ex-s"></div>
+        <button class="btn" id="exGo" type="button" disabled>Create Project &amp; Bid From This Info</button> <span id="exMsg" class="ex-s"></span></details></div>
+    <div class="ex-note">We cannot automatically pull in large files. Download them from ${esc(x.site)} and upload them to the project after it is created.</div></div>`;
+  const q = sel => wrap.querySelector(sel);
+  const card = o => '<div class="ex-card">' + Object.entries(o).filter(([, v]) => v).map(([k, v]) => '<div><span>' + esc(k) + '</span><b>' + esc(v) + '</b></div>').join('') + '</div>';
+  const gate = () => { const ok = q('#exC1').checked && q('#exC2').checked; q('#exS3').classList.toggle('ex-lock', !ok); q('#exBring').disabled = !ok || !!found; paintPaste(); };
+  const paintPaste = () => { const ok = q('#exC1').checked && q('#exC2').checked; cur = x.parse(q('#exText').value); const raw = q('#exText').value.trim();
+    q('#exView').innerHTML = cur ? card(cur.view) + '<div style="color:var(--ok,#1E8449);font-weight:600">✓ This is the bid the app will create.</div>' : (raw ? '<span style="color:#b3261e">This does not look like a ' + esc(x.site) + ' invite page. Open the invite and copy the whole page.</span>' : '');
+    q('#exGo').disabled = !(ok && cur); };
+  q('#exC1').onchange = q('#exC2').onchange = gate; q('#exText').oninput = paintPaste;
+  q('#exBack').onclick = e => { e.preventDefault(); stop(); close(); newBidDialog(); };
+  const showFound = nb => { const w = q('#exWait'); if(!w) return; w.innerHTML = '<div style="color:var(--ok,#1E8449);font-weight:600">✓ Bid created. Check this is the right one:</div>' + card({ Project: nb.name, Customer: nb.customer, Location: [nb.address, nb.city, nb.state].filter(Boolean).join(', '), 'Bid due': nb.bidDue }) + '<button class="btn primary" id="exOpen" type="button">Open Project &amp; Bid</button>';
+    q('#exOpen').onclick = async () => { stop(); close(); await refresh(); openBid(nb.id); BID_TAB = 'overview'; render(); }; };
+  const poll = async () => { if(!alive || !back.isConnected){ stop(); return; } if(found) return;
+    try{ const r = await api('GET', '/bids'); const nb = (r.bids || []).find(b => !known.has(b.id) && x.marker.test(b.notes || '')); if(nb){ found = nb; stop(); q('#exBring').disabled = true; await refresh(); showFound(nb); } }catch(e){ /* next tick */ } };
+  q('#exBring').onclick = () => { window.open('https://claude.ai/new?q=' + encodeURIComponent(x.prompt), '_blank', 'noopener'); q('#exBring').textContent = 'Opened. Approve it there.'; q('#exWait').innerHTML = '<span class="es-spin"></span> Waiting for the bid to appear here…'; clearInterval(t); alive = true; t = setInterval(poll, 4000); };
+  q('#exGo').onclick = async () => {
+    const m = q('#exMsg'); if(!cur) return;
+    if(BIDS.some(b => (b.name || '').trim().toLowerCase() === cur.name.trim().toLowerCase()) && !confirm('A bid named "' + cur.name + '" already exists. Create another one anyway?')) return;
+    m.textContent = 'Creating…'; q('#exGo').disabled = true;
+    try{ const ef = new File([q('#exText').value], x.site + ' invite ' + iso(new Date()) + '.txt', { type: 'text/plain' }); ef.__email = true;
+      const r = await api('POST', '/bids', Object.assign({ name: cur.name }, Object.fromEntries(Object.entries(cur.fields).filter(([, v]) => v))));
+      stop(); PENDING_FILES = [ef]; AI_AFTER = null; close(); await refresh(); openBid(r.bid.id); BID_TAB = 'overview'; render(); }
+    catch(e){ m.textContent = 'Could not create the bid (' + e.message + ').'; q('#exGo').disabled = false; }
+  };
 }
 function newBidDialog(){
   const back = document.createElement('div'); back.className = 'pk-back'; const close = () => back.remove();
@@ -1523,7 +1579,8 @@ function newBidDialog(){
     try{ const r = await api('POST', '/bids', Object.assign({ name: bc ? bc.name : bidNameFromFiles(files) }, datesFromEmail(email), bc ? Object.fromEntries(Object.entries(bc.fields).filter(([, v]) => v)) : {})); PENDING_FILES = files; AI_AFTER = withAi ? r.bid.id : null; close(); await refresh(); openBid(r.bid.id); BID_TAB = 'overview'; render(); }
     catch(e){ m.textContent = 'Could not create the bid (' + e.message + ').'; draw(); }
   };
-  back.innerHTML = `<div class="pk" role="dialog" aria-label="New bid" style="max-width:600px"><div class="pk-h"><b>New bid</b><span style="flex:1"></span><button class="btn small ghost" id="nbX" type="button">Close</button></div>
+  back.innerHTML = `<div class="pk" role="dialog" aria-label="New bid" style="width:min(900px,100%);max-width:900px"><div class="pk-h"><b>New bid</b><span style="flex:1"></span><button class="btn small ghost" id="nbX" type="button">Close</button></div>
+    <div class="nb-wrap" id="nbWrap"><div class="nb-main">
     <div class="nb-opts">
       <div class="nb-opt nb-em" style="cursor:default;text-align:left;padding:12px"><b style="margin:0 0 6px;font-size:14px;text-align:center">1 · Paste The GC's Email Or BuildingConnected Invite</b>
         <textarea id="nbEmail" placeholder="Paste the email from the customer, or the text of a BuildingConnected invite…" aria-label="The GC's email" style="width:100%;box-sizing:border-box;height:128px;padding:8px 10px;border:1px solid var(--line);border-radius:8px;font:inherit;font-size:12.5px;resize:none;background:var(--surface,#fff);color:var(--text)"></textarea>
@@ -1535,6 +1592,9 @@ function newBidDialog(){
       <div id="nbMsg" class="nb-msg" style="text-align:center"></div></div>
     <div class="nb-rec"><div class="nb-rec-t">Recommended Files For Bid Creation</div><div class="nb-rec-r">${BID_START_FILES.map(f => `<div class="nb-rec-i${f.main ? ' main' : ''}"><span class="nb-rec-c"><svg viewBox="0 0 24 24" width="22" height="22" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">${f.icon}</svg></span><span class="nb-rec-n">${esc(f.name)}</span></div>`).join('')}</div></div>
     <div style="padding:2px 16px 14px;text-align:center;font-size:12px;color:var(--text-faint,#8a8f98)"><button class="btn small ghost" id="nbManual" type="button">Build manually</button> <button class="btn small ghost" id="nbPartial" type="button" hidden>Create the bid without Estimator AI</button></div>
+    </div>
+    <div class="nb-side"><div class="nb-side-t">Common External Bid Platforms</div><div class="nb-side-s">Bring an invite in from another website.</div>
+      ${EXT_PLATFORMS.map(x => `<button class="btn nb-ext" type="button" data-ext="${x.key}"><span class="nb-ext-i">${x.icon}</span><span>${esc(x.name)}</span></button>`).join('')}</div></div>
     <input type="file" id="nbF" multiple hidden><input type="file" id="nbD" webkitdirectory hidden></div>`;
   const draw = () => {
     const hasE = !!q('#nbEmail').value.trim(), hasF = staged.length > 0;
@@ -1549,6 +1609,7 @@ function newBidDialog(){
     q('#nbMsg').textContent = hasE && hasF ? '' : (bc && !hasF ? 'The invite fills in the customer, dates and place. Add the plans and specs in the bid\'s Files, then press Draft From Documents.' : (hasE || hasF ? 'Estimator AI starts once both the email and the files are in.' : ''));
   };
   const add = fs => { fs.forEach(f => { if(!staged.some(x => x.name === f.name && x.size === f.size && x.webkitRelativePath === f.webkitRelativePath)) staged.push(f); }); draw(); };
+  back.querySelectorAll('[data-ext]').forEach(bt => bt.onclick = () => { const x = EXT_PLATFORMS.find(e => e.key === bt.dataset.ext); if(x) extWorkflow(back, x, close); });
   q('#nbX').onclick = close; back.onclick = e => { if(e.target === back) close(); };
   q('#nbManual').onclick = () => { close(); openBid(); };
   q('#nbEmail').oninput = draw; q('#nbGo').onclick = () => create(true); q('#nbPartial').onclick = () => create(false);
